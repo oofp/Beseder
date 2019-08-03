@@ -49,7 +49,7 @@ type TimerBasicFunc m =
   :>> ClearAllFunc "t1"  
 -- :kind! EvalTransFunc IO TimerEmptyFunc
 
-buildTrans :: ToTrans (TimerBasicFunc m) q m NoSplitter xs => STrans q m NoSplitter xs _ (TimerBasicFunc m) ()
+buildTrans :: ToTrans (TimerBasicFunc m) () q m NoSplitter xs () => STrans q m NoSplitter xs _ (TimerBasicFunc m) ()
 buildTrans =
   let px_t :: Proxy (TimerBasicFunc m)
       px_t = Proxy
@@ -57,10 +57,13 @@ buildTrans =
       px_m = Proxy
       px_sp :: Proxy NoSplitter
       px_sp = Proxy
-  in toTrans px_t px_m px_sp    
+      px_u :: Proxy ()
+      px_u = Proxy
+  in toTrans px_t px_u px_m px_sp    
 
 executableTrans :: TaskPoster m => ExcecutableTrans (ContT Bool) m (TimerBasicFunc m) 
 executableTrans = buildTrans  
 
 runTimerBasic :: IO ()
 runTimerBasic = runAsyncTrans executableTrans
+

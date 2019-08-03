@@ -156,7 +156,7 @@ return = ReturnTrans
   , Eval (f_a sp as) ~ '(rs1, ex1)  --assert 
   , Eval (f_b sp rs1) ~ '(rs2, ex2) --assert
   , Binder q m sp as rs1 ex1 f_a a rs2 ex2 f_b ex_un b
-  ) => STrans q m sp as '(rs1,ex1) f_a a -> (a -> STrans q m sp rs1 '(rs2,ex2) f_b b) -> STrans q m sp as '(rs2,ex_un) (ComposeFunc f_a f_b) b
+  ) => STrans q m sp as '(rs1,ex1) f_a a -> (a -> STrans q m sp rs1 '(rs2,ex2) f_b b) -> STrans q m sp as '(rs2,ex_un) (BindFunc f_a f_b) b
 (>>=) = BindTrans 
 infixl 1 >>=
 
@@ -342,11 +342,11 @@ pumpEvents ::
   , f ~ GetNextAllFunc
   , loopRes ~ First (TransformLoop sp2 xs_sub f)
   , Eval (f sp2 loopRes) ~ '(rs',ex)
-  , f_sub ~ ComposeFunc
+  , f_sub ~ BindFunc
               IDFunc
-              (ComposeFunc
+              (BindFunc
                 IDFunc
-                (ComposeFunc
+                (BindFunc
                     IDFunc
                     (ComposeFunc
                       (ConstFunc loopRes)
@@ -381,11 +381,11 @@ handleEvents ::
   , f ~ ComposeFunc GetNextAllFunc f_hnd
   , loopRes ~ First (TransformLoop sp2 xs_sub f)
   , Eval (f sp2 loopRes) ~ '(rs',ex)
-  , f_sub ~ ComposeFunc
+  , f_sub ~ BindFunc
               IDFunc
-              (ComposeFunc
+              (BindFunc
                 IDFunc
-                (ComposeFunc
+                (BindFunc
                     IDFunc
                     (ComposeFunc
                       (ConstFunc loopRes)

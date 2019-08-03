@@ -83,6 +83,9 @@ type family ComposeFam' (isID :: Bool) (f_a :: * -> [*] -> ([*],[*]) -> *) (f_b 
   ComposeFam' True f_a f_b sp as = Eval (f_b sp as)
   ComposeFam' False f_a f_b sp as = ComposeFam (Eval (f_a sp as)) sp f_b
 
+data BindFunc :: (* -> [*] -> ([*],[*]) -> *) ->  (* -> [*] -> ([*],[*]) -> *) -> * -> [*] -> Exp ([*],[*])
+type instance Eval (BindFunc f_a f_b sp as) = Eval (ComposeFunc f_a f_b sp as)
+  
 data ComposeFunc :: (* -> [*] -> ([*],[*]) -> *) ->  (* -> [*] -> ([*],[*]) -> *) -> * -> [*] -> Exp ([*],[*])
 type instance Eval (ComposeFunc f_a f_b sp as) = ComposeFam' (IsIDFunc f_a) f_a f_b sp as -- ComposeFam (Eval (f_a sp as)) sp f_b
 
@@ -256,7 +259,7 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     , Eval (f_a sp as) ~ '(rs1, ex1)  --assert 
     , Eval (f_b sp rs1) ~ '(rs2, ex2) --assert
     , Binder q m sp as rs1 ex1 f_a a rs2 ex2 f_b ex_un b
-    ) => STrans q m sp as '(rs1,ex1) f_a a -> (a -> STrans q m sp rs1 '(rs2,ex2) f_b b) -> STrans q m sp as '(rs2,ex_un) (ComposeFunc f_a f_b) b
+    ) => STrans q m sp as '(rs1,ex1) f_a a -> (a -> STrans q m sp rs1 '(rs2,ex2) f_b b) -> STrans q m sp as '(rs2,ex_un) (BindFunc f_a f_b) b
   BindDirTrans ::
     ( Eval (f_a sp as) ~ '(as, '[])  --assert 
     , Eval (f_b sp as) ~ '(rs2, ex2) --assert
