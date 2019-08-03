@@ -1,0 +1,32 @@
+resolver: lts-13.4
+
+
+packages:
+- '.'
+
+# Dependency packages to be pulled from upstream that are not in the resolver
+# (e.g., acme-missiles-0.3)
+extra-deps:
+- subdirs:
+  - haskus-utils
+  - haskus-utils-data
+  - haskus-utils-types
+  - haskus-utils-variant
+  git: https://github.com/oofp/haskus-utlls_1.0_forked.git
+  commit: c346272ec449155ea2e2a0fb3a4c3f3b707a13a5
+- stm-containers-1.1.0.2
+- stm-hamt-1.2.0.2
+- primitive-extras-0.7.1
+- ekg-0.4.0.15@sha256:f52d7c00654d72d2ab988255f30adba95a52484ac310bab9c136c64732e69f4b
+- ekg-json-0.1.0.6@sha256:4ff2e9cac213a5868ae8b4a7c72a16a9a76fac14d944ae819b3d838a9725569b
+- focus-1.0.1.3@sha256:adfb0c747394e5dc5d4839167b95f6f9673162b68eb7e7cf11ba39ddf648f8e8
+
+# Override default flag values for local packages and extra-deps
+flags: {}
+
+# Extra package databases containing global packages
+extra-package-dbs: []
+
+ignore-revision-mismatch: true
+
+

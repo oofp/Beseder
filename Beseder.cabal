@@ -1,0 +1,87 @@
+name:                Beseder
+version:             0.1.1.0
+-- synopsis:
+-- description:
+homepage:            https://github.com/oofp/Beseder#readme
+license:             OtherLicense
+license-file:        LICENSE
+author:              oofp
+maintainer:          oofp
+copyright:           2018-2020 oofp
+category:            Control
+build-type:          Simple
+extra-source-files:  README.md
+cabal-version:       >=1.10
+
+library 
+  hs-source-dirs:      src
+  ghc-options:         -Wall -fomit-interface-pragmas -fprint-potential-instances
+  exposed-modules:     Beseder.Base.Base
+                     , Beseder.Base.Control
+                     , Beseder.Base.Common
+                     , Beseder.Resources.State.MonoStateRes
+                     , Beseder.Resources.State.DataRes
+                     , Beseder.Resources.Timer
+                     , Beseder.Resources.Comm
+                     , Beseder.Misc.Misc
+  other-modules:       Beseder.Base.Internal.Classes
+                     , Beseder.Base.Internal.Cont
+                     , Beseder.Base.Internal.Core
+                     , Beseder.Base.Internal.Flow
+                     , Beseder.Base.Internal.Named
+                     , Beseder.Base.Internal.STrans
+                     , Beseder.Base.Internal.STransDo
+                     , Beseder.Base.Internal.SplitFlow
+                     , Beseder.Base.Internal.SplitOps
+                     , Beseder.Base.Internal.TupleHelper
+                     , Beseder.Base.Internal.TypeExp
+                     , Beseder.Utils.ListHelper
+                     , Beseder.Utils.Lst
+                     , Beseder.Utils.VariantHelper 
+                     , Beseder.Misc.TaskPosterImpl.CallbackQueue
+                     , Beseder.Misc.TaskPosterImpl.TaskQ
+                     , Beseder.Resources.State.Impl.IORefStateProv
+                     , Beseder.Resources.State.Impl.PureStateProv
+                     , Beseder.Resources.State.Impl.STMStateProv
+                     , Beseder.Resources.State.MonoStateProv  
+                     , Beseder.Resources.Timer.TimerResImpl
+                     , Beseder.Resources.Timer.TimerRes
+                     , Beseder.Resources.Comm.CommProv
+                     , Beseder.Resources.Comm.CommProvImpl
+                     , Beseder.Resources.Comm.Impl.Console
+                     , Beseder.Resources.Comm.Impl.WSClient
+  build-depends:       base >= 4.7 && < 5
+                     , protolude
+                     , network
+                     , text
+                     , containers
+                     , async
+                     , stm
+                     , haskus-utils
+                     , mtl
+                     , random
+                     , websockets
+                     , network
+                     , bytestring
+                     , template-haskell
+                     , alarmclock
+  default-language:    Haskell2010
+  default-extensions:  OverloadedStrings, NoImplicitPrelude
+
+executable TimerApps
+  hs-source-dirs:      Examples/Timer
+  main-is:             Main.hs
+  other-modules:       TimerApps
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-T -dshow-passes -fomit-interface-pragmas -fprint-potential-instances
+  build-depends:       base
+                     , Beseder
+                     , text
+                     , protolude
+                     , haskus-utils
+  default-language:    Haskell2010
+  default-extensions:  OverloadedStrings, NoImplicitPrelude
+
+
+source-repository head
+  type:     git
+  location: https://github.com/oofp/Beseder

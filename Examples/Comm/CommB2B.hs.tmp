@@ -1,0 +1,112 @@
+{-# LANGUAGE DataKinds              #-}
+{-# LANGUAGE DefaultSignatures      #-}
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE KindSignatures         #-}
+{-# LANGUAGE MonoLocalBinds         #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE PartialTypeSignatures  #-}
+{-# LANGUAGE PolyKinds              #-}
+{-# LANGUAGE RankNTypes             #-}
+{-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE MonoLocalBinds         #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE PartialTypeSignatures  #-}
+{-# LANGUAGE PolyKinds              #-}
+{-# LANGUAGE RankNTypes             #-}
+{-# LANGUAGE RebindableSyntax       #-}
+{-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE TypeApplications       #-}
+{-# LANGUAGE TypeFamilies           #-}
+{-# LANGUAGE TypeOperators          #-}
+{-# LANGUAGE TypeSynonymInstances   #-}
+{-# LANGUAGE UndecidableInstances   #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE OverloadedLabels #-}
+
+module  CommB2B where
+
+import           Control.Monad.Cont hiding (return, lift, liftIO, (>>), (>>=), forever)
+import           Protolude                    hiding (Product, handle, return, gets, lift, liftIO,
+                                               (>>), (>>=), forever, until,try,on)
+import           Beseder.Base.Control                                               
+import           Beseder.Base.Common
+import           Beseder.Misc.Misc
+import           Beseder.Resources.Timer
+import           Data.String 
+
+import           Control.Monad.Cont hiding (return, lift, liftIO, (>>), (>>=), forever)
+import           MachineStransEx
+import           MachineStransDoEx
+import           CommProv
+import           Data.String
+import           SplitOps
+import           Protolude                    hiding (Product, handle, return, gets, lift, liftIO,
+                                               (>>), (>>=), forever, until, try, on, getAll)
+import           QMonad
+import qualified Network.WebSockets  as WS
+import           WSClientMachine
+import           ConsoleMachine
+import           Data.Function (id)
+import qualified Data.ByteString.Lazy as LBStr
+import           DataMachine
+
+b2bApp :: forall m i1 i2 o1 o2 e1 e2 comm1 comm2. 
+  ( MonadIO m
+  , CommProv m i1 o1 e1 comm1
+  , CommProv m i2 o2 e2 comm2
+  , Show o2
+  , Show o1
+  , Show comm1
+  , Show comm2
+  ) => CommRes comm1 i1 o1 e1 -> CommRes comm2 i2 o2 e2 -> (i1 -> o2) -> (i2 -> o1) -> (i1 -> Bool) -> STrans (ContT Bool) m NoSplitter '[()] _ _ ()
+b2bApp comRes1 comRes2 i1o2 i2o1 contPred = do
+  withRes #com1 comRes1
+  withRes #com2 comRes2
+  withRes #flCont initAsTrue
+  try @(("com1" :? IsCommAlive) :&& ("com2" :? IsCommAlive) :&& ("flCont" :? IsTrue)) $ do
+      handleEvents $ do
+        on @("com1" :? IsMessageReceived) $ do  
+          onRcvd1 :: _ <- whatNext
+          msgRcvd1 <- getAll #com1 getIncomingMsg
+          iff (contPred msgRcvd1) (invokeAll #flCont setFalse)
+          on @("com2" :? IsCommConnected) $ do  
+            let o2 = i1o2 msgRcvd1 
+            invokeAll #com2 (SendMsg o2)
+          invokeAll #com1 GetNextMsg
+        on @("com2" :? IsMessageReceived) $ do  
+          on @("com1" :? IsCommConnected) $ do  
+            msgRcvd2 <- gets #com2 getIncomingMsg
+            let o1 = i2o1 msgRcvd2 
+            invokeAll #com1 (SendMsg o1)
+          invokeAll #com2 GetNextMsg
+        loopStates :: _ <- whatNext
+        noop
+  loopCompletedStates :: _ <- whatNext
+  termAndClearAllResources
+
+---
+echoWS :: WSClient 
+echoWS = WSClient
+  { host = "echo.websocket.org"
+  , port = 80
+  , path = "/"
+  , options = WS.defaultConnectionOptions
+  , headers = [] 
+  , flEnablePing = False
+  }     
+
+commRes1 :: CommRes WSClient LBStr.ByteString Text ()
+commRes1 = CommRes echoWS
+
+commRes2 :: CommRes Console Text Text ()
+commRes2 = CommRes Console
+
+b2bAppWsConsole :: STrans (ContT Bool) MMonad NoSplitter '[()] '(('[()]),'[]) _ ()
+b2bAppWsConsole = 
+  b2bApp commRes1 commRes2 show id ((==)"q")
+
+runTest :: IO ()  
+runTest = void $ execApp b2bAppWsConsole
+  
