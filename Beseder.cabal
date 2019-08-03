@@ -24,6 +24,7 @@ library
                      , Beseder.Resources.Timer
                      , Beseder.Resources.Comm
                      , Beseder.Misc.Misc
+                     , Beseder.Base.Internal.STransFunc
   other-modules:       Beseder.Base.Internal.Classes
                      , Beseder.Base.Internal.Cont
                      , Beseder.Base.Internal.Core
