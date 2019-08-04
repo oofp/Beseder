@@ -40,7 +40,9 @@ module Beseder.Base.Control
     , InvokeFunc 
     , ClearAllVarFunc
     , ComposeFunc 
+    , BindFunc 
     , (:>>) 
+    , (:>>=) 
     , IffFunc
     , IfElseFunc 
     , CaptureFunc 
@@ -49,8 +51,10 @@ module Beseder.Base.Control
     , ForeverFunc 
     , AlignFunc 
     , ConstFunc
+    , DictFunc
     , module Beseder.Base.Internal.STransFunc
     , STrans
+    , TransDict (..)
     ) where
 
 

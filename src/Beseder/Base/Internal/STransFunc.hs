@@ -43,6 +43,7 @@ import           Beseder.Utils.ListHelper
 import           Beseder.Utils.VariantHelper
 import           Beseder.Base.Internal.SplitFlow
 import           Beseder.Utils.Lst
+import           Data.Coerce
 
 class ToTrans (funcData :: * -> [*] -> Exp ([*],[*])) dict q m sp (xs :: [*]) a where
   toTrans :: Proxy funcData -> Proxy dict -> Proxy m -> Proxy sp -> STrans q m sp xs (Eval (funcData sp xs)) funcData a
@@ -117,8 +118,14 @@ instance
         px_b = Proxy  
     in ComposeTrans (toTrans px_a px_dict px_m px_sp) (toTrans px_b px_dict px_m px_sp)     
 
-data AdHocFunc :: dict -> Symbol -> * -> [*] -> Exp ([*],[*])
-type instance Eval (AdHocFunc dict funcName sp xs) = '(xs, '[])  
+instance 
+  ( Eval (func sp xs) ~ '(xs, '[]) 
+  , TransDict dict keyName func a
+  ) => ToTrans (DictFunc keyName) dict q m sp xs a where 
+  toTrans _ px_dict px_m px_sp =   
+    let namedKey :: Named keyName
+        namedKey = Named
+    in DictTrans px_dict namedKey    
 
 instance 
   ( ex_un ~ Union ex1 ex2 
@@ -141,3 +148,28 @@ instance
           transB :: STransPar q m sp rs1 '(rs2, ex2)  f_b b a
           transB = toTransPar px_b px_dict px_m px_sp
       in BindTrans transA (getTrans transB)     
+
+instance 
+  ( Request m (NamedRequest req name) (VWrap xs NamedTuple)
+  , Show req
+  , KnownSymbol name
+  , zs ~ ReqResult (NamedRequest req name) (VWrap xs NamedTuple)
+  , SplicC sp rs ex zs
+  ) => ToTransPar (InvokeAllFunc req (name :: Symbol)) dict q m sp xs () req where 
+  toTransPar _ _ _ _ =
+    let named :: Named name
+        named = Named 
+    in STransPar (InvokeAllTrans named)
+    
+--
+buildTrans :: forall d f q m sp xs a. ToTrans f d q m sp xs a => STrans q m sp xs (Eval (f sp xs)) f a
+buildTrans =
+  let px_f :: Proxy f
+      px_f = Proxy
+      px_m :: Proxy m
+      px_m = Proxy
+      px_sp :: Proxy sp
+      px_sp = Proxy
+      px_d :: Proxy d
+      px_d = Proxy
+  in toTrans px_f px_d px_m px_sp    

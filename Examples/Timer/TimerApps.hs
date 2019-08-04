@@ -70,6 +70,7 @@ timerHello timeoutSec1 = do
   newRes #t1 TimerRes 
   invoke #t1 (StartTimer timeoutSec1)  
   nextEv
+  -- _ :: _ <- whatNext
   clear #t1 
 
 -- runAsyncTrans $ twoTimersOn 4 7  

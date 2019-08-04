@@ -15,6 +15,7 @@
 module Beseder.Misc.Misc
   ( runAsyncTrans 
   , runSyncTrans 
+  , TaskQ 
   ) where
 
 import Beseder.Misc.TaskPosterImpl.TaskQ    

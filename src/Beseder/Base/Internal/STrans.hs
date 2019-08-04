@@ -92,6 +92,9 @@ type instance Eval (ComposeFunc f_a f_b sp as) = ComposeFam' (IsIDFunc f_a) f_a 
 type (:>>) f_a f_b = ComposeFunc f_a f_b
 infixr 1 :>>
 
+type (:>>=) f_a f_b = BindFunc f_a f_b
+infixr 2 :>>=
+
 data IffFunc :: (* -> [*] -> ([*],[*]) -> *) -> * -> [*] -> Exp ([*],[*])
 type instance Eval (IffFunc f_a sp xs) = UnionRs (Eval (f_a sp xs)) xs
 
@@ -120,6 +123,12 @@ type Try sp1 f = EmbedFunc sp1 f
 
 data IDFunc :: * -> [*] -> Exp ([*],[*])
 type instance Eval (IDFunc sp xs) = '(xs,'[])
+
+data DictFunc :: Symbol -> * -> [*] -> Exp ([*],[*])
+type instance Eval (DictFunc keyName sp xs) = '(xs,'[])
+
+--data DelegateFunc :: dict -> Symbol -> * -> [*] -> Exp ([*],[*])
+--type instance Eval (DelegateFunc dict funcName sp xs) = '(xs, '[])  
 
 type family ForeverFam (xs_ex :: ([*],[*])) (sp :: *) (xs :: [*]) :: ([*],[*]) where
   ForeverFam '(xs,ex) sp xs = '(('[]),ex)
@@ -160,6 +169,12 @@ type SplicC sp xs ex zs =
   , VariantSplitter xs ex zs
   , '(xs,ex) ~ ListSplitterRes2 sp zs
   )
+
+--class (Eval (func sp xs) ~ '(xs,'[])) => TransDict dict (key :: Symbol) q m sp xs (func :: * -> [*] -> ([*],[*]) -> *) a | dict key -> func where -- | dict key -> q m sp xs func a where
+--  getTransFromDict  :: Proxy dict -> Named key -> STrans q m sp xs '(xs,'[]) func a
+
+class TransDict dict (key :: Symbol) (func :: * -> [*] -> ([*],[*]) -> *) (a :: *) | dict key -> func a where -- q m sp xs (func :: * -> [*] -> ([*],[*]) -> *) a | dict key -> func where -- | dict key -> q m sp xs func a where
+  getTransFromDict  :: Proxy dict -> Named key -> STrans q m sp xs '(xs,'[]) func a
 
 --
 data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc :: * -> [*] -> ([*],[*]) -> *) (a :: *) where
@@ -336,6 +351,10 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     , Eval (f2 sp xs) ~ '(rs2, ex2) --assert
     ) => Bool -> STrans q m sp xs '(rs1,ex1) f1 ()  -> STrans q m sp xs '(rs2,ex2) f2 () -> STrans q m sp xs '(rs, ex) (IfElseFunc f1 f2) ()  
   LiftIOTrans :: MonadIO m => IO a -> STrans q m sp xs '(xs, '[]) IDFunc a
+  DictTrans ::
+    ( Eval (func sp xs) ~ '(xs, '[]) 
+    , TransDict dict keyName func a
+    ) => Proxy dict -> Named keyName -> STrans q m sp xs '(xs, '[]) (DictFunc keyName) a
 
 splitV_ :: 
   ( ListSplitter sp ys
@@ -527,6 +546,7 @@ applyTrans (IffTrans fl t1) sp curSnap =
       fmap liftRightRes (applyTrans t1 sp curSnap)
     else 
       fmap (\v-> Right (liftVariant v,())) curSnap
+applyTrans (DictTrans dict named) sp curSnap = applyTrans (getTransFromDict dict named) sp curSnap
       
 liftRes :: (Liftable rs1 rs, Liftable ex1 ex) => Either (V ex1) (V rs1,()) -> Either (V ex) (V rs,())
 liftRes (Right (v_rs1, ())) = Right $ (liftVariant v_rs1, ())        
