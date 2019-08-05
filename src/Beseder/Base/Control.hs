@@ -54,6 +54,8 @@ module Beseder.Base.Control
     , DictFunc
     , module Beseder.Base.Internal.STransFunc
     , STrans
+    , STransApp (..)
+    , applyTransApp
     , TransDict (..)
     ) where
 

@@ -43,7 +43,7 @@ import           Beseder.Utils.ListHelper
 import           Beseder.Utils.VariantHelper
 import           Beseder.Base.Internal.SplitFlow
 import           Beseder.Utils.Lst
-import           Data.Coerce
+import           Type.Errors hiding (Eval,Exp)
 
 class ToTrans (funcData :: * -> [*] -> Exp ([*],[*])) dict q m sp (xs :: [*]) a where
   toTrans :: Proxy funcData -> Proxy dict -> Proxy m -> Proxy sp -> STrans q m sp xs (Eval (funcData sp xs)) funcData a
@@ -68,6 +68,7 @@ instance
   , Show req
   , KnownSymbol name
   , zs ~ ReqResult (NamedRequest req name) (VWrap xs NamedTuple)
+  , WhenStuck (ReqResult (NamedRequest req name) (VWrap xs NamedTuple)) (DelayError ('Text "No request supported detected"))
   , SplicC sp rs ex zs
   , GetInstance req
   ) => ToTrans (InvokeAllFunc req (name :: Symbol)) dict q m sp xs () where 
@@ -119,8 +120,8 @@ instance
     in ComposeTrans (toTrans px_a px_dict px_m px_sp) (toTrans px_b px_dict px_m px_sp)     
 
 instance 
-  ( Eval (func sp xs) ~ '(xs, '[]) 
-  , TransDict dict keyName func a
+  ( --Eval (func sp xs) ~ '(xs, '[]) 
+     TransDict dict keyName a
   ) => ToTrans (DictFunc keyName) dict q m sp xs a where 
   toTrans _ px_dict px_m px_sp =   
     let namedKey :: Named keyName
@@ -154,6 +155,7 @@ instance
   , Show req
   , KnownSymbol name
   , zs ~ ReqResult (NamedRequest req name) (VWrap xs NamedTuple)
+  -- , WhenStuck (ReqResult (NamedRequest req name) (VWrap xs NamedTuple)) (DelayError ('Text "No request supported detected"))
   , SplicC sp rs ex zs
   ) => ToTransPar (InvokeAllFunc req (name :: Symbol)) dict q m sp xs () req where 
   toTransPar _ _ _ _ =
@@ -173,3 +175,4 @@ buildTrans =
       px_d :: Proxy d
       px_d = Proxy
   in toTrans px_f px_d px_m px_sp    
+

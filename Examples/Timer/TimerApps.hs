@@ -37,6 +37,7 @@ import           Beseder.Base.Common
 import           Beseder.Misc.Misc
 import           Beseder.Resources.Timer
 import           Data.String 
+import           Control.Monad.Cont (ContT)
 
 type TimerHelloFunc m =
   (ComposeFunc
@@ -65,11 +66,14 @@ type TimerHelloFuncNicer m =
   :>> ClearAllFunc "t1"  
 -- :kind! EvalTransFunc IO TimerHelloFunc
 
-timerHello :: TaskPoster m  => Int -> AsyncTransApp m CompletedRes (TimerHelloFuncNicer m)
-timerHello timeoutSec1 = do
+data AnotherReq = AnotherReq deriving (Show,Eq)
+--timerHello :: TaskPoster m  => Int -> STrans (ContT Bool) m NoSplitter '[TimerNotArmed m "t1"] '(('[TimerArmed m "t1"]),'[]) (InvokeAllFunc StartTimer "t1") () -- AsyncTransApp m _ _ -- CompletedRes (TimerHelloFuncNicer m)
+--timerHello :: TaskPoster m  => Int -> STrans (ContT Bool) m NoSplitter '[TimerNotArmed m "t1"] _ (InvokeAllFunc StartTimer "t1") () -- AsyncTransApp m _ _ -- CompletedRes (TimerHelloFuncNicer m)
+timerHello :: TaskPoster m  => Int -> STransApp (ContT Bool) m NoSplitter '[()] '(('[()]),'[]) () -- AsyncTransApp m _ _ -- CompletedRes (TimerHelloFuncNicer m)
+timerHello timeoutSec1 = MkApp $ do
   newRes #t1 TimerRes 
-  invoke #t1 (StartTimer timeoutSec1)  
-  nextEv
+  invoke #t1  (StartTimer timeoutSec1)  --  --   AnotherReq
+  nextEv 
   -- _ :: _ <- whatNext
   clear #t1 
 
@@ -86,7 +90,8 @@ twoTimersOn timeoutSec1 timeoutSec2 = do
       invoke #t2 StopTimer 
   clearAllResources
 
--- runAsyncTrans $ timersPump 4 7 7 9  
+-- runAsyncTrans $ timersPump 4 7 7 9 
+{- 
 timersPump :: TaskPoster m  => Int -> Int -> Int -> Int -> AsyncTransApp m _ _ 
 timersPump timeoutSec1 timeoutSec2 timeoutSec3 timeoutSec4 = do
   withRes #t1 TimerRes 
@@ -99,6 +104,7 @@ timersPump timeoutSec1 timeoutSec2 timeoutSec3 timeoutSec4 = do
   invoke #t4 (StartTimer timeoutSec4) 
   pumpEvents
   clearAllResources
+-}
 
 {-
 complexLogicTimersApp :: TaskPoster m => Int -> Int -> Int -> Int -> AsyncTransApp m _ _

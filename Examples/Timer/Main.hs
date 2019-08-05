@@ -35,5 +35,5 @@ import           Beseder.Misc.Misc
 import           TimerApps
 
 main :: IO ()
-main = runAsyncTrans $ timerHello 10 -- 1 2 3 4
+main = runAsyncApp $ timerHello 10 -- 1 2 3 4
 

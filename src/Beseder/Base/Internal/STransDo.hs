@@ -30,6 +30,7 @@ import           Control.Monad.Cont       hiding (return, lift, liftIO, (>>), (>
 --import           Haskus.Utils.Flow
 import           Haskus.Utils.Types.List
 import           Haskus.Utils.Variant
+import           Type.Errors hiding (Eval,Exp)
 import           Beseder.Base.Internal.Core
 import           Beseder.Base.Internal.Flow
 import           Beseder.Base.Internal.STrans
@@ -86,6 +87,7 @@ invoke ::
   , Show req
   , KnownSymbol name
   , zs ~ ReqResult (NamedRequest req name) (VWrap xs NamedTuple)
+  , WhenStuck (ReqResult (NamedRequest req name) (VWrap xs NamedTuple)) (DelayError ('Text "No request supported detected" ))
   , SplicC sp rs ex zs
   ) => Named name -> req -> STrans q m sp xs '(rs,ex) (InvokeAllFunc req name) ()
 invoke = InvokeAllTrans

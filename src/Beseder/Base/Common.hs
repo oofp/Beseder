@@ -7,8 +7,10 @@ module Beseder.Base.Common
     , GetInstance (..)
     , TaskPoster (..)
     , execTrans
+    , execApp
     , ExecutableFunc
     , ExcecutableTrans
+    , ExcecutableApp
     , AsyncTrans 
     , SyncTrans 
     , AsyncTransApp 

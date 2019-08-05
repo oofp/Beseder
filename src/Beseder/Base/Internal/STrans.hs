@@ -30,6 +30,8 @@ import           GHC.TypeLits
 import           Haskus.Utils.Tuple
 import           Haskus.Utils.Types.List
 import           Haskus.Utils.Variant
+import           Type.Errors hiding (Eval,Exp)
+
 import           Beseder.Base.Internal.Core
 import           Beseder.Base.Internal.Flow
 import           Beseder.Base.Internal.Named
@@ -173,8 +175,8 @@ type SplicC sp xs ex zs =
 --class (Eval (func sp xs) ~ '(xs,'[])) => TransDict dict (key :: Symbol) q m sp xs (func :: * -> [*] -> ([*],[*]) -> *) a | dict key -> func where -- | dict key -> q m sp xs func a where
 --  getTransFromDict  :: Proxy dict -> Named key -> STrans q m sp xs '(xs,'[]) func a
 
-class TransDict dict (key :: Symbol) (func :: * -> [*] -> ([*],[*]) -> *) (a :: *) | dict key -> func a where -- q m sp xs (func :: * -> [*] -> ([*],[*]) -> *) a | dict key -> func where -- | dict key -> q m sp xs func a where
-  getTransFromDict  :: Proxy dict -> Named key -> STrans q m sp xs '(xs,'[]) func a
+class TransDict dict (key :: Symbol) (a :: *) | dict key -> a where -- q m sp xs (func :: * -> [*] -> ([*],[*]) -> *) a | dict key -> func where -- | dict key -> q m sp xs func a where
+  getTransFromDict  :: Proxy dict -> Named key -> STransApp q m sp xs '(xs,'[]) a
 
 --
 data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc :: * -> [*] -> ([*],[*]) -> *) (a :: *) where
@@ -217,6 +219,7 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     , Show req
     , KnownSymbol name
     , zs ~ ReqResult (NamedRequest req name) (VWrap xs NamedTuple)
+    --, WhenStuck (ReqResult (NamedRequest req name) (VWrap xs NamedTuple)) (DelayError ('Text "No request supported detected"))
     , SplicC sp rs ex zs
     ) => Named name -> req -> STrans q m sp xs '(rs,ex) (InvokeAllFunc req name) ()
   ClearAllTrans ::
@@ -352,8 +355,8 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     ) => Bool -> STrans q m sp xs '(rs1,ex1) f1 ()  -> STrans q m sp xs '(rs2,ex2) f2 () -> STrans q m sp xs '(rs, ex) (IfElseFunc f1 f2) ()  
   LiftIOTrans :: MonadIO m => IO a -> STrans q m sp xs '(xs, '[]) IDFunc a
   DictTrans ::
-    ( Eval (func sp xs) ~ '(xs, '[]) 
-    , TransDict dict keyName func a
+    ( TransDict dict keyName a
+    , Eval (DictFunc name sp xs) ~ '(xs,'[])
     ) => Proxy dict -> Named keyName -> STrans q m sp xs '(xs, '[]) (DictFunc keyName) a
 
 splitV_ :: 
@@ -451,10 +454,16 @@ instance
           in fmap liftLeft (applyTrans (f_t2 a) sp (return v_bs))
         Left v_ex -> return $ Left $ liftVariant v_ex
       
-applyTrans :: 
+applyTransSafely :: 
   ( MonadTrans q
   , Monad (q m)
   , Eval (sfunc sp xs) ~ '(rs,ex)
+  ) => STrans q m sp xs '(rs,ex) sfunc a -> sp -> MFlow q m xs ->  MFlowExA q m rs ex a
+applyTransSafely = applyTrans 
+
+applyTrans :: 
+  ( MonadTrans q
+  , Monad (q m)
   ) => STrans q m sp xs '(rs,ex) sfunc a -> sp -> MFlow q m xs ->  MFlowExA q m rs ex a
 applyTrans (WithResTrans named resFact) sp curSnap = splitV_ sp <$> andRes named resFact curSnap
 applyTrans (WithResAllTrans named resFact) sp curSnap = splitV_ sp <$> andResAll named resFact curSnap
@@ -546,7 +555,7 @@ applyTrans (IffTrans fl t1) sp curSnap =
       fmap liftRightRes (applyTrans t1 sp curSnap)
     else 
       fmap (\v-> Right (liftVariant v,())) curSnap
-applyTrans (DictTrans dict named) sp curSnap = applyTrans (getTransFromDict dict named) sp curSnap
+applyTrans (DictTrans dict named) sp curSnap = applyTransApp (getTransFromDict dict named) sp curSnap
       
 liftRes :: (Liftable rs1 rs, Liftable ex1 ex) => Either (V ex1) (V rs1,()) -> Either (V ex) (V rs,())
 liftRes (Right (v_rs1, ())) = Right $ (liftVariant v_rs1, ())        
@@ -578,10 +587,18 @@ transRes _ = Proxy
 transFunc :: forall q m sp xs rs_ex sfunc a. STrans q m sp xs rs_ex sfunc a -> Proxy sfunc
 transFunc _ = Proxy
 
-execTrans' ::  (MonadTrans q, Monad (q m), Eval (sfunc NoSplitter '[()]) ~ '(rs,ex)) => STrans q m NoSplitter '[()] '(rs,ex) sfunc a -> MFlowExA q m rs ex a
+execTrans' :: 
+ ( MonadTrans q
+ , Monad (q m)
+ --, Eval (sfunc NoSplitter '[()]) ~ '(rs,ex)
+ ) => STrans q m NoSplitter '[()] '(rs,ex) sfunc a -> MFlowExA q m rs ex a
 execTrans' t = applyTrans t NoSplitter (return (variantFromValue ()))
 
-execTrans_ ::  (MonadTrans q, Monad (q m), Eval (sfunc NoSplitter '[()]) ~ '(rs,'[])) => STrans q m NoSplitter '[()] '(rs,'[]) sfunc () -> MFlow q m rs 
+execTrans_ :: 
+  ( MonadTrans q
+  , Monad (q m)
+  -- , Eval (sfunc NoSplitter '[()]) ~ '(rs,'[])
+  ) => STrans q m NoSplitter '[()] '(rs,'[]) sfunc () -> MFlow q m rs 
 execTrans_ t = do 
   ei <- applyTrans t NoSplitter (return (variantFromValue ()))
   case ei of
@@ -590,6 +607,7 @@ execTrans_ t = do
 
 type ExecutableFunc sfunc = Eval (sfunc NoSplitter '[()]) ~ '(('[()]),'[])    
 type ExcecutableTrans q m sfunc = STrans q m NoSplitter '[()] '(('[()]),'[]) sfunc ()
+type ExcecutableApp q m = STransApp q m NoSplitter '[()] '(('[()]),'[]) ()
 
 type AsyncTrans m sp xs rs_ex func a = STrans (ContT Bool) m sp xs rs_ex a  
 type SyncTrans m sp xs rs_ex func a = STrans IdentityT m sp xs rs_ex a  
@@ -597,9 +615,30 @@ type SyncTrans m sp xs rs_ex func a = STrans IdentityT m sp xs rs_ex a
 type AsyncTransApp m rs_ex func = STrans (ContT Bool) m NoSplitter '[()] rs_ex func ()  
 type SyncTransApp m rs_ex func = STrans IdentityT m NoSplitter '[()] rs_ex func ()  
 
-execTrans ::  (MonadTrans q, Monad (q m),  ExecutableFunc sfunc) => ExcecutableTrans q m sfunc -> q m () 
+execTrans ::  
+  ( MonadTrans q
+  --, ExecutableFunc sfunc
+  , Monad (q m)
+  ) => ExcecutableTrans q m sfunc -> q m () 
 execTrans t = fmap variantToValue (execTrans_ t)  
     
 
 type EvalTransFunc m func = Eval (func m NoSplitter '[()])
+
+data STransApp q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*]))  (a :: *) where
+  MkApp :: STrans q m sp xs rs_ex func a -> STransApp  q m sp xs rs_ex a 
+
+--mkIDTrans :: STransApp q m sp xs '(xs, '[]) a -> STrans q m sp xs '(xs, '[]) IDFunc a
+--mkIDTrans (MkApp t) = t
+
+
+applyTransApp :: 
+  ( MonadTrans q
+  , Monad (q m)
+  ) => STransApp q m sp xs '(rs,ex) a -> sp -> MFlow q m xs ->  MFlowExA q m rs ex a
+applyTransApp (MkApp trans) = applyTrans trans  
+  
+execApp ::  (MonadTrans q, Monad (q m)) => ExcecutableApp q m  -> q m () 
+execApp (MkApp t) = execTrans t  
+    
 
