@@ -13,6 +13,8 @@
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE RebindableSyntax      #-}
 
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -21,9 +23,10 @@
 
 module Beseder.Base.Internal.STransFunc where
 
-import           Protolude                    hiding (Product, handle,TypeError,First)
-import           Control.Monad.Cont
-import           Control.Monad.Identity
+import           Protolude                    hiding (Product, handle, return, gets, lift, liftIO,
+                                                (>>), (>>=), forever, until,try,on, First)
+import           Control.Monad.Cont (ContT)
+import           Control.Monad.Identity (IdentityT)
 import           Haskus.Utils.Flow
 import           Data.Text
 import           Data.Typeable
@@ -39,18 +42,21 @@ import           Beseder.Base.Internal.TypeExp
 import           Beseder.Base.Internal.TupleHelper
 import           Beseder.Base.Internal.SplitOps
 import           Beseder.Base.Internal.STrans
+import           Beseder.Base.Internal.STransDo
 import           Beseder.Utils.ListHelper
 import           Beseder.Utils.VariantHelper
 import           Beseder.Base.Internal.SplitFlow
 import           Beseder.Utils.Lst
 import           Type.Errors hiding (Eval,Exp)
+import           Beseder.Resources.State.StateLogger 
+
 
 class ToTrans (funcData :: * -> [*] -> Exp ([*],[*])) dict q m sp (xs :: [*]) a where
-  toTrans :: Proxy funcData -> Proxy dict -> Proxy m -> Proxy sp -> STrans q m sp xs (Eval (funcData sp xs)) funcData a
+  reifyTrans :: Proxy funcData -> Proxy dict -> STrans q m sp xs (Eval (funcData sp xs)) funcData a
 
 newtype STransPar q m sp xs rs_ex func a b = STransPar {getTrans :: b -> STrans q m sp xs rs_ex func a}  
 class ToTransPar (funcData :: * -> [*] -> Exp ([*],[*])) dict q m sp (xs :: [*]) a b where
-  toTransPar :: Proxy funcData -> Proxy dict -> Proxy m -> Proxy sp -> STransPar q m sp xs (Eval (funcData sp xs)) funcData a b
+  reifyTransPar :: Proxy funcData -> Proxy dict -> STransPar q m sp xs (Eval (funcData sp xs)) funcData a b
 
 instance 
   ( Request m (NamedRequest TerminateRes name) (VWrap xs NamedTupleClr)
@@ -58,10 +64,7 @@ instance
   , KnownSymbol name
   , SplicC sp rs ex zs
   ) => ToTrans (ClearAllFunc (name::Symbol)) dict q m sp xs () where
-  toTrans _ _ _ _ =
-    let named :: Named name
-        named = Named 
-     in ClearAllTrans named
+  reifyTrans _ _ = ClearAllTrans (Named @name)   
 
 instance 
   ( Request m (NamedRequest req name) (VWrap xs NamedTuple)
@@ -72,10 +75,7 @@ instance
   , SplicC sp rs ex zs
   , GetInstance req
   ) => ToTrans (InvokeAllFunc req (name :: Symbol)) dict q m sp xs () where 
-  toTrans _ _ _ _ =
-    let named :: Named name
-        named = Named 
-    in InvokeAllTrans named getInstance
+  reifyTrans _ _ = InvokeAllTrans (Named @name) getInstance   
 
 instance 
   ( MkRes m resPars
@@ -89,17 +89,14 @@ instance
   , IsTypeUniqueList name xs 
   , GetInstance resPars
   ) => ToTrans (NewResFunc resPars name m) dict q m sp xs () where
-  toTrans _ _ _ _ =     
-    let named :: Named name
-        named = Named 
-    in NewResTrans named getInstance
+  reifyTrans _ _ = NewResTrans (Named @name) getInstance   
 
 instance 
   ( Transition m (TransWrap xs) 
   , SplicC sp rs ex zs
   , zs ~ NextStates (TransWrap xs)
   ) => ToTrans GetNextAllFunc dict (ContT Bool) m sp xs () where
-  toTrans _ _ _ _ =  GetNextAllTrans   
+  reifyTrans _ _ = GetNextAllTrans   
        
 instance 
   ( ex_un ~ Union ex1 ex2
@@ -112,21 +109,18 @@ instance
   , ToTrans f_b dict q m sp rs1 b
   , ComposeFam' (IsIDFunc f_a) f_a f_b sp as ~ '(rs2,ex_un)
   ) => ToTrans (ComposeFunc f_a f_b) dict q m sp as b where 
-  toTrans _ px_dict px_m px_sp =   
-    let px_a :: Proxy f_a
-        px_a = Proxy  
-        px_b :: Proxy f_b
-        px_b = Proxy  
-    in ComposeTrans (toTrans px_a px_dict px_m px_sp) (toTrans px_b px_dict px_m px_sp)     
+  reifyTrans _ _ = 
+    let t1 :: STrans q m sp as (Eval (f_a sp as)) f_a ()
+        t1 = reifyTrans (Proxy @f_a) (Proxy @dict) 
+        t2 :: STrans q m sp rs1 (Eval (f_b sp rs1)) f_b b
+        t2 = reifyTrans (Proxy @f_b) (Proxy @dict)
+    in ComposeTrans t1 t2  
 
 instance 
   ( --Eval (func sp xs) ~ '(xs, '[]) 
-     TransDict dict keyName a
+     TransDict q m dict keyName a
   ) => ToTrans (DictFunc keyName) dict q m sp xs a where 
-  toTrans _ px_dict px_m px_sp =   
-    let namedKey :: Named keyName
-        namedKey = Named
-    in DictTrans px_dict namedKey    
+  reifyTrans _ _ = DictTrans (Proxy @dict) (Named @keyName)  
 
 instance 
   ( ex_un ~ Union ex1 ex2 
@@ -139,17 +133,61 @@ instance
   , ToTransPar f_b dict q m sp rs1 b a
   , ComposeFam' (IsIDFunc f_a) f_a f_b sp as ~ '(rs2,ex_un)
   ) => ToTrans (BindFunc f_a f_b) dict q m sp as b where 
-    toTrans _ px_dict px_m px_sp =   
-      let px_a :: Proxy f_a
-          px_a = Proxy  
-          px_b :: Proxy f_b
-          px_b = Proxy
-          transA :: STrans q m sp as '(rs1, ex1) f_a a  
-          transA = toTrans px_a px_dict px_m px_sp
-          transB :: STransPar q m sp rs1 '(rs2, ex2)  f_b b a
-          transB = toTransPar px_b px_dict px_m px_sp
+    reifyTrans _ _ =   
+      let
+        transA :: STrans q m sp as '(rs1, ex1) f_a a  
+        transA = reifyTrans (Proxy @f_a) (Proxy @dict)  
+        transB :: STransPar q m sp rs1 '(rs2, ex2)  f_b b a
+        transB = reifyTransPar (Proxy @f_b) (Proxy @dict)
       in BindTrans transA (getTrans transB)     
+  
+instance 
+  ( ListSplitter sp1 xs
+  , xs_sub ~ ListSplitterRes sp1 xs
+  , ex_sub ~ FilterList xs_sub xs 
+  , VariantSplitter xs_sub ex_sub xs
+  , rs1 ~ Union rs_sub ex_sub  
+  , Liftable rs_sub rs1
+  , Liftable ex_sub rs1
+  , GetInstance sp1
+  , ToTrans f_sub dict q m sp xs_sub ()
+  , Eval (f_sub sp xs_sub) ~ '(rs_sub, ex) -- assert
+  ) => ToTrans (CaptureFunc sp1 f_sub) dict q m sp xs () where  
+    reifyTrans _ _  =
+      let transSub :: STrans q m sp xs_sub '(rs_sub, ex) f_sub ()  
+          transSub = reifyTrans (Proxy @f_sub) (Proxy @dict)
+      in CaptureTrans getInstance transSub  
+          
 
+instance       
+  ( sp2 ~ (sp :&& sp1) 
+  , SplicC sp1 xs_sub ex_sub xs
+  , zs ~ Union rs_sub (Union ex_sub ex)
+  , Liftable ex zs
+  , Liftable ex_sub zs
+  , Liftable rs_sub zs
+  , SplicC sp rs ex1 zs
+  , '(rs,ex1) ~ ListSplitterRes2 sp zs
+  , GetInstance sp1
+  , ToTrans f_sub dict q m sp2 (ListSplitterRes sp1 xs) ()
+  , Eval (f_sub (sp :&& sp1) xs_sub) ~ '(rs_sub, ex) --assert
+  , ListSplitterRes sp (UnionTuple (UnionRs (Eval (f_sub (sp :&& sp1) xs_sub)) ex_sub)) ~ rs
+  , FilterList rs (UnionTuple (UnionRs (Eval (f_sub (sp :&& sp1) xs_sub)) ex_sub)) ~ ex1
+  ) => ToTrans (EmbedFunc sp1 f_sub) dict q m sp xs () where 
+    reifyTrans _ _  =
+      let transSub :: STrans q m (sp :&& sp1) xs_sub '(rs_sub, ex) f_sub ()  
+          transSub = reifyTrans (Proxy @f_sub) (Proxy @dict)
+      in EmbedTrans getInstance transSub  
+    
+instance       
+  ( Eval (f sp xs) ~ '(xs,ex)
+  , ToTrans f dict q m sp xs ()
+  ) => ToTrans (ForeverFunc f) dict q m sp xs () where
+    reifyTrans _ _  =
+      let transBody :: STrans q m sp xs '(xs, ex) f ()    
+          transBody = reifyTrans (Proxy @f) (Proxy @dict)
+      in ForeverTrans transBody  
+    
 instance 
   ( Request m (NamedRequest req name) (VWrap xs NamedTuple)
   , Show req
@@ -158,21 +196,108 @@ instance
   -- , WhenStuck (ReqResult (NamedRequest req name) (VWrap xs NamedTuple)) (DelayError ('Text "No request supported detected"))
   , SplicC sp rs ex zs
   ) => ToTransPar (InvokeAllFunc req (name :: Symbol)) dict q m sp xs () req where 
-  toTransPar _ _ _ _ =
-    let named :: Named name
-        named = Named 
-    in STransPar (InvokeAllTrans named)
+  reifyTransPar _ _  = STransPar (InvokeAllTrans (Named @name))
     
+instance 
+  ( Liftable xs rs
+  ) => ToTrans (ConstFunc rs) dict q m sp xs () where
+    reifyTrans _ _  = ExtendTo (Proxy @rs)
+
+instance 
+  ( Liftable xs rs
+  , rs ~ First (TransformLoop sp xs f)
+  , Eval (f sp xs) ~ '(bs, ex)
+  , ToTrans f dict q m sp xs ()
+  ) => ToTrans (ExtendForLoopFunc f) dict q m sp xs () where
+    reifyTrans _ _  =
+      let transBody :: STrans q m sp xs '(bs,ex) f ()      
+          transBody = reifyTrans (Proxy @f) (Proxy @dict)
+      in ExtendForLoop transBody  
+  
+instance 
+  ( Liftable rs xs
+  , ToTrans f dict q m sp xs ()
+  , '(rs, ex) ~ (Eval (f sp xs))
+  ) => ToTrans (AlignFunc f) dict q m sp xs () where
+    reifyTrans _ _  =
+      let transBody :: STrans q m sp xs '(rs, ex) f ()      
+          transBody = reifyTrans (Proxy @f) (Proxy @dict)
+      in AlignTrans transBody  
 --
 buildTrans :: forall d f q m sp xs a. ToTrans f d q m sp xs a => STrans q m sp xs (Eval (f sp xs)) f a
-buildTrans =
-  let px_f :: Proxy f
-      px_f = Proxy
-      px_m :: Proxy m
-      px_m = Proxy
-      px_sp :: Proxy sp
-      px_sp = Proxy
-      px_d :: Proxy d
-      px_d = Proxy
-  in toTrans px_f px_d px_m px_sp    
+buildTrans = reifyTrans (Proxy @f) (Proxy @d)
+
+-- aliases
+type On sp1 f_sub = CaptureFunc sp1 f_sub
+type Try sp1 f_sub = EmbedFunc sp1 f_sub
+type Next = On Dynamics GetNextAllFunc
+type Invoke name req = InvokeAllFunc req name 
+type name :-> req = InvokeAllFunc req name
+infixr 5 :->
+
+type NewRes name resPars m = NewResFunc resPars name m  
+  
+type HandleLoop f =
+ Try Dynamics 
+  ( ExtendForLoopFunc f 
+  :>> ForeverFunc (AlignFunc f)
+  ) 
+
+type PumpEvents = HandleLoop Next 
+type HandleEvents handler = HandleLoop (handler :>> Next)  
+
+type family ClearResourcesFam (names :: [Symbol]) where
+  ClearResourcesFam '[name] = ClearAllFunc name
+  ClearResourcesFam (name ': rest) = ClearAllFunc name :>> ClearResourcesFam rest
+
+-- type instance Eval (ClearResources names sp xs) = Eval ((ClearResourcesFam names) sp xs)
+
+type ClearResources (names :: [Symbol]) = ClearResourcesFam names
+
+data ClearResourcesExcept :: [Symbol] ->  * -> [*] -> Exp ([*],[*])
+type instance Eval (ClearResourcesExcept names sp xs) = Eval (ClearResourcesFam (FilterList names (GetAllNames xs)) sp xs)
+
+instance 
+  ( ToTrans (ClearResourcesFam (FilterList names (GetAllNames xs))) dict q m sp xs()
+  ) => ToTrans (ClearResourcesExcept names) dict q m sp xs () where
+  reifyTrans _ _ = 
+    let px_t :: Proxy (ClearResourcesFam (FilterList names (GetAllNames xs)))
+        px_t = Proxy
+    in AppWrapperTrans $ MkApp $ reifyTrans px_t (Proxy @dict)     
+  
+--
+-- type LogFunc label xs = CaptureFunc(By "log") (InvokeAllFunc (LogState label xs) "log")
+type LogFunc label xs = InvokeAllFunc (LogState label xs) "log"
+
+data LoggerFunc :: Symbol ->  * -> [*] -> Exp ([*],[*])
+type instance Eval (LoggerFunc label sp xs) = Eval (LogFunc label (ReqResult (NamedRequest TerminateRes "log") (VWrap xs NamedTupleClr)) sp xs)
+
+logState :: 
+  ( KnownSymbol label
+  , ys ~ ReqResult (NamedRequest TerminateRes "log") (VWrap xs NamedTupleClr)
+  , Request m (NamedRequest (LogState label ys) "log") (VWrap xs NamedTuple)
+  , zs ~ ReqResult (NamedRequest (LogState label ys) "log") (VWrap xs NamedTuple)
+  , SplicC sp rs ex zs
+  ) => Named label -> STrans q m sp xs (Eval ((LogFunc label ys) sp xs)) (LogFunc label ys) ()
+logState _labeled = do
+  let logStateReq :: LogState label xs
+      logStateReq = LogState
+  invoke #log logStateReq    
+
+
+instance 
+  ( KnownSymbol label
+  , ys ~ ReqResult (NamedRequest TerminateRes "log") (VWrap xs NamedTupleClr)
+  , Request m (NamedRequest (LogState label ys) "log") (VWrap xs NamedTuple)
+  , zs ~ ReqResult (NamedRequest (LogState label ys) "log") (VWrap xs NamedTuple)
+  , SplicC sp rs ex zs
+  ) => ToTrans (LoggerFunc label) dict q m sp xs () where
+    reifyTrans _ _ = AppWrapperTrans $ MkApp $ logState (Named @label)
+
+type Trace label = On (By "log") (LoggerFunc label)
+type FuncWithTrace m func = (NewResFunc StateLoggerRes "log" m) :>> func
+type EvalTransFuncWithTrace m func  = Eval (FuncWithTrace m (func m) NoSplitter '[()])
+type ClearAllResourcesButTrace = ClearResourcesExcept '["log"]
+
+--type EvalTransFunc m func = Eval (func m NoSplitter '[()])
 

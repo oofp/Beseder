@@ -113,15 +113,11 @@ type family UnionRs (bs_ex :: ([*],[*]))  (ex_a :: [*]) :: ([*],[*]) where
 data CaptureFunc :: * -> (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp ([*],[*])
 type instance Eval (CaptureFunc sp1 f_sub sp xs) = CaptureFam (ListSplitterRes2 sp1 xs) f_sub sp xs
 
-type On sp1 f = CaptureFunc sp1 f
-
 type family UnionTuple xs_ex :: [*] where
   UnionTuple '(xs,ex) = Union xs ex
 
 data EmbedFunc :: * -> (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp ([*],[*])
 type instance Eval (EmbedFunc sp1 f_sub sp xs) = ListSplitterRes2 sp (UnionTuple (CaptureFam (ListSplitterRes2 sp1 xs) f_sub (sp :&& sp1) xs))
-
-type Try sp1 f = EmbedFunc sp1 f
 
 data IDFunc :: * -> [*] -> Exp ([*],[*])
 type instance Eval (IDFunc sp xs) = '(xs,'[])
@@ -145,6 +141,9 @@ type instance Eval (ForeverFunc f sp xs) = ForeverFam (Eval (f sp xs)) sp xs
 
 data AlignFunc :: (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp ([*],[*])
 type instance Eval (AlignFunc f sp xs) = '(xs, Second (Eval (f sp xs))) 
+
+data ExtendForLoopFunc :: (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp ([*],[*])
+type instance Eval (ExtendForLoopFunc f sp xs) = '(First (TransformLoop sp xs f), '[]) 
 
 type family First ab  where
   First '(a,b) = a
@@ -175,7 +174,7 @@ type SplicC sp xs ex zs =
 --class (Eval (func sp xs) ~ '(xs,'[])) => TransDict dict (key :: Symbol) q m sp xs (func :: * -> [*] -> ([*],[*]) -> *) a | dict key -> func where -- | dict key -> q m sp xs func a where
 --  getTransFromDict  :: Proxy dict -> Named key -> STrans q m sp xs '(xs,'[]) func a
 
-class TransDict dict (key :: Symbol) (a :: *) | dict key -> a where -- q m sp xs (func :: * -> [*] -> ([*],[*]) -> *) a | dict key -> func where -- | dict key -> q m sp xs func a where
+class TransDict (q :: (* -> *) -> * -> *) (m :: * -> *) dict (key :: Symbol) (a :: *) | q m dict key -> a where 
   getTransFromDict  :: Proxy dict -> Named key -> STransApp q m sp xs '(xs,'[]) a
 
 --
@@ -330,6 +329,10 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
   ExtendTo :: 
     ( Liftable xs rs
     ) => Proxy rs -> STrans q m sp xs '(rs,ex) (ConstFunc rs) () 
+  ExtendForLoop :: 
+    ( rs ~ First (TransformLoop sp xs f)
+    , Liftable xs rs
+    ) => STrans q m sp as '(bs,ex) f () -> STrans q m sp xs '(rs,'[]) (ExtendForLoopFunc f) () 
   Extend :: 
     ( Liftable xs rs
     ) => STrans q m sp xs '(rs,'[()]) (ConstFunc rs) () 
@@ -355,9 +358,12 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     ) => Bool -> STrans q m sp xs '(rs1,ex1) f1 ()  -> STrans q m sp xs '(rs2,ex2) f2 () -> STrans q m sp xs '(rs, ex) (IfElseFunc f1 f2) ()  
   LiftIOTrans :: MonadIO m => IO a -> STrans q m sp xs '(xs, '[]) IDFunc a
   DictTrans ::
-    ( TransDict dict keyName a
+    ( TransDict q m dict keyName a
     , Eval (DictFunc name sp xs) ~ '(xs,'[])
     ) => Proxy dict -> Named keyName -> STrans q m sp xs '(xs, '[]) (DictFunc keyName) a
+  AppWrapperTrans ::
+    ( Eval (f sp xs) ~ rs_ex
+    ) => STransApp q m sp xs rs_ex a -> STrans q m sp xs rs_ex f a 
 
 splitV_ :: 
   ( ListSplitter sp ys
@@ -533,6 +539,7 @@ applyTrans (AlignTrans t) sp curSnap = do
     Right (v_xs,()) -> return $ Right (liftVariant v_xs, ())
     Left v_ex -> return $ Left v_ex
 applyTrans (ExtendTo _) sp curSnap = fmap (\v-> Right (liftVariant v,())) curSnap
+applyTrans (ExtendForLoop _) sp curSnap = fmap (\v-> Right (liftVariant v,())) curSnap
 applyTrans Extend sp curSnap = fmap (\v-> Right (liftVariant v,())) curSnap
 applyTrans (GetTrans f) sp curSnap = fmap (\v-> Right (v,(f (variantToValue v)))) curSnap
 applyTrans (GetAllTrans named f) sp curSnap = fmap (\v-> Right (v,(f (getTypeByNameVar named v)))) curSnap
@@ -556,7 +563,8 @@ applyTrans (IffTrans fl t1) sp curSnap =
     else 
       fmap (\v-> Right (liftVariant v,())) curSnap
 applyTrans (DictTrans dict named) sp curSnap = applyTransApp (getTransFromDict dict named) sp curSnap
-      
+applyTrans (AppWrapperTrans app) sp curSnap = applyTransApp app sp curSnap
+       
 liftRes :: (Liftable rs1 rs, Liftable ex1 ex) => Either (V ex1) (V rs1,()) -> Either (V ex) (V rs,())
 liftRes (Right (v_rs1, ())) = Right $ (liftVariant v_rs1, ())        
 liftRes (Left v_ex1) = Left $ liftVariant v_ex1

@@ -21,6 +21,7 @@ library
                      , Beseder.Base.Common
                      , Beseder.Resources.State.MonoStateRes
                      , Beseder.Resources.State.DataRes
+                     , Beseder.Resources.State.StateLogger  
                      , Beseder.Resources.Timer
                      , Beseder.Resources.Comm
                      , Beseder.Misc.Misc

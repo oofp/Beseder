@@ -374,3 +374,12 @@ instance (TT x (TargetByName name x), GetTarget (TargetByName name x) (TypeByNam
       Right x -> getByName named x
       Left v_xs -> getTypeByNameVar named v_xs 
 
+
+type family GetNames (t :: *) :: [Symbol] where
+  GetNames () = '[]
+  GetNames (St a name) = '[name]
+  GetNames ((St a name), rest) = name ': GetNames rest
+
+type family GetAllNames (lst :: [*]) :: [Symbol] where
+  GetAllNames '[] = '[]    
+  GetAllNames (x ': xs) = Union (GetNames x) (GetAllNames xs)    

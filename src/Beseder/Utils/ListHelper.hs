@@ -18,7 +18,7 @@ module Beseder.Utils.ListHelper where
 import           Haskus.Utils.Types.List
 import           Protolude
 
-type family FilterList (xs :: [*]) (ys :: [*]) :: [*] where
+type family FilterList (xs :: [k]) (ys :: [k]) :: [k] where
   FilterList '[] ys = ys
   FilterList (x ': xtail) ys = FilterList xtail (Filter x ys)
 

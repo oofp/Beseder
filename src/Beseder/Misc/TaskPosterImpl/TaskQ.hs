@@ -17,6 +17,8 @@ module Beseder.Misc.TaskPosterImpl.TaskQ where
 import Protolude    
 import Beseder.Base.Base
 import Beseder.Base.Common
+import Beseder.Base.Control hiding ((>>), return)
+import Beseder.Base.Internal.STransFunc
 import Beseder.Misc.TaskPosterImpl.CallbackQueue
 import Control.Concurrent.STM.TChan
 import Control.Monad.Cont
@@ -58,3 +60,5 @@ runSyncTrans = runSyncFlow . execTrans
 runAsyncApp ::  ExcecutableApp (ContT Bool) TaskQ -> IO ()
 runAsyncApp = runAsyncFlow . execApp 
 
+reifyAsyncTrans :: forall d f xs a. ToTrans f d (ContT Bool) TaskQ NoSplitter xs a => Proxy f -> Proxy d -> STrans (ContT Bool) TaskQ NoSplitter xs (Eval (f NoSplitter xs)) f a
+reifyAsyncTrans px_f px_d = reifyTrans px_f px_d

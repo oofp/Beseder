@@ -87,7 +87,7 @@ invoke ::
   , Show req
   , KnownSymbol name
   , zs ~ ReqResult (NamedRequest req name) (VWrap xs NamedTuple)
-  , WhenStuck (ReqResult (NamedRequest req name) (VWrap xs NamedTuple)) (DelayError ('Text "No request supported detected" ))
+  -- , WhenStuck (ReqResult (NamedRequest req name) (VWrap xs NamedTuple)) (DelayError ('Text "No request supported detected" ))
   , SplicC sp rs ex zs
   ) => Named name -> req -> STrans q m sp xs '(rs,ex) (InvokeAllFunc req name) ()
 invoke = InvokeAllTrans
@@ -298,6 +298,10 @@ handleLoop ::
   ( loopRes ~ First (TransformLoop sp xs f)
   , Eval (f sp loopRes) ~ '(rs,ex)
   , Liftable rs loopRes 
+  , MonadTrans q
+  , Monad (q m)
+  , Liftable xs (First (TransformLoop' sp (Eval (f sp xs)) '(xs, '[]) f))
+  , Liftable ex ex
   , _
   --, LiftVariant ex ex
   --, IsSubset '[] ex ~ 'True
@@ -310,6 +314,20 @@ handleLoop hnd = do
   Beseder.Base.Internal.STransDo.forever $ do
     AlignTrans hnd
 
+handleLoop' ::
+  ( loopRes ~ First (TransformLoop sp xs f)
+  , Eval (f sp loopRes) ~ '(rs,ex)
+  , Liftable rs loopRes 
+  , MonadTrans q
+  , Monad (q m)
+  , Liftable xs loopRes
+  , _
+  ) => STrans q m sp loopRes '(rs,ex) f () -> STrans q m sp xs '(('[]), ex) _ ()
+handleLoop' hnd = do
+  ExtendForLoop hnd
+  Beseder.Base.Internal.STransDo.forever $ do
+    AlignTrans hnd
+  
 handleLoopDry ::
   ( loopRes ~ First (TransformLoop sp xs f)
   , Eval (f sp loopRes) ~ '(rs,ex)
@@ -321,7 +339,7 @@ handleLoopDry hnd = do
   spx <- WhatSplitterTrans
   loopState <- getLoopFuncRes px spx hnd 
   ExtendTo loopState
-      
+
 pumpEvents' ::
   ( f ~ GetNextAllFunc
   , loopRes ~ First (TransformLoop sp xs f)
