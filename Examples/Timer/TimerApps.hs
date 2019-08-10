@@ -80,6 +80,7 @@ timerHello timeoutSec1 = MkApp $ do
 -- runAsyncTrans $ twoTimersOn 4 7  
 twoTimersOn :: TaskPoster m => Int -> Int -> AsyncTransApp m _ _
 twoTimersOn timeoutSec1 timeoutSec2 = do
+  liftIO $ putStrLn ("Entered twoTimersOn" :: Text)
   newRes #t1 TimerRes 
   invoke #t1 (StartTimer timeoutSec1)  
   withRes #t2 TimerRes
@@ -89,6 +90,7 @@ twoTimersOn timeoutSec1 timeoutSec2 = do
       liftIO $ putStrLn ("Timer1 triggered"::Text)
       invoke #t2 StopTimer 
   clearAllResources
+  liftIO $ putStrLn ("Leaving twoTimersOn" :: Text)
 
 -- runAsyncTrans $ timersPump 4 7 7 9 
 {- 

@@ -43,6 +43,7 @@ import           Beseder.Base.Internal.TupleHelper
 import           Beseder.Base.Internal.SplitOps
 import           Beseder.Base.Internal.STrans
 import           Beseder.Base.Internal.STransDo
+import           qualified Beseder.Base.Internal.STransDo as SDo
 import           Beseder.Utils.ListHelper
 import           Beseder.Utils.VariantHelper
 import           Beseder.Base.Internal.SplitFlow
@@ -293,6 +294,15 @@ instance
   , SplicC sp rs ex zs
   ) => ToTrans (LoggerFunc label) dict q m sp xs () where
     reifyTrans _ _ = AppWrapperTrans $ MkApp $ logState (Named @label)
+
+
+data PutStrLn :: Symbol ->  * -> [*] -> Exp ([*],[*])
+type instance Eval (PutStrLn txt sp xs) = '(xs, '[])
+instance 
+  ( KnownSymbol txt
+  , MonadIO m
+  ) => ToTrans (PutStrLn txt) dict q m sp xs () where
+    reifyTrans _ _ = AppWrapperTrans $ MkApp $ SDo.liftIO $ putStrLn (symbolVal (Proxy @txt))
 
 type Trace label = On (By "log") (LoggerFunc label)
 type FuncWithTrace m func = (NewResFunc StateLoggerRes "log" m) :>> func

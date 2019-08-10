@@ -93,7 +93,6 @@ type TimerHandlingFunc m =
     ) 
   :>> Trace "after pump"
   :>> ClearAllResourcesButTrace
-  
 
 -- :kind! EvalTransFunc IO TimerBasicFunc
 -- :kind! EvalTransFuncWithTrace IO TimerBasicFunc

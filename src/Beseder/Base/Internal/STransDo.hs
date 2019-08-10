@@ -146,7 +146,7 @@ clearAllResources =
   ) => STrans q m sp as '(rs1,ex1) f_a () -> STrans q m sp rs1 '(rs2,ex2) f_b b -> STrans q m sp as '(rs2,ex_un) (ComposeFunc f_a f_b) b
 (>>) = ComposeTrans  
 
-infixr 1 >>
+infixl 1 >>
 
 return :: a -> STrans q m sp xs '(xs, '[]) IDFunc a 
 return = ReturnTrans

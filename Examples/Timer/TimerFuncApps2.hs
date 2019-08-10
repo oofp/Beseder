@@ -55,13 +55,16 @@ type TimerBasicFunc m =
 
 type InitAndStartTimer name m = 
   NewResFunc TimerRes name m
+  :>> PutStrLn name
   :>> DictFunc "getStartTimer" :>>= InvokeAllFunc StartTimer name
 
 type TimerBasicFunc2 m = 
-  InitAndStartTimer "t1" m
+  PutStrLn "Entered TimerBasicFunc2"
+  :>> InitAndStartTimer "t1" m
   :>> InitAndStartTimer "t2" m
   :>> Trace "log0"
   :>> Next 
+  :>> PutStrLn "After 1st Next"
   :>> On ("t1" :? IsTimerArmed)  
     (   Trace "log1a"
     :>> "t1" :-> StopTimer
@@ -71,6 +74,7 @@ type TimerBasicFunc2 m =
   :>> Next
   :>> Trace "log2"
   :>> ClearAllResourcesButTrace
+  :>> PutStrLn "Leaving TimerBasicFunc2"
   
 
 -- :kind! EvalTransFunc IO TimerBasicFunc

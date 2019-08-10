@@ -92,7 +92,7 @@ data ComposeFunc :: (* -> [*] -> ([*],[*]) -> *) ->  (* -> [*] -> ([*],[*]) -> *
 type instance Eval (ComposeFunc f_a f_b sp as) = ComposeFam' (IsIDFunc f_a) f_a f_b sp as -- ComposeFam (Eval (f_a sp as)) sp f_b
 
 type (:>>) f_a f_b = ComposeFunc f_a f_b
-infixr 1 :>>
+infixl 1 :>>
 
 type (:>>=) f_a f_b = BindFunc f_a f_b
 infixr 2 :>>=
@@ -484,8 +484,9 @@ applyTrans (BindDirTrans t1 f_t2) sp curSnap =
   applyTrans t1 sp curSnap >>= (\(Right (v_as,a)) -> applyTrans (f_t2 a) sp (return v_as))
 applyTrans (ReturnTrans a) sp curSnap = fmap (\v_xs -> Right (v_xs,a)) curSnap
 applyTrans (LiftIOTrans io_a) sp curSnap = do 
+  v_xs <- curSnap
   a <- lift $ liftIO io_a 
-  fmap (\v_xs -> Right (v_xs,a)) curSnap
+  return $ Right (v_xs, a)
 applyTrans (CaptureTrans sp1 t) sp curSnap = do 
   v_xs <- curSnap
   case splitV sp1 v_xs of
@@ -548,8 +549,9 @@ applyTrans (OpResAllTrans named f) sp curSnap = do
   op_res <- lift $ f (getTypeByNameVar named v_xs)
   return $ Right (v_xs, op_res)
 applyTrans (OpAllTrans m_a) sp curSnap = do 
+  v_xs <- curSnap
   a <- lift m_a
-  fmap (\v_xs -> Right (v_xs,a)) curSnap
+  return $ Right (v_xs,a)
 applyTrans (IfElseTrans fl t1 t2) sp curSnap = 
   if fl
     then 
