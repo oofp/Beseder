@@ -57,7 +57,7 @@ instance
   ( Monad m
   , MonoStateProv p s m
   ) => MkRes m (StateRes p s) where
-  type ResSt (StateRes p s) = MonoStateData p s 
+  type ResSt m (StateRes p s) = MonoStateData p s m 
   mkRes p = createState p   
 
 type instance StateTrans (MonoState p s m name) = 'Static

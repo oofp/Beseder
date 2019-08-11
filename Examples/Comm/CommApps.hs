@@ -32,9 +32,6 @@ import           Protolude                    hiding (Product, handle, return, g
                                                (>>), (>>=), forever, until,try,on)
 import           Control.Monad.Cont (ContT)                                               
 import           Beseder.Base.Control                                               
-import           Beseder.Base.Base
-import           Beseder.Base.Common
-import           Beseder.Misc.Misc
 import           Beseder.Resources.Comm 
 import           Beseder.Resources.State.DataRes
 import           Data.String 
@@ -56,7 +53,7 @@ proxyApp :: forall m i1 i2 o1 o2 e1 e2 comm1 comm2.
 proxyApp comRes1 comRes2 i1o2 i2o1 contPred = MkApp $ do
   newRes #com1 comRes1
   newRes #com2 comRes2
-  withRes #flCont initAsTrue
+  newRes #flCont initAsTrue
   try @(("com1" :? IsCommAlive) :&& ("com2" :? IsCommAlive) :&& ("flCont" :? IsTrue)) $ do
     handleEvents $ do
       on @("com1" :? IsMessageReceived) $ do  

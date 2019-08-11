@@ -52,7 +52,7 @@ data WithResAllFunc :: res -> * -> [*] -> Exp ([*],[*])
 type instance Eval (WithResAllFunc res sp xs) = ListSplitterRes2 sp (AppendToTupleList xs res)
 
 data NewResFunc :: (resPars :: *) -> name -> (* -> *) -> * -> [*] -> Exp ([*],[*])
-type instance Eval (NewResFunc resPars name m sp xs) = ListSplitterRes2 sp (AppendToTupleList xs (St (ResSt resPars m) name))
+type instance Eval (NewResFunc resPars name m sp xs) = ListSplitterRes2 sp (AppendToTupleList xs (St (ResSt m resPars) name))
 
 data InvokeAllFunc :: (req :: *) -> name -> * -> [*] -> Exp ([*],[*])
 type instance Eval (InvokeAllFunc req name sp xs) = ListSplitterRes2 sp (ReqResult (NamedRequest req name) (VWrap xs NamedTuple))
@@ -204,7 +204,7 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     ) => Named name -> resFact -> STrans  q m sp xs '(rs,ex) (WithResAllFunc res) ()
   NewResTrans ::
     ( MkRes m resPars
-    , res ~ St (ResSt resPars m) name
+    , res ~ St (ResSt m resPars) name
     , zs ~ AppendToTupleList xs res
     , SplicC sp rs ex zs
     , Show resPars
@@ -651,4 +651,5 @@ applyTransApp (MkApp trans) = applyTrans trans
 execApp ::  (MonadTrans q, Monad (q m)) => ExcecutableApp q m  -> q m () 
 execApp (MkApp t) = execTrans t  
     
+
 

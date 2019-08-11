@@ -80,7 +80,7 @@ instance
 
 instance 
   ( MkRes m resPars
-  , res ~ St (ResSt resPars m) name
+  , res ~ St (ResSt m resPars) name
   , zs ~ AppendToTupleList xs res
   , SplicC sp rs ex zs
   , Show resPars

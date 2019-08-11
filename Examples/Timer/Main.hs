@@ -27,12 +27,11 @@
 
 module  Main where
 
-import           Protolude                    hiding (Product, handle, return, gets, lift, liftIO,
-                                               (>>), (>>=), forever, until,try,on)
-import           Beseder.Base.Control                                               
+import           Protolude                                                           
 import           Beseder.Base.Common
 import           Beseder.Misc.Misc
 import           TimerApps
+import           TimerFuncApps2
 
 main :: IO ()
 main = runAsyncApp $ timerHello 10 -- 1 2 3 4

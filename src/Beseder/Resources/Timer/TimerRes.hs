@@ -64,12 +64,11 @@ type TimerArmed m name = St (TimerArmedEvData m) name
 type TimerTriggered m name = St (TimerTriggeredEvData m) name
 type TimerStopped m name = St (TimerStoppedEvData m) name
 
---instance (MonadIO m, TimerProv m, res ~ TimerNotArmed m name) => CreateRes m name TimerRes (V '[res]) where -- TimerNotArmed m name])  where
 instance (MonadIO m, TimerProv m) => CreateRes m name TimerRes (V '[TimerNotArmed m name])  where
   createRes _nm timer = fmap (variantFromValue . St) (createTimer timer)  
 
 instance (MonadIO m, TimerProv m) => MkRes m TimerRes where
-  type ResSt TimerRes = TimerNotArmedEvData
+  type ResSt m TimerRes = TimerNotArmedEvData m
   mkRes timer = createTimer timer  
 
 type instance StateTrans (TimerNotArmedEvData m) = 'Static

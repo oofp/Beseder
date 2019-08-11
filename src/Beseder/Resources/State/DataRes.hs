@@ -34,8 +34,14 @@ newtype D a = D a deriving (Show, Eq)
 
 newtype InitData a = InitData a deriving (Show, Eq)
 
-instance (MonadIO m) => CreateRes m name (InitData a) (V '[(St (D a) name)]) where
+instance (Monad m) => CreateRes m name (InitData a) (V '[(St (D a) name)]) where
   createRes _named  (InitData a) = return (variantFromValue $ St (D a))
+
+instance 
+  ( Monad m
+  ) => MkRes m (InitData a) where
+  type ResSt m (InitData a) = D a  
+  mkRes (InitData a) = return $ D a   
 
 newtype SetData a = SetData a deriving (Show, Eq)
 data ModifyData a b = ModifyData (a -> b) 
@@ -44,10 +50,10 @@ instance Show (ModifyData a b) where
   show _ = "Modify"
 
 
-instance (MonadIO m) => Request m (SetData a) (St (D b) name) where
+instance (Monad m) => Request m (SetData a) (St (D b) name) where
   type ReqResult (SetData a) (St (D b) name) = '[St (D a) name]
   request (SetData a) (St _) = return $ variantFromValue (St (D a))
-instance (MonadIO m) => Request m (ModifyData a b) (St (D a) name) where
+instance (Monad m) => Request m (ModifyData a b) (St (D a) name) where
   type ReqResult (ModifyData a b) (St (D a) name) = '[St (D b) name]
   request (ModifyData f) (St (D a)) = return $ variantFromValue (St (D (f a)))
   
@@ -56,7 +62,7 @@ getData (St (D a)) = a
   
 type StD a name = St (D a) name 
 type instance StateTrans (St (D a) name) = 'Static
-instance (MonadIO m) => TermState m (St (D a) name) where
+instance Monad m => TermState m (St (D a) name) where
   terminate _ = return ()
 
 --

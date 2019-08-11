@@ -487,7 +487,7 @@ andMkRes ::
   , Monad (q m)
   , KnownSymbol name
   , MkRes m resPars
-  , res ~ St (ResSt resPars m) name
+  , res ~ St (ResSt m resPars) name
   , AppendToTuple x res
   , Liftable ys zs
   , Liftable '[AppendToTupleResult x res] zs
@@ -516,7 +516,7 @@ andMkResAll ::
   , Monad (q m)
   , KnownSymbol name
   , MkRes m resFact 
-  , res ~ (St (ResSt resFact m) name)
+  , res ~ (St (ResSt m resFact) name)
   , AppendToTuple (Variant sx) res
   , AppendToTupleResult  (Variant sx) res ~ V ys
   ) => Named name -> resFact -> MFlow q m sx -> MFlow q m ys

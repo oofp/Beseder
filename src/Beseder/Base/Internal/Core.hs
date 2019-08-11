@@ -33,8 +33,8 @@ class (Monad q) => CreateRes q name res state | q name res -> state where
   createRes :: Named name -> res -> q state
 
 class (Monad q) => MkRes q res  where
-  type ResSt res  :: (* -> *) -> *
-  mkRes :: res -> q ((ResSt res) q)
+  type ResSt q res  :: *
+  mkRes :: res -> q (ResSt q res)
 
 class (MonadIO q, StateTrans state1 ~ 'Dynamic) => Transition q state1 where
   type NextStates state1 :: [*]
@@ -55,10 +55,10 @@ class  (Monad q) => Request q req state1 where
   request :: req -> state1 -> q (V (ReqResult req state1))
 
   
-class (MonadIO q, StateTrans state ~ 'Static ) => TermState q state where
+class (Monad q, StateTrans state ~ 'Static ) => TermState q state where
   terminate :: state -> q ()
 
-class (MonadIO q) => ClearableState q state where
+class (Monad q) => ClearableState q state where
   type ClearResult state
   clearState :: state -> q (ClearResult state)
 

@@ -19,7 +19,6 @@ module Beseder.Resources.State.StateLogger
   ) where  
 
 import           Protolude
-import           qualified GHC.Show (Show (..))
 import           Haskus.Utils.Variant
 import           Beseder.Base.Base
 import           Beseder.Base.Common
@@ -37,7 +36,7 @@ instance GetInstance StateLoggerRes where
 instance 
   ( Monad m
   ) => MkRes m (StateLoggerRes) where
-  type ResSt (StateLoggerRes) = LogEntriesList '[] 
+  type ResSt m StateLoggerRes = LogEntriesList '[] m 
   mkRes _ = return LogEntriesList  
 
 type instance StateTrans (LogEntries logEntries m name) = 'Static

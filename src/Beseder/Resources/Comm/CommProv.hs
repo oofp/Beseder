@@ -76,7 +76,7 @@ instance (MonadIO m, CommProv commPars i o e m) => CreateRes m name (CommRes com
   createRes _nm pars = fmap (variantFromValue . St) (createComm pars)  
 
 instance (MonadIO m, CommProv commPars i o e m) => MkRes m (CommRes commPars i o e) where
-  type ResSt (CommRes commPars i o e) = StCommInitiated commPars i o e
+  type ResSt m (CommRes commPars i o e) = StCommInitiated commPars i o e m
   mkRes pars = createComm pars  
     
 type instance StateTrans (CommClosed name commPars i o e m) = 'Static

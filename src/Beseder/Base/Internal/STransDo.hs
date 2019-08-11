@@ -71,7 +71,7 @@ withRes = WithResAllTrans
 
 newRes :: 
   ( MkRes m resPars
-  , res ~ St (ResSt resPars m) name
+  , res ~ St (ResSt m resPars) name
   , zs ~ AppendToTupleList xs res
   , SplicC sp rs ex zs
   , Show resPars
@@ -424,4 +424,5 @@ getLoopFuncRes ::
  , Eval (f sp loopRes) ~ '(rs,ex) 
  ) => Proxy xs -> Proxy sp -> STrans q m sp loopRes '(rs,ex) f () -> STrans q m sp xs '(xs, '[]) IDFunc (Proxy loopRes) -- (First (TransformLoop sp xs f)))
 getLoopFuncRes _ _ _ = return Proxy
+
 
