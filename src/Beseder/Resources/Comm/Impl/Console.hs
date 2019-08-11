@@ -13,6 +13,7 @@
 
 module Beseder.Resources.Comm.Impl.Console 
   ( ConsoleRes
+  , consoleRes
   )
   where
 

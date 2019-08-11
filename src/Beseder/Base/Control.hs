@@ -9,6 +9,9 @@ module Beseder.Base.Control
     , while
     , try
     , on
+    , iff
+    , ifElse
+    , gets
     , termAndClearAllResources 
     , clearAllResources
     , handleEvents

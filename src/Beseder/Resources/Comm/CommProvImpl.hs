@@ -39,8 +39,8 @@ class CommProvImpl commPars m i o e where
 data CommState commPars m i o e = CommState 
   { asyncTask :: Maybe (Async ())
   , commReqs :: Maybe (CommReqs m o)
-  , cb1 :: Maybe (Either (StCommFailed m i o e commPars) (StCommWaitForMsg m i o e commPars)-> m Bool)
-  , cb2 :: Maybe (Either (StCommClosed m i o e commPars) (StCommMsgRcvd m i o e commPars)-> m Bool)
+  , cb1 :: Maybe (Either (StCommFailed commPars i o e m) (StCommWaitForMsg commPars i o e m)-> m Bool)
+  , cb2 :: Maybe (Either (StCommClosed commPars i o e m) (StCommMsgRcvd commPars i o e m)-> m Bool)
   }
 
 setAsyncTask :: TaskPoster m => Async () -> TVar (CommState commPars m i o e) -> m ()
@@ -56,7 +56,7 @@ sendMessage comStTVar o = do
     Nothing -> unexpectedState "commReqs is Nothing at sendMessage"
     Just commRqs -> sendReq commRqs o
   
-cancelComm :: TaskPoster m => TVar (CommState commPars m i o e) -> m (StCommClosed m i o e commPars)
+cancelComm :: TaskPoster m => TVar (CommState commPars m i o e) -> m (StCommClosed commPars i o e m)
 cancelComm comStTVar = do
   commSt <- liftIO $ atomically $ do
     comSt <- readTVar comStTVar
@@ -70,12 +70,12 @@ cancelComm comStTVar = do
     Just asncTask -> void $ liftIO $ async $ cancel asncTask >> putStrLn ("comm cancelled"::Protolude.Text)
   return StCommClosed  
 
-instance (CommProvImpl commPars m i o e, TaskPoster m) => CommProv m i o e commPars where  
-  data StCommInitiated m i o e commPars =  StCommInitiated (TVar (CommState commPars m i o e))
-  data StCommWaitForMsg m i o e commPars = StCommWaitForMsg (TVar (CommState commPars m i o e))
-  data StCommMsgRcvd m i o e commPars = StCommMsgRcvd (TVar (CommState commPars m i o e)) i
-  data StCommClosed m i o e commPars = StCommClosed 
-  data StCommFailed m i o e commPars = StCommFailed e 
+instance (CommProvImpl commPars m i o e, TaskPoster m) => CommProv commPars i o e m where  
+  data StCommInitiated commPars i o e m =  StCommInitiated (TVar (CommState commPars m i o e))
+  data StCommWaitForMsg commPars i o e m = StCommWaitForMsg (TVar (CommState commPars m i o e))
+  data StCommMsgRcvd commPars i o e m = StCommMsgRcvd (TVar (CommState commPars m i o e)) i
+  data StCommClosed commPars i o e m = StCommClosed 
+  data StCommFailed commPars i o e m = StCommFailed e 
   
   createComm (CommRes commPars) = do
     liftIO $ putStrLn ("creatComn entered:"::Text)

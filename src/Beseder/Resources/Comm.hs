@@ -17,6 +17,7 @@ import Beseder.Resources.Comm.CommProv
   , CommFailed 
   , IsMessageReceived
   , IsCommAlive 
+  , IsCommConnected 
   , getCommFailure
   , getIncomingMsg
   ) 
