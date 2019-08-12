@@ -357,7 +357,7 @@ newVWrap _ = VWrap
 
 instance (MonadIO q) => Request q req (VWrap '[] w) where
   type ReqResult req (VWrap '[] w) = '[]
-  request req v_empty = undefined
+  request _req _vempty = undefined
 
 instance 
   ( MonadIO q

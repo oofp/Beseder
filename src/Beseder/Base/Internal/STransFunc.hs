@@ -26,12 +26,8 @@ module Beseder.Base.Internal.STransFunc where
 import           Protolude                    hiding (Product, handle, return, gets, lift, liftIO,
                                                 (>>), (>>=), forever, until,try,on, First)
 import           Control.Monad.Cont (ContT)
-import           Control.Monad.Identity (IdentityT)
 import           Haskus.Utils.Flow
-import           Data.Text
-import           Data.Typeable
 import           GHC.TypeLits
-import           Haskus.Utils.Tuple
 import           Haskus.Utils.Types.List
 import           Haskus.Utils.Variant
 import           Beseder.Base.Internal.Core
@@ -46,8 +42,6 @@ import           Beseder.Base.Internal.STransDo
 import           qualified Beseder.Base.Internal.STransDo as SDo
 import           Beseder.Utils.ListHelper
 import           Beseder.Utils.VariantHelper
-import           Beseder.Base.Internal.SplitFlow
-import           Beseder.Utils.Lst
 import           Type.Errors hiding (Eval,Exp)
 import           Beseder.Resources.State.StateLogger 
 
@@ -198,7 +192,21 @@ instance
   , SplicC sp rs ex zs
   ) => ToTransPar (InvokeAllFunc req (name :: Symbol)) dict q m sp xs () req where 
   reifyTransPar _ _  = STransPar (InvokeAllTrans (Named @name))
-    
+
+instance 
+  ( MkRes m resPars
+  , res ~ St (ResSt m resPars) name
+  , zs ~ AppendToTupleList xs res
+  , SplicC sp rs ex zs
+  , Show resPars
+  , KnownSymbol name
+  , AppendToTuple (Variant xs) res
+  , AppendToTupleResult (Variant xs) res ~ Variant (AppendToTupleList xs res)  
+  , IsTypeUniqueList name xs 
+  , GetInstance resPars
+  ) => ToTransPar (NewResFunc resPars name m) dict q m sp xs () resPars where
+  reifyTransPar _ _ = STransPar (NewResTrans (Named @name))   
+  
 instance 
   ( Liftable xs rs
   ) => ToTrans (ConstFunc rs) dict q m sp xs () where

@@ -34,41 +34,37 @@ import           Control.Monad.Cont (ContT)
 import           Beseder.Base.Control                                               
 import           Beseder.Resources.Comm 
 import           Beseder.Resources.State.DataRes
---import           Data.String 
+import           Data.String 
 
 type CompletedRes = '(('[()]),'[])
 
-proxyApp :: forall m i1 i2 o1 o2 e1 e2 comm1 comm2. 
-  ( MonadIO m
-  , CommProv comm1 i1 o1 e1 m  
-  , CommProv comm2 i2 o2 e2 m 
-  , Show o2
-  , Show o1
-  , Show comm1
-  , Show comm2
-  ) => CommRes comm1 i1 o1 e1 
-      -> CommRes comm2 i2 o2 e2 
-      -> (i1 -> o2) -> (i2 -> o1) -> (i1 -> Bool) 
-      -> STransApp (ContT Bool) m NoSplitter '[()] CompletedRes ()
-proxyApp comRes1 comRes2 i1o2 i2o1 contPred = MkApp $ do
-  newRes #com1 comRes1
-  newRes #com2 comRes2
-  newRes #flCont initAsTrue
-  try @(("com1" :? IsCommAlive) :&& ("com2" :? IsCommAlive) :&& ("flCont" :? IsTrue)) $ do
-    handleEvents $ do
-      on @("com1" :? IsMessageReceived) $ do  
-        msgRcvd1 <- gets #com1 getIncomingMsg
-        iff (contPred msgRcvd1) (invoke #flCont setFalse)
-        on @("com2" :? IsCommConnected) $ do  
-          let o2 = i1o2 msgRcvd1 
-          invoke #com2 (SendMsg o2)
-        invoke #com1 GetNextMsg
-      on @("com2" :? IsMessageReceived) $ do  
-        on @("com1" :? IsCommConnected) $ do  
-          msgRcvd2 <- gets #com2 getIncomingMsg
-          let o1 = i2o1 msgRcvd2 
-          invoke #com1 (SendMsg o1)
-        invoke #com2 GetNextMsg
-  termAndClearAllResources
+-- :kind! EvalTransFunc IO (ProxyApp Int Int Int Int Int Int Int Int)
+-- :kind! EvalTransFuncWithTrace IO (ProxyApp Int Int Int Int Int Int Int Int)
 
-
+type ProxyApp commPars1 commPars2 i1 i2 o1 o2 e1 e2 m =
+  DictFunc "comRes1" :>>= NewRes "com1" (CommRes commPars1 i1 o1 e1) m
+  :>> DictFunc "comRes2" :>>= NewRes "com2" (CommRes commPars1 i1 o1 e1) m
+  :>> NewRes "flCont" InitAsTrue m
+  :>> Trace "comm created"
+  :>> Try(("com1" :? IsCommAlive) :&& ("com2" :? IsCommAlive) :&& ("flCont" :? IsTrue)) 
+    ( HandleEvents
+      ( On ("com1" :? IsMessageReceived)
+            ( On ("com2" :? IsCommConnected) 
+                ( Trace "com2Connected"
+                :>> DictFunc "rcvd1ToSend2" :>>= Invoke "com2" (SendMsg o2) 
+                )
+              :>> Invoke "com1" GetNextMsg
+            )  
+      :>> On ("com2" :? IsMessageReceived)
+          ( On ("com1" :? IsCommConnected) 
+              ( Trace "com1Connected"
+              :>> DictFunc "rcvd2ToSend1" :>>= Invoke "com1" (SendMsg o1) 
+              )
+            :>> Invoke "com2" GetNextMsg
+          )
+      )
+    )
+    :>> On ("com1" :? IsCommAlive) (Invoke "com1" CloseComm)
+    :>> On ("com2" :? IsCommAlive) (Invoke "com2" CloseComm)
+    :>> ClearAllResourcesButTrace
+    

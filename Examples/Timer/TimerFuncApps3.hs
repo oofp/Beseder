@@ -70,7 +70,7 @@ type TimerBasicFunc m =
 
 type InitAndStartRandomTimer name m = 
   NewResFunc TimerRes name m
-  :>> DictFunc "getRandomTimer" :>>= InvokeAllFunc StartTimer name
+  :>> DictFunc "getRandomTimer" :>>= Invoke name StartTimer
   
 type TimerHandlingFunc m = 
   InitAndStartRandomTimer "t1" m 
@@ -79,9 +79,9 @@ type TimerHandlingFunc m =
   :>> InitAndStartRandomTimer "t4" m 
   :>> Trace "before handling"
   :>> HandleEvents 
-    ( --Trace "inside loop (1)"
+    ( Trace "inside loop"
     -- :>> Next
-    On ("t1" :? IsTimerTriggered :&& "t2" :? IsTimerArmed) 
+    :>> On ("t1" :? IsTimerTriggered :&& "t2" :? IsTimerArmed) 
       (Invoke "t2" StopTimer)
     :>> On ("t2" :? IsTimerTriggered :&& "t3" :? IsTimerArmed) 
       (Invoke "t3" StopTimer)
@@ -94,16 +94,27 @@ type TimerHandlingFunc m =
   :>> Trace "after pump"
   :>> ClearAllResourcesButTrace
 
+type TimerTestFunc m = 
+  InitAndStartRandomTimer "t1" m 
+  :>> InitAndStartRandomTimer "t2" m 
+  :>> Trace "before handling"
+  :>> HandleEvents 
+    ( Trace "inside loop"
+    ) 
+  :>> Trace "after pump"
+  :>> ClearAllResourcesButTrace
+  
+{-  
 -- :kind! EvalTransFunc IO TimerBasicFunc
 -- :kind! EvalTransFuncWithTrace IO TimerBasicFunc
 executableTrans :: 
   ( TaskPoster m
-  -- , TransDict (ContT Bool) m Dict1 "getRandomTimer" StartTimer 
   ) => ExcecutableTrans (ContT Bool) m (TimerHandlingFunc m) 
 executableTrans = buildTrans @Dict1
 
 runTimerBasic :: IO ()
 runTimerBasic = runAsyncTrans executableTrans
+-}
 
 --reifyTimerBasicApp :: STransApp (ContT Bool) TaskQ NoSplitter '[()] '(('[()]),'[]) () 
 --reifyTimerBasicApp = MkApp $ reifyAsyncTrans (Proxy @(TimerBasicFunc TaskQ)) (Proxy @Dict1) 

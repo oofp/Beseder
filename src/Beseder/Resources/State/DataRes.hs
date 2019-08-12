@@ -22,6 +22,8 @@ module Beseder.Resources.State.DataRes
   , IsFalse 
   , initAsTrue 
   , initAsFalse
+  , InitAsTrue
+  , InitAsFalse
   ) where  
 
 import           Protolude  
@@ -100,3 +102,6 @@ setTrue = SetData (Proxy @True)
 
 setFalse :: SetFalse
 setFalse = SetData (Proxy @False)
+
+instance GetInstance (InitDataPx a) where
+  getInstance = InitData Proxy

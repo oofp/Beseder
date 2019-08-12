@@ -43,10 +43,15 @@ type instance StateTrans (LogEntries logEntries m name) = 'Static
 
 data LogState (label :: Symbol) (states ::[*]) = LogState deriving Show
 
+type family AppendLogEntry (entry :: (Symbol,[*])) (logEntries :: [(Symbol,[*])]) :: [(Symbol,[*])] where
+  AppendLogEntry '(label, sts) '[] = '[('(label, sts))]
+  AppendLogEntry '(label, sts)  ('(label, sts) ': logEntries) = ('(label, sts) ': logEntries)
+  AppendLogEntry '(label, sts)  ('(label1, sts1) ': logEntries) = ('(label1, sts1) ': (AppendLogEntry '(label, sts) logEntries))
+
 instance 
   ( Monad m
   ) => Request m (LogState label states) (LogEntries logEntries m name)  where
-  type instance ReqResult (LogState label states) (LogEntries logEntries m name) = '[LogEntries ('(label,states) ': logEntries) m name]
+  type instance ReqResult (LogState label states) (LogEntries logEntries m name) = '[LogEntries (AppendLogEntry '(label,states) logEntries) m name] -- '[LogEntries ('(label,states) ': logEntries) m name]
   request LogState (St _) = return $ variantFromValue (St LogEntriesList) 
 
 instance 
