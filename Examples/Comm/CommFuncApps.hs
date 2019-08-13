@@ -47,24 +47,24 @@ type CompletedRes = '(('[()]),'[])
 -- :kind! EvalTransFuncWithTrace IO (ProxyApp Console WSClient Text Text Text LBStr.ByteString () ())
 
 type ProxyApp commPars1 commPars2 i1 i2 o1 o2 e1 e2 m =
-  "comRes1" >| NewRes "com1" (CommRes commPars1 i1 o1 e1) m 
-  :>> "comRes2" >| NewRes "com2" (CommRes commPars2 i2 o2 e2) m
+  "comRes1" |> NewRes "com1" (CommRes commPars1 i1 o1 e1) m 
+  :>> "comRes2" |> NewRes "com2" (CommRes commPars2 i2 o2 e2) m
   :>> NewRes "flCont" InitAsTrue m
   :>> Trace "comm created"
   :>> Try(("com1" :? IsCommAlive) :&& ("com2" :? IsCommAlive) :&& ("flCont" :? IsTrue)) 
     ( HandleEvents
       ( On ("com1" :? IsMessageReceived)
-            ( "shouldQuit" >| IffFunc (Invoke "flCont" SetFalse)
+            ( "shouldQuit" |> IffFunc (Invoke "flCont" SetFalse)
               :>> On ("com2" :? IsCommConnected) 
                 ( Trace "com2Connected"
-                :>> "rcvd1ToSend2" >| Invoke "com2" (SendMsg o2) 
+                :>> "rcvd1ToSend2" |> Invoke "com2" (SendMsg o2) 
                 )
               :>> Invoke "com1" GetNextMsg
             )  
       :>> On ("com2" :? IsMessageReceived)
           ( On ("com1" :? IsCommConnected) 
               ( Trace "com1Connected"
-              :>> "rcvd2ToSend1" >| Invoke "com1" (SendMsg o1) 
+              :>> "rcvd2ToSend1" |> Invoke "com1" (SendMsg o1) 
               )
             :>> Invoke "com2" GetNextMsg
           )

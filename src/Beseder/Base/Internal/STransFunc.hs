@@ -256,7 +256,7 @@ type Invoke name req = InvokeAllFunc req name
 type name :-> req = InvokeAllFunc req name
 infixr 5 :->
 
-type (>|) name withParam = DictFunc name :>>= withParam 
+type (|>) name withParam = DictFunc name :>>= withParam 
 type NewRes name resPars m = NewResFunc resPars name m  
 
 type Iff condName posBranch = DictFunc condName :>>= IffFunc posBranch
