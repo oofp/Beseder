@@ -47,11 +47,11 @@ import           Beseder.Resources.State.StateLogger
 
 
 class ToTrans (funcData :: * -> [*] -> Exp ([*],[*])) dict q m sp (xs :: [*]) a where
-  reifyTrans :: Proxy funcData -> Proxy dict -> STrans q m sp xs (Eval (funcData sp xs)) funcData a
+  reifyTrans :: Proxy funcData -> dict -> STrans q m sp xs (Eval (funcData sp xs)) funcData a
 
 newtype STransPar q m sp xs rs_ex func a b = STransPar {getTrans :: b -> STrans q m sp xs rs_ex func a}  
 class ToTransPar (funcData :: * -> [*] -> Exp ([*],[*])) dict q m sp (xs :: [*]) a b where
-  reifyTransPar :: Proxy funcData -> Proxy dict -> STransPar q m sp xs (Eval (funcData sp xs)) funcData a b
+  reifyTransPar :: Proxy funcData -> dict -> STransPar q m sp xs (Eval (funcData sp xs)) funcData a b
 
 instance 
   ( Request m (NamedRequest TerminateRes name) (VWrap xs NamedTupleClr)
@@ -59,7 +59,7 @@ instance
   , KnownSymbol name
   , SplicC sp rs ex zs
   ) => ToTrans (ClearAllFunc (name::Symbol)) dict q m sp xs () where
-  reifyTrans _ _ = ClearAllTrans (Named @name)   
+  reifyTrans _ dict = ClearAllTrans (Named @name)   
 
 instance 
   ( Request m (NamedRequest req name) (VWrap xs NamedTuple)
@@ -70,7 +70,7 @@ instance
   , SplicC sp rs ex zs
   , GetInstance req
   ) => ToTrans (InvokeAllFunc req (name :: Symbol)) dict q m sp xs () where 
-  reifyTrans _ _ = InvokeAllTrans (Named @name) getInstance   
+  reifyTrans _ dict = InvokeAllTrans (Named @name) getInstance   
 
 instance 
   ( MkRes m resPars
@@ -84,14 +84,14 @@ instance
   , IsTypeUniqueList name xs 
   , GetInstance resPars
   ) => ToTrans (NewResFunc resPars name m) dict q m sp xs () where
-  reifyTrans _ _ = NewResTrans (Named @name) getInstance   
+  reifyTrans _ dict = NewResTrans (Named @name) getInstance   
 
 instance 
   ( Transition m (TransWrap xs) 
   , SplicC sp rs ex zs
   , zs ~ NextStates (TransWrap xs)
   ) => ToTrans GetNextAllFunc dict (ContT Bool) m sp xs () where
-  reifyTrans _ _ = GetNextAllTrans   
+  reifyTrans _ dict = GetNextAllTrans   
        
 instance 
   ( ex_un ~ Union ex1 ex2
@@ -104,18 +104,18 @@ instance
   , ToTrans f_b dict q m sp rs1 b
   , ComposeFam' (IsIDFunc f_a) f_a f_b sp as ~ '(rs2,ex_un)
   ) => ToTrans (ComposeFunc f_a f_b) dict q m sp as b where 
-  reifyTrans _ _ = 
+  reifyTrans _ dict = 
     let t1 :: STrans q m sp as (Eval (f_a sp as)) f_a ()
-        t1 = reifyTrans (Proxy @f_a) (Proxy @dict) 
+        t1 = reifyTrans (Proxy @f_a) dict 
         t2 :: STrans q m sp rs1 (Eval (f_b sp rs1)) f_b b
-        t2 = reifyTrans (Proxy @f_b) (Proxy @dict)
+        t2 = reifyTrans (Proxy @f_b) dict
     in ComposeTrans t1 t2  
 
 instance 
   ( --Eval (func sp xs) ~ '(xs, '[]) 
-     TransDict q m dict keyName a
+     TransDict q m dict keyName xs a
   ) => ToTrans (DictFunc keyName) dict q m sp xs a where 
-  reifyTrans _ _ = DictTrans (Proxy @dict) (Named @keyName)  
+  reifyTrans _ dict = DictTrans dict (Named @keyName)  
 
 instance 
   ( ex_un ~ Union ex1 ex2 
@@ -128,12 +128,12 @@ instance
   , ToTransPar f_b dict q m sp rs1 b a
   , ComposeFam' (IsIDFunc f_a) f_a f_b sp as ~ '(rs2,ex_un)
   ) => ToTrans (BindFunc f_a f_b) dict q m sp as b where 
-    reifyTrans _ _ =   
+    reifyTrans _ dict =   
       let
         transA :: STrans q m sp as '(rs1, ex1) f_a a  
-        transA = reifyTrans (Proxy @f_a) (Proxy @dict)  
+        transA = reifyTrans (Proxy @f_a) dict  
         transB :: STransPar q m sp rs1 '(rs2, ex2)  f_b b a
-        transB = reifyTransPar (Proxy @f_b) (Proxy @dict)
+        transB = reifyTransPar (Proxy @f_b) dict
       in BindTrans transA (getTrans transB)     
   
 instance 
@@ -148,9 +148,9 @@ instance
   , ToTrans f_sub dict q m sp xs_sub ()
   , Eval (f_sub sp xs_sub) ~ '(rs_sub, ex) -- assert
   ) => ToTrans (CaptureFunc sp1 f_sub) dict q m sp xs () where  
-    reifyTrans _ _  =
+    reifyTrans _ dict =
       let transSub :: STrans q m sp xs_sub '(rs_sub, ex) f_sub ()  
-          transSub = reifyTrans (Proxy @f_sub) (Proxy @dict)
+          transSub = reifyTrans (Proxy @f_sub) dict
       in CaptureTrans getInstance transSub  
           
 
@@ -169,18 +169,18 @@ instance
   , ListSplitterRes sp (UnionTuple (UnionRs (Eval (f_sub (sp :&& sp1) xs_sub)) ex_sub)) ~ rs
   , FilterList rs (UnionTuple (UnionRs (Eval (f_sub (sp :&& sp1) xs_sub)) ex_sub)) ~ ex1
   ) => ToTrans (EmbedFunc sp1 f_sub) dict q m sp xs () where 
-    reifyTrans _ _  =
+    reifyTrans _ dict =
       let transSub :: STrans q m (sp :&& sp1) xs_sub '(rs_sub, ex) f_sub ()  
-          transSub = reifyTrans (Proxy @f_sub) (Proxy @dict)
+          transSub = reifyTrans (Proxy @f_sub) dict
       in EmbedTrans getInstance transSub  
     
 instance       
   ( Eval (f sp xs) ~ '(xs,ex)
   , ToTrans f dict q m sp xs ()
   ) => ToTrans (ForeverFunc f) dict q m sp xs () where
-    reifyTrans _ _  =
+    reifyTrans _ dict =
       let transBody :: STrans q m sp xs '(xs, ex) f ()    
-          transBody = reifyTrans (Proxy @f) (Proxy @dict)
+          transBody = reifyTrans (Proxy @f) dict
       in ForeverTrans transBody  
     
 instance 
@@ -203,9 +203,20 @@ instance
   , AppendToTuple (Variant xs) res
   , AppendToTupleResult (Variant xs) res ~ Variant (AppendToTupleList xs res)  
   , IsTypeUniqueList name xs 
-  , GetInstance resPars
   ) => ToTransPar (NewResFunc resPars name m) dict q m sp xs () resPars where
   reifyTransPar _ _ = STransPar (NewResTrans (Named @name))   
+
+instance 
+  ( rs ~ Union rs1 xs
+  , Liftable rs1 rs
+  , Liftable xs rs
+  , Eval (f1 sp xs) ~ '(rs1, ex)  
+  , ToTrans f1 dict q m sp xs () 
+  ) => ToTransPar (IffFunc f1) dict q m sp xs () Bool where
+  reifyTransPar _ dict = STransPar (\fl -> 
+    let transSub :: STrans q m sp xs '(rs1, ex) f1 ()  
+        transSub = reifyTrans (Proxy @f1) dict
+    in IffTrans fl transSub)   
   
 instance 
   ( Liftable xs rs
@@ -218,9 +229,9 @@ instance
   , Eval (f sp xs) ~ '(bs, ex)
   , ToTrans f dict q m sp xs ()
   ) => ToTrans (ExtendForLoopFunc f) dict q m sp xs () where
-    reifyTrans _ _  =
+    reifyTrans _ dict =
       let transBody :: STrans q m sp xs '(bs,ex) f ()      
-          transBody = reifyTrans (Proxy @f) (Proxy @dict)
+          transBody = reifyTrans (Proxy @f) dict
       in ExtendForLoop transBody  
   
 instance 
@@ -228,24 +239,28 @@ instance
   , ToTrans f dict q m sp xs ()
   , '(rs, ex) ~ (Eval (f sp xs))
   ) => ToTrans (AlignFunc f) dict q m sp xs () where
-    reifyTrans _ _  =
+    reifyTrans _ dict =
       let transBody :: STrans q m sp xs '(rs, ex) f ()      
-          transBody = reifyTrans (Proxy @f) (Proxy @dict)
+          transBody = reifyTrans (Proxy @f) dict
       in AlignTrans transBody  
 --
-buildTrans :: forall d f q m sp xs a. ToTrans f d q m sp xs a => STrans q m sp xs (Eval (f sp xs)) f a
-buildTrans = reifyTrans (Proxy @f) (Proxy @d)
+buildTrans :: forall d f q m sp xs a. ToTrans f d q m sp xs a => d -> STrans q m sp xs (Eval (f sp xs)) f a
+buildTrans dict = reifyTrans (Proxy @f) dict
 
 -- aliases
 type On sp1 f_sub = CaptureFunc sp1 f_sub
 type Try sp1 f_sub = EmbedFunc sp1 f_sub
 type Next = On Dynamics GetNextAllFunc
 type Invoke name req = InvokeAllFunc req name 
+
 type name :-> req = InvokeAllFunc req name
 infixr 5 :->
 
+type (>|) name withParam = DictFunc name :>>= withParam 
 type NewRes name resPars m = NewResFunc resPars name m  
-  
+
+type Iff condName posBranch = DictFunc condName :>>= IffFunc posBranch
+
 type HandleLoop f =
  Try Dynamics 
   ( ExtendForLoopFunc f 
@@ -269,11 +284,11 @@ type instance Eval (ClearResourcesExcept names sp xs) = Eval (ClearResourcesFam 
 instance 
   ( ToTrans (ClearResourcesFam (FilterList names (GetAllNames xs))) dict q m sp xs()
   ) => ToTrans (ClearResourcesExcept names) dict q m sp xs () where
-  reifyTrans _ _ = 
+  reifyTrans _ dict = 
     let px_t :: Proxy (ClearResourcesFam (FilterList names (GetAllNames xs)))
         px_t = Proxy
-    in AppWrapperTrans $ MkApp $ reifyTrans px_t (Proxy @dict)     
-  
+    in AppWrapperTrans $ MkApp $ reifyTrans px_t dict     
+    
 --
 -- type LogFunc label xs = CaptureFunc(By "log") (InvokeAllFunc (LogState label xs) "log")
 type LogFunc label xs = InvokeAllFunc (LogState label xs) "log"
@@ -301,7 +316,7 @@ instance
   , zs ~ ReqResult (NamedRequest (LogState label ys) "log") (VWrap xs NamedTuple)
   , SplicC sp rs ex zs
   ) => ToTrans (LoggerFunc label) dict q m sp xs () where
-    reifyTrans _ _ = AppWrapperTrans $ MkApp $ logState (Named @label)
+    reifyTrans _ dict = AppWrapperTrans $ MkApp $ logState (Named @label)
 
 
 data PutStrLn :: Symbol ->  * -> [*] -> Exp ([*],[*])
@@ -310,7 +325,7 @@ instance
   ( KnownSymbol txt
   , MonadIO m
   ) => ToTrans (PutStrLn txt) dict q m sp xs () where
-    reifyTrans _ _ = AppWrapperTrans $ MkApp $ SDo.liftIO $ putStrLn (symbolVal (Proxy @txt))
+    reifyTrans _ dict = AppWrapperTrans $ MkApp $ SDo.liftIO $ putStrLn (symbolVal (Proxy @txt))
 
 type Trace label = On (By "log") (LoggerFunc label)
 type FuncWithTrace m func = (NewResFunc StateLoggerRes "log" m) :>> func

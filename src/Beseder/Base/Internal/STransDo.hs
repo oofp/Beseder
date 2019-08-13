@@ -239,8 +239,8 @@ gets' ::
 gets' named f = GetTrans (f .  getByName named)
 
 gets ::
-  ( GetTypeByNameVar name x xs
-  ) => (GetTypeByNameVar name x xs) => Named name -> (x -> a) -> STrans q m sp xs '(xs, '[]) IDFunc a
+  ( GetTypeByNameVar name x xs, x ~ St st name
+  ) => Named name -> (x -> a) -> STrans q m sp xs '(xs, '[]) IDFunc a
 gets = GetAllTrans  
 
 op :: 

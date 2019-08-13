@@ -14,6 +14,7 @@
 module Beseder.Resources.Comm.Impl.Console 
   ( ConsoleRes
   , consoleRes
+  , Console (..)
   )
   where
 
@@ -49,3 +50,4 @@ instance (MonadIO m) => CommProvImpl Console m Text Text () where
           inp <- getLine
           msgCB $ Just inp)
         exceptHandler
+

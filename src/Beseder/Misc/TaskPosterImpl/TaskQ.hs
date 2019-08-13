@@ -60,5 +60,5 @@ runSyncTrans = runSyncFlow . execTrans
 runAsyncApp ::  ExcecutableApp (ContT Bool) TaskQ -> IO ()
 runAsyncApp = runAsyncFlow . execApp 
 
-reifyAsyncTrans :: forall d f xs a. ToTrans f d (ContT Bool) TaskQ NoSplitter xs a => Proxy f -> Proxy d -> STrans (ContT Bool) TaskQ NoSplitter xs (Eval (f NoSplitter xs)) f a
-reifyAsyncTrans px_f px_d = reifyTrans px_f px_d
+reifyAsyncTrans :: forall d f xs a. ToTrans f d (ContT Bool) TaskQ NoSplitter xs a => Proxy f -> d -> STrans (ContT Bool) TaskQ NoSplitter xs (Eval (f NoSplitter xs)) f a
+reifyAsyncTrans px_f d = reifyTrans px_f d

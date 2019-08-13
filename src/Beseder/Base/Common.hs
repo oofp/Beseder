@@ -15,6 +15,7 @@ module Beseder.Base.Common
     , SyncTrans 
     , AsyncTransApp 
     , SyncTransApp 
+    , GetTypeByNameVar 
     ) where
 
 import Beseder.Base.Internal.Core 
@@ -22,3 +23,4 @@ import Beseder.Base.Internal.Named
 import Beseder.Base.Internal.TypeExp 
 import Beseder.Base.Internal.Classes 
 import Beseder.Base.Internal.STrans
+import Beseder.Base.Internal.TupleHelper (GetTypeByNameVar)

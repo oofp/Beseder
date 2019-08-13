@@ -39,6 +39,7 @@ import           Beseder.Resources.Timer
 import           Data.String 
 import           Control.Monad.Cont
 
+-- it is just for test
 instance GetInstance StartTimer where
   getInstance = StartTimer 5
 
@@ -80,7 +81,7 @@ buildTrans =
 -}
 
 executableTrans :: TaskPoster m => ExcecutableTrans (ContT Bool) m (TimerBasicFunc m) 
-executableTrans = buildTrans @()
+executableTrans = buildTrans ()
 
 runTimerBasic :: IO ()
 runTimerBasic = runAsyncTrans executableTrans

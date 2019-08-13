@@ -43,13 +43,13 @@ import           Control.Monad.Trans (MonadTrans)
 import           System.Random
 
 
-data Dict1 
+data Dict1 = Dict1
 
-instance TransDict q m Dict1 "getStartTimer" StartTimer where
+instance TransDict q m Dict1  "getStartTimer" xs StartTimer where
   getTransFromDict _ _ =  MkApp $ Beseder.Base.Control.return (StartTimer 5)
 
 --instance (MonadIO m, MonadTrans q, Monad (q m)) => TransDict q m Dict1 "getRandonTimer" StartTimer where
-instance (MonadIO m) => TransDict (ContT Bool) m Dict1 "getRandomTimer" StartTimer where  
+instance (MonadIO m) => TransDict (ContT Bool) m Dict1 "getRandomTimer" xs StartTimer where  
   getTransFromDict _ _ =  MkApp $ do 
     timeoutSec <- liftIO $ randomRIO (1,10)
     Beseder.Base.Control.return (StartTimer timeoutSec)
@@ -104,17 +104,15 @@ type TimerTestFunc m =
   :>> Trace "after pump"
   :>> ClearAllResourcesButTrace
   
-{-  
 -- :kind! EvalTransFunc IO TimerBasicFunc
 -- :kind! EvalTransFuncWithTrace IO TimerBasicFunc
 executableTrans :: 
   ( TaskPoster m
   ) => ExcecutableTrans (ContT Bool) m (TimerHandlingFunc m) 
-executableTrans = buildTrans @Dict1
+executableTrans = buildTrans Dict1
 
 runTimerBasic :: IO ()
 runTimerBasic = runAsyncTrans executableTrans
--}
 
 --reifyTimerBasicApp :: STransApp (ContT Bool) TaskQ NoSplitter '[()] '(('[()]),'[]) () 
 --reifyTimerBasicApp = MkApp $ reifyAsyncTrans (Proxy @(TimerBasicFunc TaskQ)) (Proxy @Dict1) 

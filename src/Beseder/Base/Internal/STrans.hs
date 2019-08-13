@@ -125,9 +125,6 @@ type instance Eval (IDFunc sp xs) = '(xs,'[])
 data DictFunc :: Symbol -> * -> [*] -> Exp ([*],[*])
 type instance Eval (DictFunc keyName sp xs) = '(xs,'[])
 
---data DelegateFunc :: dict -> Symbol -> * -> [*] -> Exp ([*],[*])
---type instance Eval (DelegateFunc dict funcName sp xs) = '(xs, '[])  
-
 type family ForeverFam (xs_ex :: ([*],[*])) (sp :: *) (xs :: [*]) :: ([*],[*]) where
   ForeverFam '(xs,ex) sp xs = '(('[]),ex)
   ForeverFam '(ys,ex) sp xs = 
@@ -171,11 +168,9 @@ type SplicC sp xs ex zs =
   , '(xs,ex) ~ ListSplitterRes2 sp zs
   )
 
---class (Eval (func sp xs) ~ '(xs,'[])) => TransDict dict (key :: Symbol) q m sp xs (func :: * -> [*] -> ([*],[*]) -> *) a | dict key -> func where -- | dict key -> q m sp xs func a where
---  getTransFromDict  :: Proxy dict -> Named key -> STrans q m sp xs '(xs,'[]) func a
 
-class TransDict (q :: (* -> *) -> * -> *) (m :: * -> *) dict (key :: Symbol) (a :: *) | q m dict key -> a where 
-  getTransFromDict  :: Proxy dict -> Named key -> STransApp q m sp xs '(xs,'[]) a
+class TransDict (q :: (* -> *) -> * -> *) (m :: * -> *) dict (key :: Symbol) (xs :: [*]) (a :: *) | q m xs dict key -> a where 
+  getTransFromDict  :: dict -> Named key -> STransApp q m sp xs '(xs,'[]) a
 
 --
 data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc :: * -> [*] -> ([*],[*]) -> *) (a :: *) where
@@ -337,7 +332,7 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     ( Liftable xs rs
     ) => STrans q m sp xs '(rs,'[()]) (ConstFunc rs) () 
   GetTrans :: (x -> a) -> STrans q m sp '[x] '(('[x]), '[]) IDFunc a
-  GetAllTrans :: (GetTypeByNameVar name x xs) => Named name -> (x -> a) -> STrans q m sp xs '(xs, '[]) IDFunc a
+  GetAllTrans :: (GetTypeByNameVar name x xs, x ~ St st name) => Named name -> (x -> a) -> STrans q m sp xs '(xs, '[]) IDFunc a
   OpAllTrans :: Monad m => m a -> STrans q m sp xs '(xs, '[]) IDFunc a
   OpResAllTrans :: (Monad m, GetTypeByNameVar name x xs) => Named name -> (x -> m a) -> STrans q m sp xs '(xs, '[]) IDFunc a
   IffTrans ::
@@ -358,9 +353,9 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     ) => Bool -> STrans q m sp xs '(rs1,ex1) f1 ()  -> STrans q m sp xs '(rs2,ex2) f2 () -> STrans q m sp xs '(rs, ex) (IfElseFunc f1 f2) ()  
   LiftIOTrans :: MonadIO m => IO a -> STrans q m sp xs '(xs, '[]) IDFunc a
   DictTrans ::
-    ( TransDict q m dict keyName a
+    ( TransDict q m dict keyName xs a
     , Eval (DictFunc name sp xs) ~ '(xs,'[])
-    ) => Proxy dict -> Named keyName -> STrans q m sp xs '(xs, '[]) (DictFunc keyName) a
+    ) => dict -> Named keyName -> STrans q m sp xs '(xs, '[]) (DictFunc keyName) a
   AppWrapperTrans ::
     ( Eval (f sp xs) ~ rs_ex
     ) => STransApp q m sp xs rs_ex a -> STrans q m sp xs rs_ex f a 
@@ -466,6 +461,9 @@ applyTransSafely ::
   , Eval (sfunc sp xs) ~ '(rs,ex)
   ) => STrans q m sp xs '(rs,ex) sfunc a -> sp -> MFlow q m xs ->  MFlowExA q m rs ex a
 applyTransSafely = applyTrans 
+
+proxyFromFlow :: MFlow q m xs -> Proxy xs
+proxyFromFlow _ = Proxy
 
 applyTrans :: 
   ( MonadTrans q
@@ -651,5 +649,7 @@ applyTransApp (MkApp trans) = applyTrans trans
 execApp ::  (MonadTrans q, Monad (q m)) => ExcecutableApp q m  -> q m () 
 execApp (MkApp t) = execTrans t  
     
-
+----
+type family Has (st :: *) (xs :: [*]) where
+  Has (St st name) xs = GetTypeByNameVar name (St st name) xs
 

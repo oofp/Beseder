@@ -43,7 +43,8 @@ newtype SendMsg o = SendMsg o deriving (Show, Eq)
 data GetNextMsg = GetNextMsg deriving (Show, Eq)
 data CloseComm = CloseComm deriving (Show, Eq)
 instance GetInstance CloseComm where getInstance = CloseComm
-
+instance GetInstance GetNextMsg where getInstance = GetNextMsg
+ 
 class CommProv commPars i o e m  where
   data StCommInitiated commPars i o e m 
   data StCommWaitForMsg commPars i o e m   

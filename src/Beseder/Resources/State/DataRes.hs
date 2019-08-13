@@ -16,8 +16,12 @@ module Beseder.Resources.State.DataRes
   ( InitData (..)
   , SetData (..)
   , ModifyData (..) 
+  , StD
+  , getData
   , setTrue 
   , setFalse
+  , SetTrue
+  , SetFalse
   , IsTrue 
   , IsFalse 
   , initAsTrue 
@@ -105,3 +109,10 @@ setFalse = SetData (Proxy @False)
 
 instance GetInstance (InitDataPx a) where
   getInstance = InitData Proxy
+
+instance GetInstance SetFalse where
+  getInstance = setFalse
+ 
+instance GetInstance SetTrue where
+  getInstance = setTrue
+      

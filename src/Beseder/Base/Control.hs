@@ -60,6 +60,7 @@ module Beseder.Base.Control
     , STransApp (..)
     , applyTransApp
     , TransDict (..)
+    , Has 
     ) where
 
 
