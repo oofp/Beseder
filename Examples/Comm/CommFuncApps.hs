@@ -54,7 +54,7 @@ type ProxyApp commPars1 commPars2 i1 i2 o1 o2 e1 e2 m =
   :>> Try(("com1" :? IsCommAlive) :&& ("com2" :? IsCommAlive) :&& ("flCont" :? IsTrue)) 
     ( HandleEvents
       ( On ("com1" :? IsMessageReceived)
-            ( "shouldQuit" |> IffFunc (Invoke "flCont" SetFalse)
+            ( Iff "shouldQuit" (Invoke "flCont" SetFalse)
               :>> On ("com2" :? IsCommConnected) 
                 ( Trace "com2Connected"
                 :>> "rcvd1ToSend2" |> Invoke "com2" (SendMsg o2) 
