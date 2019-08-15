@@ -653,3 +653,6 @@ execApp (MkApp t) = execTrans t
 type family Has (st :: *) (xs :: [*]) where
   Has (St st name) xs = GetTypeByNameVar name (St st name) xs
 
+type family HasWithName (st :: *) (name :: Symbol) (xs :: [*]) where
+  HasWithName (St st name) name1 xs = (GetTypeByNameVar name (St st name) xs, (St st name) ~ (St st name1))
+  

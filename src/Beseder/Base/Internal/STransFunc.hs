@@ -334,3 +334,42 @@ type ClearAllResourcesButTrace = ClearResourcesExcept '["log"]
 
 --type EvalTransFunc m func = Eval (func m NoSplitter '[()])
 
+---
+  
+data HasResC :: Symbol -> res -> [*] -> Exp Constraint
+data EmptyC :: [*] -> Exp Constraint
+
+type family NameOfRes res :: Symbol where
+  NameOfRes (St st resName) = resName
+
+type family TypeOfRes res  where
+  TypeOfRes (St st resName) = st
+  
+type instance Eval (EmptyC xs) = ()
+type instance Eval (HasResC resName res xs) = (Has res xs, res ~ St (TypeOfRes res) resName)
+
+data Patch (xc :: [*] -> Constraint -> *) a where
+  CnP :: a -> Patch EmptyC a 
+  FnP :: Named resName -> (res -> a) -> Patch (HasResC resName res) a 
+
+class GetStransApp fct xs a where
+  getStransApp :: fct -> STransApp q m sp xs '(xs,'[]) a 
+
+instance (Eval (xc xs)) => GetStransApp (Patch xc a) xs a where
+  getStransApp (CnP a) = MkApp $ return a  
+  getStransApp (FnP resNamed f) = MkApp $ gets resNamed f
+
+
+newtype Patches entries = Patches entries  
+
+instance (TT tpl (TargetByName key tpl), GetTarget (TargetByName key tpl) (TypeByName key tpl), Eval (xc xs), St (Patch xc a) key ~ TypeByName key tpl) => 
+  TransDict q m (Patches tpl) key xs a where
+    getTransFromDict (Patches tpl) named = 
+      let (St entry) = getByName named tpl
+      in getStransApp entry
+      
+
+as :: st -> Named name -> St st name
+as st named = St st
+
+

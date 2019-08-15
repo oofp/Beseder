@@ -41,50 +41,41 @@ import           Data.String
 import           Control.Monad.Cont (ContT)
 import           Control.Monad.Trans (MonadTrans)
 
-data Dict1 = Dict1
-
-instance TransDict q m Dict1 "getStartTimer" xs StartTimer where
-  getTransFromDict _ _ =  MkApp $ Beseder.Base.Control.return (StartTimer 5)
-
-instance TransDict q m Dict1 "initData" xs (InitData Int) where
-  getTransFromDict _ _ =  MkApp $ Beseder.Base.Control.return (InitData 0)
+dict1  
+  = Patches  
+    ( CnP (StartTimer 5) `as` #getStartTimer,
+    ( CnP (InitData (1::Int)) `as` #initData,      
+    ( CnP (ModifyData (+(1::Int))) `as` #incCounter,
+    ( FnP #counter ((\cnt->SetData (cnt+(1::Int))) . getData) `as` #setCounter))))   
   
-instance 
-  TransDict q m Dict1 "incCounter" xs (ModifyData Int Int) where
-    getTransFromDict _ _ =  MkApp $ return (ModifyData (+1))
-
-instance (Monad (q m), MonadTrans q, GetTypeByNameVar "counter" (StD Int "counter") xs) =>
-  TransDict q m Dict1 "setCounter" xs (SetData Int) where
-    getTransFromDict _ _ =  MkApp $ do
-      cnt <- gets #counter getData 
-      return (SetData (cnt+1))
-      
 type TimerBasicFunc m = 
   NewResFunc TimerRes "t1" m 
-  :>> DictFunc "getStartTimer" :>>= InvokeAllFunc StartTimer "t1"
+  :>> "initData" |> NewResFunc (InitData Int) "counter"m
+  :>> "getStartTimer" |> InvokeAllFunc StartTimer "t1"
+  :>> "setCounter" |> Invoke "counter" (SetData Int)
   :>> Trace "log0"
   :>> GetNextAllFunc 
   :>> Trace "log1"
   :>> ClearAllResourcesButTrace
 
-type InitAndStartTimer name m = 
+type InitAndStartTimer name m tmr = 
   NewResFunc TimerRes name m
   :>> PutStrLn name
-  :>> DictFunc "getStartTimer" :>>= InvokeAllFunc StartTimer name
+  :>> tmr |> InvokeAllFunc StartTimer name
 
 type TimerBasicFunc2 m = 
   PutStrLn "Entered TimerBasicFunc2"
-  :>> DictFunc "initData" :>>= NewResFunc (InitData Int) "counter"m
-  :>> InitAndStartTimer "t1" m
-  :>> InitAndStartTimer "t2" m
+  :>> "initData" |> NewResFunc (InitData Int) "counter"m
+  :>> InitAndStartTimer "t1" m "getStartTimer"
+  :>> InitAndStartTimer "t2" m "getStartTimer"
   :>> Trace "log0"
   :>> Next 
   :>> PutStrLn "After 1st Next"
   :>> On ("t1" :? IsTimerArmed)  
     (   Trace "log1a"
     :>> "t1" :-> StopTimer
-    :>> DictFunc "incCounter" :>>= Invoke "counter" (ModifyData Int Int)
-    :>> DictFunc "setCounter" :>>= Invoke "counter" (SetData Int)
+    :>> "incCounter" |> Invoke "counter" (ModifyData Int Int)
+    :>> "setCounter" |> Invoke "counter" (SetData Int)
     :>> Trace "log1b"
     ) --  --
   :>> Trace "log1"
@@ -98,13 +89,13 @@ type TimerBasicFunc2 m =
 -- :kind! EvalTransFuncWithTrace IO TimerBasicFunc
 
 executableTrans :: (TaskPoster m) => ExcecutableTrans (ContT Bool) m (TimerBasicFunc m) 
-executableTrans = buildTrans Dict1
+executableTrans = buildTrans dict1
 
 runTimerBasic :: IO ()
 runTimerBasic = runAsyncTrans executableTrans
 
 executableTrans2 :: (TaskPoster m) => ExcecutableTrans (ContT Bool) m (TimerBasicFunc2 m) 
-executableTrans2 = buildTrans Dict1
+executableTrans2 = buildTrans dict1
 
 runTimerBasic2 :: IO ()
 runTimerBasic2 = runAsyncTrans executableTrans2
@@ -113,4 +104,29 @@ runTimerBasic2 = runAsyncTrans executableTrans2
 --reifyTimerBasic = reifyAsyncTrans (Proxy @(TimerBasicFunc TaskQ)) (Proxy @Dict1) 
 
 reifyTimerBasicApp :: STransApp (ContT Bool) TaskQ NoSplitter '[()] '(('[()]),'[]) () 
-reifyTimerBasicApp = MkApp $ reifyAsyncTrans (Proxy @(TimerBasicFunc TaskQ)) Dict1 
+reifyTimerBasicApp = MkApp $ reifyAsyncTrans (Proxy @(TimerBasicFunc TaskQ)) dict1 
+
+--
+{-
+data Dict1 = Dict1
+
+instance TransDict q m Dict1 "getStartTimer" xs StartTimer where
+  getTransFromDict _ _ =  MkApp $ Beseder.Base.Control.return (StartTimer 5)
+
+instance TransDict q m Dict1 "getStartTimer2" xs StartTimer where
+  getTransFromDict _ _ =  MkApp $ Beseder.Base.Control.return (StartTimer 5)
+  
+instance TransDict q m Dict1 "initData" xs (InitData Int) where
+  getTransFromDict _ _ =  MkApp $ Beseder.Base.Control.return (InitData 0)
+  
+instance 
+  TransDict q m Dict1 "incCounter" xs (ModifyData Int Int) where
+    getTransFromDict _ _ =  MkApp $ return (ModifyData (+1))
+
+instance (Monad (q m), MonadTrans q, GetTypeByNameVar "counter" (StD Int "counter") xs) =>
+  TransDict q m Dict1 "setCounter" xs (SetData Int) where
+    getTransFromDict _ _ =  MkApp $ do
+      cnt <- gets #counter getData 
+      return (SetData (cnt+1))
+-}
+

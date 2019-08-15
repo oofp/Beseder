@@ -23,4 +23,4 @@ import Beseder.Base.Internal.Named
 import Beseder.Base.Internal.TypeExp 
 import Beseder.Base.Internal.Classes 
 import Beseder.Base.Internal.STrans
-import Beseder.Base.Internal.TupleHelper (GetTypeByNameVar)
+import Beseder.Base.Internal.TupleHelper (GetTypeByNameVar, (:<>))

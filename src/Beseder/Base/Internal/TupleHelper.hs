@@ -383,3 +383,13 @@ type family GetNames (t :: *) :: [Symbol] where
 type family GetAllNames (lst :: [*]) :: [Symbol] where
   GetAllNames '[] = '[]    
   GetAllNames (x ': xs) = Union (GetNames x) (GetAllNames xs)    
+
+
+--
+
+type (:<>) t1 t2 = (t1,t2) 
+infixr 1 :<>
+
+type T4 = Int :<> Char :<> Bool :<> Text
+type family Third t4 where
+  Third (t1, (t2, (t3,t4))) = t3
