@@ -42,17 +42,9 @@ import           Control.Monad.Cont (ContT)
 import           Control.Monad.Trans (MonadTrans)
 import           System.Random
 
-
-data Dict1 = Dict1
-
-instance TransDict q m Dict1  "getStartTimer" xs StartTimer where
-  getTransFromDict _ _ =  MkApp $ Beseder.Base.Control.return (StartTimer 5)
-
---instance (MonadIO m, MonadTrans q, Monad (q m)) => TransDict q m Dict1 "getRandonTimer" StartTimer where
-instance (MonadIO m) => TransDict (ContT Bool) m Dict1 "getRandomTimer" xs StartTimer where  
-  getTransFromDict _ _ =  MkApp $ do 
-    timeoutSec <- liftIO $ randomRIO (1,10)
-    Beseder.Base.Control.return (StartTimer timeoutSec)
+dict1 = Patches
+  ( CnP (StartTimer 5) `as` #getStartTimer ,
+  ( IoP (StartTimer <$> randomRIO (1,10)) `as` #getRandomTimer))
 
 type InitAndStartTimer name m = 
   NewResFunc TimerRes name m
@@ -80,7 +72,6 @@ type TimerHandlingFunc m =
   :>> Trace "before handling"
   :>> HandleEvents 
     ( Trace "inside loop"
-    -- :>> Next
     :>> On ("t1" :? IsTimerTriggered :&& "t2" :? IsTimerArmed) 
       (Invoke "t2" StopTimer)
     :>> On ("t2" :? IsTimerTriggered :&& "t3" :? IsTimerArmed) 
@@ -89,7 +80,6 @@ type TimerHandlingFunc m =
       (Invoke "t4" StopTimer)
     :>> On ("t4" :? IsTimerTriggered :&& "t1" :? IsTimerArmed) 
       (Invoke "t1" StopTimer)
-    -- :>> Trace "inside loop (2)"  
     ) 
   :>> Trace "after pump"
   :>> ClearAllResourcesButTrace
@@ -109,7 +99,7 @@ type TimerTestFunc m =
 executableTrans :: 
   ( TaskPoster m
   ) => ExcecutableTrans (ContT Bool) m (TimerHandlingFunc m) 
-executableTrans = buildTrans Dict1
+executableTrans = buildTrans dict1 -- Dict1
 
 runTimerBasic :: IO ()
 runTimerBasic = runAsyncTrans executableTrans
@@ -119,3 +109,14 @@ runTimerBasic = runAsyncTrans executableTrans
 
 
 
+{- 'Old' way to set Dictionary with term level patches 
+data Dict1 = Dict1
+
+instance TransDict q m Dict1  "getStartTimer" xs StartTimer where
+  getTransFromDict _ _ =  MkApp $ Beseder.Base.Control.return (StartTimer 5)
+--instance (MonadIO m, MonadTrans q, Monad (q m)) => TransDict q m Dict1 "getRandonTimer" StartTimer where
+instance (MonadIO m) => TransDict (ContT Bool) m Dict1 "getRandomTimer" xs StartTimer where  
+  getTransFromDict _ _ =  MkApp $ do 
+    timeoutSec <- liftIO $ randomRIO (1,10)
+    Beseder.Base.Control.return (StartTimer timeoutSec)
+-}

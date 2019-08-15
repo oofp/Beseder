@@ -129,4 +129,3 @@ instance (Monad (q m), MonadTrans q, GetTypeByNameVar "counter" (StD Int "counte
       cnt <- gets #counter getData 
       return (SetData (cnt+1))
 -}
-

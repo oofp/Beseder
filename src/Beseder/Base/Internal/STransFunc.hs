@@ -336,8 +336,10 @@ type ClearAllResourcesButTrace = ClearResourcesExcept '["log"]
 
 ---
   
-data HasResC :: Symbol -> res -> [*] -> Exp Constraint
-data EmptyC :: [*] -> Exp Constraint
+data HasResC :: Symbol -> res -> (* -> *) -> [*] -> Exp Constraint
+data EmptyC :: (* -> *) -> [*] -> Exp Constraint
+data MonadIOC :: (* -> *) -> [*] -> Exp Constraint
+data MonadC :: (* -> *) -> [*] -> Exp Constraint
 
 type family NameOfRes res :: Symbol where
   NameOfRes (St st resName) = resName
@@ -345,24 +347,30 @@ type family NameOfRes res :: Symbol where
 type family TypeOfRes res  where
   TypeOfRes (St st resName) = st
   
-type instance Eval (EmptyC xs) = ()
-type instance Eval (HasResC resName res xs) = (Has res xs, res ~ St (TypeOfRes res) resName)
+type instance Eval (EmptyC m xs) = ()
+type instance Eval (HasResC resName res m xs) = (Has res xs, res ~ St (TypeOfRes res) resName)
+type instance Eval (MonadIOC m xs) = MonadIO m
+type instance Eval (MonadC m xs) = Monad m
 
-data Patch (xc :: [*] -> Constraint -> *) a where
-  CnP :: a -> Patch EmptyC a 
-  FnP :: Named resName -> (res -> a) -> Patch (HasResC resName res) a 
+data Patch (xc :: (* -> *) -> [*] -> Constraint -> *) (m :: * -> *) a where
+  CnP :: a -> Patch EmptyC m a 
+  FnP :: Named resName -> (res -> a) -> Patch (HasResC resName res) m a 
+  MnP :: m a -> Patch MonadC m a 
+  IoP :: IO a -> Patch MonadIOC m a 
 
-class GetStransApp fct xs a where
+class GetStransApp fct xs m a where
   getStransApp :: fct -> STransApp q m sp xs '(xs,'[]) a 
 
-instance (Eval (xc xs)) => GetStransApp (Patch xc a) xs a where
+instance (Eval (xc m xs)) => GetStransApp (Patch xc m a) xs m a where
   getStransApp (CnP a) = MkApp $ return a  
   getStransApp (FnP resNamed f) = MkApp $ gets resNamed f
+  getStransApp (IoP io_a) = MkApp $ SDo.liftIO io_a
+  getStransApp (MnP m_a) = MkApp $ SDo.op m_a
 
 
 newtype Patches entries = Patches entries  
 
-instance (TT tpl (TargetByName key tpl), GetTarget (TargetByName key tpl) (TypeByName key tpl), Eval (xc xs), St (Patch xc a) key ~ TypeByName key tpl) => 
+instance (TT tpl (TargetByName key tpl), GetTarget (TargetByName key tpl) (TypeByName key tpl), Eval (xc m xs), St (Patch xc m a) key ~ TypeByName key tpl) => 
   TransDict q m (Patches tpl) key xs a where
     getTransFromDict (Patches tpl) named = 
       let (St entry) = getByName named tpl
