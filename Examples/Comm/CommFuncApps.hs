@@ -41,8 +41,6 @@ import           Data.String
 import qualified Data.ByteString.Lazy as LBStr                                               
 import qualified Network.WebSockets  as WS
 
-type CompletedRes = '(('[()]),'[])
-
 -- :kind! EvalTransFunc IO (ProxyApp Console WSClient Text Text Text LBStr.ByteString () ())
 -- :kind! EvalTransFuncWithTrace IO (ProxyApp Console WSClient Text Text Text LBStr.ByteString () ())
 
@@ -91,13 +89,20 @@ commRes2 = CommRes echoWS
 commRes1 :: ConsoleRes 
 commRes1 = consoleRes
 
+dict1 = Patches
+  ( CnP commRes1 `as` #comRes1,
+  ( CnP commRes2 `as` #comRes2,
+  ( ((FnP #com1 (SendMsg . getIncomingMsg)) :: Patch _ TaskQ (SendMsg Text)) `as` #rcvd1ToSend2,
+  ( ((FnP #com2 (SendMsg . show . getIncomingMsg)) :: Patch _ TaskQ (SendMsg Text)) `as` #rcvd2ToSend1,
+  ( ((FnP #com1 ((=="q") . getIncomingMsg)) :: Patch _ TaskQ Bool) `as` #shouldQuit)))))
+
 data ProxyAppDict = ProxyAppDict
 
 instance TransDict q m ProxyAppDict "comRes2" xs (CommRes WSClient LBStr.ByteString Text ()) where
   getTransFromDict dict _  =  MkApp $ return commRes2
 instance TransDict q m ProxyAppDict "comRes1" xs ConsoleRes where
   getTransFromDict dict _ =  MkApp $ return commRes1
-
+ 
 getConsoleMsg :: 
   (Has (CommMsgRcvd "com1" Console Text Text () TaskQ) xs) => 
     STrans q m sp xs '(xs, '[]) IDFunc Text
@@ -136,20 +141,9 @@ instance (Has (CommMsgRcvd "com2" WSClient LBStr.ByteString Text () TaskQ) xs) =
 
 type ConsoleWsApp = ProxyApp Console WSClient Text LBStr.ByteString Text Text () () TaskQ
 
-{-
 executableConsoleWsTrans :: ExcecutableTrans (ContT Bool) TaskQ ConsoleWsApp 
-executableConsoleWsTrans = buildTrans ProxyAppDict
-  
+executableConsoleWsTrans = buildTrans dict1 -- ProxyAppDict
+
 runConsoleWs :: IO ()
 runConsoleWs = runAsyncTrans executableConsoleWsTrans
--}
-
--- to consider implementing dictionary items using the record below
-data ProxyAppDict2 commPars1 commPars2 i1 i2 o1 o2 e1 e2 = 
-  ProxyAppDict2 
-    { commRes12 :: commPars1
-    , commRes22 :: commPars2
-    , i1o2 :: i1 -> o2
-    , i2o1 :: i2 -> o1
-    }
 
