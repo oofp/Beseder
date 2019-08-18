@@ -172,6 +172,33 @@ type SplicC sp xs ex zs =
 class TransDict (q :: (* -> *) -> * -> *) (m :: * -> *) dict (key :: Symbol) (xs :: [*]) (a :: *) | q m xs dict key -> a where 
   getTransFromDict  :: dict -> Named key -> STransApp q m sp xs '(xs,'[]) a
 
+data Instrumentor (m :: * -> *) (c :: ([*] -> (* -> *) -> Constraint -> *)) = Instrumentor (forall xs. Eval (c xs m) => V xs -> m ())   
+
+{-
+type family InternalLists (funcData :: * -> [*] -> ([*],[*]) -> *) (sp :: *) (xs :: [*]) :: [[*]] where
+  InternalLists (ComposeFunc f1 f2) sp xs = '[xs, First (Eval (f1 sp xs))]
+  InternalLists (EmbedFunc sp1 f) sp xs = '[ListSplitterRes sp1 xs]
+  InternalLists (CaptureFunc sp1 f) sp xs = '[ListSplitterRes sp1 xs]
+  InternalLists funcData sp xs = '[xs]
+
+type family InstrumentorCs'  (c :: [*] -> (* -> *) ->Constraint)  (xss :: [[*]]) (m :: * -> *) :: Constraint where
+  InstrumentorCs' c '[] m = ()
+  InstrumentorCs' c (xs ': xss) m = (c xs m , InstrumentorCs' c xss m) 
+    
+type family InstrumentorCs  (c :: [*] -> (* -> *) ->Constraint)  (sp :: *) (xs :: [*]) (m :: * -> *) (funcData :: * -> [*] -> ([*],[*]) -> *) :: Constraint where
+  InstrumentorCs c sp xs m funcData = InstrumentorCs' c (InternalLists funcData sp xs) m  
+-}
+
+type family InstrumentorCs  (c :: [*] -> (* -> *) ->Constraint -> *)  (sp :: *) (xs :: [*]) (m :: * -> *) (funcData :: * -> [*] -> ([*],[*]) -> *) :: Constraint where
+  InstrumentorCs c sp xs m (ComposeFunc f1 f2) = (Eval (c xs m), Eval (c (First (Eval (f1 sp xs))) m), InstrumentorCs c sp xs m f1, InstrumentorCs c sp (First (Eval (f1 sp xs))) m f2)  
+  InstrumentorCs c sp xs m (BindFunc f1 f2) = (Eval (c xs m), Eval (c (First (Eval (f1 sp xs))) m), InstrumentorCs c sp xs m f1, InstrumentorCs c sp (First (Eval (f1 sp xs))) m f2)  
+  InstrumentorCs c sp xs m (EmbedFunc sp1 f) = (Eval (c (ListSplitterRes sp1 xs) m), InstrumentorCs c (sp :&& sp1) (ListSplitterRes sp1 xs) m f)  
+  InstrumentorCs c sp xs m (CaptureFunc sp1 f) = (Eval (c (ListSplitterRes sp1 xs) m), InstrumentorCs c sp (ListSplitterRes sp1 xs) m f)  
+  InstrumentorCs c sp xs m (IffFunc f_a) = (Eval (c xs m), InstrumentorCs c sp xs m f_a)
+  InstrumentorCs c sp xs m (IfElseFunc f_a f_b) = (Eval (c xs m), InstrumentorCs c sp xs m f_a, InstrumentorCs c sp xs m f_b)
+  InstrumentorCs c sp xs m (ForeverFunc f) = (Eval (c xs m), InstrumentorCs c sp xs m f)
+  InstrumentorCs c sp xs m f = (Eval (c xs m))
+  
 --
 data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc :: * -> [*] -> ([*],[*]) -> *) (a :: *) where
   WithResTrans ::
@@ -359,6 +386,16 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
   AppWrapperTrans ::
     ( Eval (f sp xs) ~ rs_ex
     ) => STransApp q m sp xs rs_ex a -> STrans q m sp xs rs_ex f a 
+  --InstrumentTrans ::
+  --  ( MonadTrans q
+  --  , Monad m
+  --  ) => (V xs -> m ()) -> STrans q m sp xs rs_ex f a -> STrans q m sp xs rs_ex f a
+  InstrumentTrans ::
+    ( MonadTrans q
+    , Monad m
+    , Eval (c xs m)
+    , InstrumentorCs c sp xs m f 
+    ) => Instrumentor m c -> STrans q m sp xs rs_ex f a -> STrans q m sp xs rs_ex f a
 
 splitV_ :: 
   ( ListSplitter sp ys
@@ -564,7 +601,12 @@ applyTrans (IffTrans fl t1) sp curSnap =
       fmap (\v-> Right (liftVariant v,())) curSnap
 applyTrans (DictTrans dict named) sp curSnap = applyTransApp (getTransFromDict dict named) sp curSnap
 applyTrans (AppWrapperTrans app) sp curSnap = applyTransApp app sp curSnap
-       
+applyTrans (InstrumentTrans (Instrumentor fnc) t) sp curSnap = do 
+  v_xs <- curSnap
+  lift $ fnc v_xs
+  applyTrans t sp (return v_xs)
+   
+
 liftRes :: (Liftable rs1 rs, Liftable ex1 ex) => Either (V ex1) (V rs1,()) -> Either (V ex) (V rs,())
 liftRes (Right (v_rs1, ())) = Right $ (liftVariant v_rs1, ())        
 liftRes (Left v_ex1) = Left $ liftVariant v_ex1

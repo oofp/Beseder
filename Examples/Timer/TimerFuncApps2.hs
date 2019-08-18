@@ -100,6 +100,10 @@ executableTrans2 = buildTrans dict1
 runTimerBasic2 :: IO ()
 runTimerBasic2 = runAsyncTrans executableTrans2
 
+runTimerBasicInstrumented2 :: IO ()
+runTimerBasicInstrumented2 = runAsyncTrans (instrumentTrans varLengthInstr  executableTrans2)
+
+
 --reifyTimerBasic :: (_) => STrans (ContT Bool) TaskQ NoSplitter xs (Eval ((TimerBasicFunc TaskQ) NoSplitter xs)) (TimerBasicFunc TaskQ) () 
 --reifyTimerBasic = reifyAsyncTrans (Proxy @(TimerBasicFunc TaskQ)) (Proxy @Dict1) 
 

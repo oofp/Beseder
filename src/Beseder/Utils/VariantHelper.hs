@@ -255,3 +255,5 @@ headToTailV v_xs =
       
       
 
+getVarLength :: forall xs. KnownNat (Length xs) => Variant xs -> Int
+getVarLength v_xs = natValue @(Length xs)

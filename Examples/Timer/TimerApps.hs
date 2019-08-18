@@ -22,12 +22,12 @@
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE TypeSynonymInstances   #-}
 {-# LANGUAGE UndecidableInstances   #-}
+-- {-# LANGUAGE ConstraintKinds        #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# OPTIONS_GHC -fomit-interface-pragmas #-}
 
 module  TimerApps where
-
 
 import           Protolude                    hiding (Product, handle, return, gets, lift, liftIO,
                                                (>>), (>>=), forever, until,try,on)
@@ -38,6 +38,7 @@ import           Beseder.Misc.Misc
 import           Beseder.Resources.Timer
 import           Data.String 
 import           Control.Monad.Cont (ContT)
+import           qualified Protolude 
 
 type TimerHelloFunc m =
   (ComposeFunc
@@ -51,14 +52,6 @@ type TimerHelloFunc m =
 
 type CompletedRes = '(('[()]),'[])
 
-{-
-type TimerHelloFuncNicer m = 
-  WithResAllFunc (TimerNotArmed m "t1") :>>
-  ((InvokeAllFunc StartTimer "t1") :>>
-   ((CaptureFunc
-    (By 'Dynamic) GetNextAllFunc) :>>
-      ClearAllFunc "t1"))  
--}      
 type TimerHelloFuncNicer m = 
   NewResFunc TimerRes "t1" m 
   :>> InvokeAllFunc StartTimer "t1" 
@@ -67,17 +60,23 @@ type TimerHelloFuncNicer m =
 -- :kind! EvalTransFunc IO TimerHelloFunc
 
 data AnotherReq = AnotherReq deriving (Show,Eq)
+
 --timerHello :: TaskPoster m  => Int -> STrans (ContT Bool) m NoSplitter '[TimerNotArmed m "t1"] '(('[TimerArmed m "t1"]),'[]) (InvokeAllFunc StartTimer "t1") () -- AsyncTransApp m _ _ -- CompletedRes (TimerHelloFuncNicer m)
 --timerHello :: TaskPoster m  => Int -> STrans (ContT Bool) m NoSplitter '[TimerNotArmed m "t1"] _ (InvokeAllFunc StartTimer "t1") () -- AsyncTransApp m _ _ -- CompletedRes (TimerHelloFuncNicer m)
-timerHello :: TaskPoster m  => Int -> STransApp (ContT Bool) m NoSplitter '[()] '(('[()]),'[]) () -- AsyncTransApp m _ _ -- CompletedRes (TimerHelloFuncNicer m)
-timerHello timeoutSec1 = MkApp $ do
+timerHello :: TaskPoster m  => Int -> STrans (ContT Bool) m NoSplitter '[()] '(('[()]),'[]) _ () -- AsyncTransApp m _ _ -- CompletedRes (TimerHelloFuncNicer m)
+timerHello timeoutSec1 = do
+  liftIO $ putStrLn ("Entered timerHello"::Text)
   newRes #t1 TimerRes 
-  invoke #t1  (StartTimer timeoutSec1)  --  --   AnotherReq
+  invoke #t1  (StartTimer timeoutSec1)  
   nextEv 
-  -- _ :: _ <- whatNext
   clear #t1 
 
+timerHelloApp :: TaskPoster m  => Int -> STransApp (ContT Bool) m NoSplitter '[()] '(('[()]),'[]) () -- AsyncTransApp m _ _ -- CompletedRes (TimerHelloFuncNicer m)
+timerHelloApp = MkApp . timerHello
+
 -- runAsyncTrans $ twoTimersOn 4 7  
+-- runAsyncTrans (instrumentTrans varIndexInstr  (twoTimersOn 5 3))
+-- runAsyncTrans (instrumentTrans varLengthInstr  (twoTimersOn 5 3))
 twoTimersOn :: TaskPoster m => Int -> Int -> AsyncTransApp m _ _
 twoTimersOn timeoutSec1 timeoutSec2 = do
   liftIO $ putStrLn ("Entered twoTimersOn" :: Text)

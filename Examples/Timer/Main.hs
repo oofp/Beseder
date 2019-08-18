@@ -34,5 +34,5 @@ import           TimerApps
 import           TimerFuncApps2
 
 main :: IO ()
-main = runAsyncApp $ timerHello 10 -- 1 2 3 4
+main = runAsyncApp $ timerHelloApp 10 -- 1 2 3 4
 

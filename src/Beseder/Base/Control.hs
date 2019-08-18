@@ -56,9 +56,12 @@ module Beseder.Base.Control
     , ConstFunc
     , DictFunc
     , module Beseder.Base.Internal.STransFunc
+    , module Beseder.Base.Internal.Instruments
     , STrans
     , STransApp (..)
     , applyTransApp
+    , instrumentTrans
+    , Instrumentor (..)
     , TransDict (..)
     , Has 
     ) where
@@ -68,3 +71,5 @@ import Beseder.Base.Internal.STransDo
 import Beseder.Base.Internal.STrans
 import Beseder.Base.Internal.SplitOps
 import Beseder.Base.Internal.STransFunc
+import Beseder.Base.Internal.STransInstr
+import Beseder.Base.Internal.Instruments

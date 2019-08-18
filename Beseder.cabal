@@ -26,12 +26,14 @@ library
                      , Beseder.Resources.Comm
                      , Beseder.Misc.Misc
                      , Beseder.Base.Internal.STransFunc
+                     , Beseder.Base.Internal.Instruments
   other-modules:       Beseder.Base.Internal.Classes
                      , Beseder.Base.Internal.Cont
                      , Beseder.Base.Internal.Core
                      , Beseder.Base.Internal.Flow
                      , Beseder.Base.Internal.Named
                      , Beseder.Base.Internal.STrans
+                     , Beseder.Base.Internal.STransInstr
                      , Beseder.Base.Internal.STransDo
                      , Beseder.Base.Internal.SplitFlow
                      , Beseder.Base.Internal.SplitOps
