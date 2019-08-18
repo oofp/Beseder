@@ -25,3 +25,17 @@ _The Hebrew word for “okay” and for “alright” is “beseder” (be-se-de
 * [Indexed Monads by Kwang Yul Seo] (https://kseo.github.io/posts/2017-01-12-indexed-monads.html)
 * [Thinking with types by Sandy Maguire] (https://leanpub.com/thinking-with-types) 
 * [Introducing ST: Working with State] (http://docs.idris-lang.org/en/latest/st/state.html)
+
+## Beseder milestones and Aha moments:
+
+* The system is represented by a list of possible system states. Each entry of the list is the product of the resources states. Program is a sequence of  steps that fold and unfold the list by creating resources, clearing resources, invoking operations on the resources and observing unsolicted changes of resources states. To be executable , program should start and end with empty state.
+* The app developer can enquire list content and use it to decide about the next step of the program. 
+* The program is represented by AST implemented by GADT parameterized  by splitter that determines to what part of the list the operation is applied
+* Defunctionalization trick (that enabled partial type family applications) allows representing splitter as type level predicate. 
+
+* GADT representing AST step is also parameterized by type level function (again using defunctionalization trick) that transforms input list of system states to output list of the states.  It is used at type level computation for example to compute all possible states within event handling loop.
+
+* There is also alternative (and probably preferable) way of writing program by defining program as type (approach that is somewhat similar to Servant). The required term (value)  level computations are indicated by named placeholder (patches) which are resolved   when reifying the application type  to application AST. The correctness of the type can be quickly tested by using type level computation applied to input list of states. It helps to overcome slow compilation time , since time consuming reifying can be infrequently while type level computation on app type (invoked using :kind! from ghci) is very quick.
+
+* AST can be transformed (for example, instrumented for logging or presentation possible). It seems to open very interesting and powerful possibilities (may be even UI generation) that still needs to be explored further.    
+ 
