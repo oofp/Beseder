@@ -25,7 +25,6 @@ import           Control.Monad.Cont
 import           Control.Monad.Identity
 import           Haskus.Utils.Flow
 import           Data.Text
-import           Data.Typeable
 import           GHC.TypeLits
 import           Haskus.Utils.Tuple
 import           Haskus.Utils.Types.List
@@ -386,16 +385,13 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
   AppWrapperTrans ::
     ( Eval (f sp xs) ~ rs_ex
     ) => STransApp q m sp xs rs_ex a -> STrans q m sp xs rs_ex f a 
-  --InstrumentTrans ::
-  --  ( MonadTrans q
-  --  , Monad m
-  --  ) => (V xs -> m ()) -> STrans q m sp xs rs_ex f a -> STrans q m sp xs rs_ex f a
   InstrumentTrans ::
     ( MonadTrans q
     , Monad m
     , Eval (c xs m)
     , InstrumentorCs c sp xs m f 
     ) => Instrumentor m c -> STrans q m sp xs rs_ex f a -> STrans q m sp xs rs_ex f a
+  InstrumentTransTrans ::  STrans q m sp xs '(xs, '[]) f_id a -> STrans q m sp xs rs_ex f a -> STrans q m sp xs rs_ex f a
 
 splitV_ :: 
   ( ListSplitter sp ys
@@ -605,7 +601,11 @@ applyTrans (InstrumentTrans (Instrumentor fnc) t) sp curSnap = do
   v_xs <- curSnap
   lift $ fnc v_xs
   applyTrans t sp (return v_xs)
-   
+applyTrans (InstrumentTransTrans t0 t) sp curSnap = do 
+  v_xs_u <- applyTrans t0 sp curSnap
+  let (Right (v_xs,a)) = v_xs_u
+  applyTrans t sp (return v_xs)
+     
 
 liftRes :: (Liftable rs1 rs, Liftable ex1 ex) => Either (V ex1) (V rs1,()) -> Either (V ex) (V rs,())
 liftRes (Right (v_rs1, ())) = Right $ (liftVariant v_rs1, ())        
@@ -698,3 +698,58 @@ type family Has (st :: *) (xs :: [*]) where
 type family HasWithName (st :: *) (name :: Symbol) (xs :: [*]) where
   HasWithName (St st name) name1 xs = (GetTypeByNameVar name (St st name) xs, (St st name) ~ (St st name1))
   
+
+---
+type family FinePrintTransFunc (func :: * -> [*] -> ([*],[*]) -> *) where 
+  FinePrintTransFunc (ComposeFunc f1 f2) = FinePrintTransFunc f1 ':$$: FinePrintTransFunc f1
+  FinePrintTransFunc GetNextAllFunc = 'Text "NextEv" 
+  FinePrintTransFunc (NewResFunc name resPars m) = 'Text "NewResource " ':<>: 'Text name ':<>: 'ShowType resPars   
+  FinePrintTransFunc (InvokeAllFunc req name) = 'Text "Invoke " ':<>: 'Text name ':<>: 'ShowType req   
+  FinePrintTransFunc (ClearAllFunc name) = 'Text "Clear " ':<>: 'Text name 
+
+
+--printFinely :: TypeError (FinePrintTransFunc f) => Proxy f -> IO ()
+--printFinely prx = return ()
+
+  {-
+  NewResTrans ::
+  ( MkRes m resPars
+  , res ~ St (ResSt m resPars) name
+  , zs ~ AppendToTupleList xs res
+  , SplicC sp rs ex zs
+  , Show resPars
+  , KnownSymbol name
+  , AppendToTuple (Variant xs) res
+  , AppendToTupleResult (Variant xs) res ~ Variant (AppendToTupleList xs res)  
+  , IsTypeUniqueList name xs 
+  ) => Named name -> resPars -> STrans  q m sp xs '(rs,ex) (NewResFunc resPars name m) ()
+InvokeAllTrans ::
+  ( Request m (NamedRequest req name) (VWrap xs NamedTuple)
+  , Show req
+  , KnownSymbol name
+  , zs ~ ReqResult (NamedRequest req name) (VWrap xs NamedTuple)
+  --, WhenStuck (ReqResult (NamedRequest req name) (VWrap xs NamedTuple)) (DelayError ('Text "No request supported detected"))
+  , SplicC sp rs ex zs
+  ) => Named name -> req -> STrans q m sp xs '(rs,ex) (InvokeAllFunc req name) ()
+ClearAllTrans ::
+  ( Request m (NamedRequest TerminateRes name) (VWrap xs NamedTupleClr)
+  , zs ~ ReqResult (NamedRequest TerminateRes name) (VWrap xs NamedTupleClr)
+  , KnownSymbol name
+  , SplicC sp rs ex zs
+  ) => Named name -> STrans q m sp xs '(rs,ex) (ClearAllFunc name) ()
+GetNextTrans ::
+  ( ExtendStateTrans x
+  , Transition m (ExtendedStateTrans x)
+  , xs ~ (NextStates (ExtendedStateTrans x))
+  , '(rs,ex) ~ Eval (GetNextFunc sp (x ': ys))
+  , zs ~ Union rs ex
+  , Liftable xs zs
+  , Liftable ys zs
+  , rs_ex ~ ListSplitterRes2 sp zs
+  ) => STrans (ContT Bool) m sp (x ': ys) '(rs,ex) GetNextFunc ()
+GetNextAllTrans ::
+  ( Transition m (TransWrap xs) 
+  , SplicC sp rs ex zs
+  , zs ~ NextStates (TransWrap xs)
+  ) => STrans (ContT Bool) m sp xs '(rs,ex) GetNextAllFunc ()
+  -}
