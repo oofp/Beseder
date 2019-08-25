@@ -24,6 +24,8 @@ library
                      , Beseder.Resources.State.StateLogger  
                      , Beseder.Resources.Timer
                      , Beseder.Resources.Comm
+                     , Beseder.Resources.Composite.CompositeRes
+                     , Beseder.Resources.Composite.CompositeHndRes
                      , Beseder.Misc.Misc
                      , Beseder.Base.Internal.STransFunc
                      , Beseder.Base.Internal.Instruments

@@ -19,6 +19,7 @@
 module  Beseder.Resources.Composite.CompositeHndRes 
   ( StCrH
   , CrReqH (..)
+  , CrReqF (..)
   , CrResH (..)
   , Handler (..)
   ) where
@@ -81,6 +82,10 @@ data CrReqH m x sfunc = CrReqH (STrans IdentityT m NoSplitter '[x] '(First (Eval
 instance Show (CrReqH m x sfunc) where
   show _ = "InvokeHComposite"
 
+data CrReqF m sfunc = CrReqF 
+instance Show (CrReqF m sfunc) where
+  show _ = "InvokeHCompositeF"
+  
 type family StCrHList (rs :: [*]) hfunc dict (name :: Symbol) where
     StCrHList '[] hfunc dict name = '[]
     StCrHList (x ': xs) hfunc dict name = St (CrH x hfunc dict) name ': StCrHList xs hfunc dict name
@@ -114,6 +119,23 @@ instance
         named = Named  
         px :: Proxy hfunc
         px = Proxy
+    in fmap (mkStCrHVar named px dict . getResults) (runIdentityT $ applyTrans t NoSplitter (return (variantFromValue x)))  
+
+instance 
+  ( Monad m
+  , MkStCrHVar name hfunc dict xs
+  , Handler sfunc dict m '[x]
+  , Eval (sfunc NoSplitter '[x]) ~ '(xs, '[])
+  ) => Request m (CrReqF m sfunc) (StCrH x hfunc dict name) where
+  type ReqResult (CrReqF m sfunc) (StCrH x hfunc dict name) = StCrHList (First (Eval (sfunc NoSplitter '[x]))) hfunc dict name 
+  request CrReqF (St (CrH x dict))=
+    let named :: Named name
+        named = Named  
+        px :: Proxy hfunc
+        px = Proxy
+        ps :: Proxy sfunc
+        ps = Proxy
+        t = reifyTrans ps dict
     in fmap (mkStCrHVar named px dict . getResults) (runIdentityT $ applyTrans t NoSplitter (return (variantFromValue x)))  
 
 instance  

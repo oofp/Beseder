@@ -269,6 +269,7 @@ type HandleLoop f =
 
 type PumpEvents = HandleLoop Next 
 type HandleEvents handler = HandleLoop (handler :>> Next)  
+type ClearResource name = ClearAllFunc name
 
 type family ClearResourcesFam (names :: [Symbol]) where
   ClearResourcesFam '[name] = ClearAllFunc name

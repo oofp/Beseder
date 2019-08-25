@@ -43,50 +43,49 @@ import           Control.Monad.Cont (ContT)
 import           Control.Monad.Identity (IdentityT)
 import           qualified Protolude 
 
-
-data ITState (timer1 :: Bool) (timer2 :: Bool) = ITState deriving Show
-
-type family ToggleTimer (firstOrSecond :: Bool) (st :: *) where
-  ToggleTimer True (ITState False t2) = ITState True t2
-  ToggleTimer True (ITState True t2) = ITState False t2
-  ToggleTimer False (ITState t1 False) = ITState t1 True
-  ToggleTimer False (ITState t1 True) = ITState t1 False
-   
-
-itRes :: Int -> Int -> STrans IdentityT TaskQ NoSplitter '[()] _ _ ()
-itRes to1 to2 = do 
-  newRes #rs (InitData (ITState @True @True)) 
+itResTrans :: Int -> Int -> STrans IdentityT TaskQ NoSplitter '[()] _ _ ()
+itResTrans to1 to2 = do 
   newRes #t1 TimerRes >> newRes #t2 TimerRes
   invoke #t1 (StartTimer to1)
   invoke #t2 (StartTimer to2)
 
-{-  
-startTwoTimersReq :: Int -> Int -> STrans IdentityT TaskQ NoSplitter '[(TimerNotArmed TaskQ "t1",TimerNotArmed TaskQ "t2")] _ _ () 
-startTwoTimersReq timeoutSec1 timeoutSec2 = do
-  invoke #t1  (StartTimer timeoutSec1)  
-  invoke #t2  (StartTimer timeoutSec2)
-
---testApp = do
---  twoTimersRes
---  startTwoTimersReq 5 4
-
-
--- runAsyncApp $ MkApp (compositeHello 1 1)
-
-compositeHello :: Int -> Int -> STrans (ContT Bool) TaskQ NoSplitter '[()] _ _ () --'(('[CrTimers]),'[]) _ () -- '(('[()]),'[]) _ () -- AsyncTransApp m _ _ -- CompletedRes (TimerHelloFuncNicer m)
-compositeHello timeoutSec1 timeoutSec2 = do
-  liftIO $ putStrLn ("Entered compositeHello"::Text)
-  newRes #c1 (CrRes twoTimersRes)  
-  newRes #c2 (CrRes twoTimersRes)  
-  invoke #c1 (CrReq $ startTwoTimersReq timeoutSec1 timeoutSec2)  
-  invoke #c2 (CrReq $ startTwoTimersReq timeoutSec2 timeoutSec1)  
-  pumpEvents 
-  --clear #c1 
-  --clear #c2
-  clearAllResources 
+type Hnd 
+  =   On ("t1" :? IsTimerTriggered) 
+        (   PutStrLn "Triggered t1" 
+        :>> ClearResource "t1"
+        :>> NewRes "t1" TimerRes TaskQ
+        :>> "to1" |> Invoke "t1" StartTimer
+        )
+  :>> On ("t2" :? IsTimerTriggered) 
+       ( PutStrLn "Triggered t2"
+       :>> ClearResource "t2"
+       :>> NewRes "t2" TimerRes TaskQ
+       :>> "to2" |> Invoke "t2" StartTimer
+       )
 
 
-type CrTimers = StCr (TimerArmed TaskQ "t1", TimerArmed TaskQ "t2") "c1"  
--}
+dict to1 to2 
+  = Patches  
+    ( CnP (StartTimer to1) `as` #to1,
+    ( CnP (StartTimer to2) `as` #to2))
+    
+twoTimerRes :: Int -> Int -> CrResH TaskQ _ _ (Hnd) _
+twoTimerRes to1 to2 = CrResH (itResTrans to1 to2) (dict to1 to2) 
 
+type StopBothTimers = 
+  Invoke "t1" StopTimer
+  :>> Invoke "t2" StopTimer
+  
+crReqStopBoth :: CrReqF TaskQ  StopBothTimers  
+crReqStopBoth = CrReqF
 
+twoTimersApp :: Int -> Int -> Int -> STrans (ContT Bool) TaskQ NoSplitter '[()] _ _ ()
+twoTimersApp to1 to2 toAll = do
+  newRes #tt (twoTimerRes to1 to2)
+  newRes #tAll TimerRes
+  invoke #tAll (StartTimer toAll)
+  try @("tAll" :? IsTimerArmed) pumpEvents
+  invoke #tt crReqStopBoth
+  clearAllResources
+
+--runAsyncApp $ MkApp (twoTimersApp 3 4 30)
