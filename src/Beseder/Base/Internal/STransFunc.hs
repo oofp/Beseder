@@ -24,7 +24,7 @@
 module Beseder.Base.Internal.STransFunc where
 
 import           Protolude                    hiding (Product, handle, return, gets, lift, liftIO,
-                                                (>>), (>>=), forever, until,try,on, First)
+                                                (>>), (>>=), forever, until,try,on, First, TypeError)
 import           Control.Monad.Cont (ContT)
 import           Haskus.Utils.Flow
 import           GHC.TypeLits
@@ -328,6 +328,49 @@ instance
   ) => ToTrans (PutStrLn txt) dict q m sp xs () where
     reifyTrans _ dict = AppWrapperTrans $ MkApp $ SDo.liftIO $ putStrLn (symbolVal (Proxy @txt))
 
+data ValidateOutput :: ([*] -> Exp Type) ->  (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp ([*],[*])
+type instance Eval (ValidateOutput valFunc f sp xs) = ValidateFam valFunc (Eval (f sp xs))  
+ 
+type family ValidateFam (valFunc :: [*] -> Exp Type) (rs_ex :: ([*],[*])) :: ([*],[*]) where
+  ValidateFam valFunc rs_ex = ValidateFam' (Eval (valFunc (First rs_ex))) rs_ex
+
+type family ValidateFam' valRes (xs :: ([*],[*])) ::  ([*],[*]) where
+  ValidateFam' () rs_ex = rs_ex
+  ValidateFam' _ rs_ex = TypeError ('Text "Validation failed")
+
+instance 
+  ( Monad m
+  , ToTrans f dict q m sp xs ()
+  , Eval (f sp xs) ~ rs_ex 
+  , ValidateFam valFunc rs_ex ~ rs_ex 
+  ) => ToTrans (ValidateOutput valFunc f) dict q m sp xs () where
+    reifyTrans _ dict = 
+      let trans :: STrans q m sp xs rs_ex f ()    
+          trans = reifyTrans (Proxy @f) dict
+      in AppWrapperTrans $ MkApp trans    
+
+data ValidateInput :: ([*] -> Exp Type) ->  (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp ([*],[*])
+type instance Eval (ValidateInput valFunc f sp xs) = Eval (f sp (ValidateListFam valFunc xs))  
+
+type family ValidateListFam (valFunc :: [*] -> Exp Type) (xs :: [*]) :: [*] where
+  ValidateFam valFunc xs = ValidateListFam' (Eval (valFunc xs)) xs
+
+type family ValidateListFam' valRes (xs :: [*]) ::  [*] where
+  ValidateListFam' () xs = xs
+  ValidateListFam' _ xs = TypeError ('Text "Validation failed")
+
+  
+instance 
+  ( Monad m
+  , ToTrans f dict q m sp xs ()
+  , Eval (f sp xs) ~ rs_ex 
+  , ValidateListFam valFunc xs ~ xs 
+  ) => ToTrans (ValidateInput valFunc f) dict q m sp xs () where
+    reifyTrans _ dict = 
+      let trans :: STrans q m sp xs rs_ex f ()    
+          trans = reifyTrans (Proxy @f) dict
+      in AppWrapperTrans $ MkApp trans    
+      
 type Trace label = On (By "log") (LoggerFunc label)
 type FuncWithTrace m func = (NewResFunc StateLoggerRes "log" m) :>> func
 type EvalTransFuncWithTrace m func  = Eval (FuncWithTrace m (func m) NoSplitter '[()])

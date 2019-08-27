@@ -16,7 +16,8 @@
 module Beseder.Utils.ListHelper where
 
 import           Haskus.Utils.Types.List
-import           Protolude
+import           Protolude hiding (TypeError)
+import           GHC.TypeLits
 
 type family FilterList (xs :: [k]) (ys :: [k]) :: [k] where
   FilterList '[] ys = ys
@@ -71,3 +72,7 @@ type family IsSublist' (bigList :: [k]) (fl :: Bool) (smallList :: [k]) :: Bool 
   IsSublist' bigList False smallList = False
   IsSublist' bigList True smallList  = IsSublist bigList smallList
     
+type family FromSingletonList (xs :: [*]) :: * where
+  FromSingletonList '[x] = x
+  FromSingletonList _ = TypeError ('Text "Should have one element")
+

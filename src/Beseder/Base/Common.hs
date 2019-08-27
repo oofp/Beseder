@@ -4,6 +4,7 @@ module Beseder.Base.Common
     , Exp 
     , Eval 
     , St (..)
+    , First
     , GetInstance (..)
     , TaskPoster (..)
     , execTrans

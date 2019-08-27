@@ -21,6 +21,7 @@ module  Beseder.Resources.Composite.CompositeHndRes
   , CrReqH (..)
   , CrReqF (..)
   , CrResH (..)
+  , CrResF (..)
   , Handler (..)
   ) where
 
@@ -32,10 +33,12 @@ import            Haskus.Utils.Tuple
 import            Haskus.Utils.Types.List
 import            Beseder.Base.Base
 import            Beseder.Base.Internal.SplitOps
+import            Beseder.Base.Internal.Classes
 import            Beseder.Base.Internal.Core
 import            Beseder.Base.Internal.STrans
 import            Beseder.Base.Internal.STransFunc
 import            Beseder.Base.Internal.Named
+import            Beseder.Utils.ListHelper
 import            Beseder.Base.Internal.STransFunc
 import            Beseder.Base.Internal.TypeExp
 import            Control.Monad.Identity (IdentityT, runIdentityT)
@@ -43,12 +46,6 @@ import            qualified GHC.Show (Show (..))
 
 
 type Handler funcData dict m xs = ToTrans funcData dict IdentityT m NoSplitter xs ()
-
-{-
-type family CanHandleList (hfunc :: * -> [*] -> ([*],[*]) -> *) dict (m :: * -> *) (xs :: [[*]]) :: Constraint where
-  CanHandleList hfunc dict m '[] = ()
-  CanHandleList hfunc m dict (x ': xs) = (Handler hfunc dict m x, CanHandleList hfunc dict m xs)  
--}
 
 data CrH a hfunc dict = CrH a dict
 
@@ -61,8 +58,13 @@ data CrResH m initState sfunc hfunc dict =
     (STrans IdentityT m NoSplitter '[()] '(('[initState]),'[]) sfunc ()) 
     dict
 
-instance Show (CrResH m initState sfunc xs hfunc) where
+instance Show (CrResH m initState sfunc hfunc dict) where
   show _ = "CreateHComposite"
+
+data CrResF m (sfunc :: * -> [*] -> Exp ([*], [*])) hfunc dict = CrResF dict
+
+instance Show (CrResF m sfunc hfunc dict) where
+  show _ = "CreateHCompositeF"
 
 instance 
     ( Monad m
@@ -71,7 +73,19 @@ instance
     mkRes (CrResH t dict) = 
       fmap (\a -> CrH (getRes a) dict) (runIdentityT $ applyTrans t NoSplitter (return (variantFromValue ())))  
   
-  
+instance 
+  ( Monad m
+  , Eval (sfunc NoSplitter '[()]) ~ '(('[initState]),'[])
+  , Handler sfunc dict m '[()] 
+  ) => MkRes m (CrResF m sfunc hfunc dict)  where
+  type ResSt m (CrResF m sfunc hfunc dict) = CrH (FromSingletonList (First (Eval (sfunc NoSplitter '[()])))) hfunc dict
+  mkRes (CrResF dict) = 
+    let ps :: Proxy sfunc
+        ps = Proxy
+        t = reifyTrans ps dict
+    in fmap (\a -> CrH (getRes a) dict) (runIdentityT $ applyTrans t NoSplitter (return (variantFromValue ())))  
+    
+    
 getRes :: Either (V '[]) (V '[x],()) -> x
 getRes (Right (v_x, ())) = variantToValue v_x  
 
@@ -85,7 +99,10 @@ instance Show (CrReqH m x sfunc) where
 data CrReqF m sfunc = CrReqF 
 instance Show (CrReqF m sfunc) where
   show _ = "InvokeHCompositeF"
-  
+
+instance GetInstance (CrReqF m sfunc) where
+  getInstance = CrReqF
+    
 type family StCrHList (rs :: [*]) hfunc dict (name :: Symbol) where
     StCrHList '[] hfunc dict name = '[]
     StCrHList (x ': xs) hfunc dict name = St (CrH x hfunc dict) name ': StCrHList xs hfunc dict name

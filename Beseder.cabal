@@ -21,11 +21,11 @@ library
                      , Beseder.Base.Common
                      , Beseder.Resources.State.MonoStateRes
                      , Beseder.Resources.State.DataRes
+                     , Beseder.Resources.State.PureRes
                      , Beseder.Resources.State.StateLogger  
                      , Beseder.Resources.Timer
                      , Beseder.Resources.Comm
-                     , Beseder.Resources.Composite.CompositeRes
-                     , Beseder.Resources.Composite.CompositeHndRes
+                     , Beseder.Resources.Composite
                      , Beseder.Misc.Misc
                      , Beseder.Base.Internal.STransFunc
                      , Beseder.Base.Internal.Instruments
@@ -56,6 +56,8 @@ library
                      , Beseder.Resources.Comm.CommProvImpl
                      , Beseder.Resources.Comm.Impl.Console
                      , Beseder.Resources.Comm.Impl.WSClient
+                     , Beseder.Resources.Composite.CompositeRes
+                     , Beseder.Resources.Composite.CompositeHndRes
   build-depends:       base >= 4.7 && < 5
                      , protolude
                      , network
@@ -93,6 +95,24 @@ executable CommApps
   hs-source-dirs:      Examples/Comm
   main-is:             Main.hs
   other-modules:       CommApps
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-T -dshow-passes -fomit-interface-pragmas -fprint-potential-instances
+  build-depends:       base
+                     , Beseder
+                     , text
+                     , mtl
+                     , protolude
+                     , haskus-utils
+                     , websockets
+                     , network
+                     , bytestring
+  default-language:    Haskell2010
+  default-extensions:  OverloadedStrings, NoImplicitPrelude
+
+executable DoorApps
+  hs-source-dirs:      Examples/Door
+  main-is:             Main.hs
+  other-modules:       PureDoor
+                     , SelfClosingDoor
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-T -dshow-passes -fomit-interface-pragmas -fprint-potential-instances
   build-depends:       base
                      , Beseder
