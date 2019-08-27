@@ -39,3 +39,6 @@ _The Hebrew word for “okay” and for “alright” is “beseder” (be-se-de
 
 * AST can be transformed (for example, instrumented for logging or presentation possible). It seems to open very interesting and powerful possibilities (may be even UI generation) that still needs to be explored further.    
  
+* Implementing "resources as type". Resource consists of other (internal resources). Resource creating, internal resources state change and requests can be described as types. Important "aha" moment was the realization that request invocation can be done with no breaking the soundness.
+
+

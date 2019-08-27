@@ -22,7 +22,6 @@
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE TypeSynonymInstances   #-}
 {-# LANGUAGE UndecidableInstances   #-}
--- {-# LANGUAGE ConstraintKinds        #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# OPTIONS_GHC -fomit-interface-pragmas #-}
@@ -36,18 +35,9 @@ import           Beseder.Base.Base
 import           Beseder.Base.Common
 import           Beseder.Misc.Misc
 import           Beseder.Resources.Timer
-import           Beseder.Resources.State.DataRes
 import           Beseder.Resources.Composite
 import           Data.String 
-import           Control.Monad.Cont (ContT)
-import           Control.Monad.Identity (IdentityT)
-import           qualified Protolude 
 import           PureDoor 
-
-doorResTrans :: Int -> STrans IdentityT TaskQ NoSplitter '[()] _ _ ()
-doorResTrans to1 = do 
-  newRes #door doorRes 
-  invoke #door LockDoor
 
 type InitDoor m =
   NewRes "door" DoorRes m  
