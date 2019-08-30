@@ -27,8 +27,6 @@ module Beseder.Resources.Timer.TimerRes
   ) where
 
 import           Protolude    
-import           Control.Monad.Cont
-import           Haskus.Utils.Types
 import           Haskus.Utils.Variant
 import           Beseder.Base.Base
 import           Beseder.Base.Common

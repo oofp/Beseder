@@ -21,7 +21,6 @@ import           Haskus.Utils.Types
 import           Haskus.Utils.Types.List
 import           Haskus.Utils.Variant
 import           Protolude               hiding (Product)
-import           Data.String
 import           Beseder.Utils.ListHelper
 
 convertEither ::

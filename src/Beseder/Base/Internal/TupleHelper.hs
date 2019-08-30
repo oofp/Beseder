@@ -25,6 +25,7 @@ import           Haskus.Utils.Types.List
 import           Haskus.Utils.Variant
 import           Beseder.Base.Internal.TypeExp
 import           Data.Function (id)
+import           Prelude (error)
 
 type family TargetIndex name a :: Nat where
   TargetIndex name a = TargetIndex' name a 0
@@ -184,9 +185,12 @@ instance
     Right x -> liftVariant (variantFromValue (appendToTuple x a))
     Left v_xs -> liftVariant (appendToTuple v_xs a)
 
+emptyVar :: V '[]
+emptyVar = error "empty Variant; will never happen"
+
 instance  AppendToTuple (V '[]) a where
   type AppendToTupleResult (V '[]) a = V '[]
-  appendToTuple v_empty a =  undefined
+  appendToTuple _v_empty _a =  emptyVar
         
 --- Get
 type family GottenByName name  st :: * where
@@ -367,7 +371,7 @@ class GetTypeByNameVar (name :: Symbol) t xs where
   getTypeByNameVar :: Named name -> V xs -> t
   
 instance GetTypeByNameVar name t '[] where
-  getTypeByNameVar named _v = undefined
+  getTypeByNameVar _named _v = undefined
 
 instance (TT x (TargetByName name x), GetTarget (TargetByName name x) (TypeByName name x), TypeByName name x ~ t, GetTypeByNameVar name t xs) => GetTypeByNameVar name t (x ': xs) where
   getTypeByNameVar named v_x_xs = case popVariantHead v_x_xs of

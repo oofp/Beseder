@@ -1,26 +1,16 @@
 {-# LANGUAGE DataKinds              #-}
-{-# LANGUAGE DefaultSignatures      #-}
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE KindSignatures         #-}
-{-# LANGUAGE MonoLocalBinds         #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE PartialTypeSignatures  #-}
 {-# LANGUAGE PolyKinds              #-}
 {-# LANGUAGE RankNTypes             #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE MonoLocalBinds         #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE PartialTypeSignatures  #-}
 {-# LANGUAGE PolyKinds              #-}
-{-# LANGUAGE RankNTypes             #-}
 {-# LANGUAGE RebindableSyntax       #-}
-{-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE TypeOperators          #-}
-{-# LANGUAGE TypeSynonymInstances   #-}
 {-# LANGUAGE UndecidableInstances   #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedLabels #-}
@@ -54,7 +44,7 @@ proxyApp comRes1 comRes2 i1o2 i2o1 contPred = MkApp $ do
   newRes #com1 comRes1
   newRes #com2 comRes2
   newRes #flCont initAsTrue
-  try @(("com1" :? IsCommAlive) :&& ("com2" :? IsCommAlive) :&& ("flCont" :? IsTrue)) $ do
+  try @(("com1" :? IsCommAlive) :&& ("com2" :? IsCommAlive) :&& ("flCont" :? IsTrue)) $ 
     handleEvents $ do
       on @("com1" :? IsMessageReceived) $ do  
         msgRcvd1 <- gets #com1 getIncomingMsg

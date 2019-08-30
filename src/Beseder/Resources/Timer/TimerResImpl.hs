@@ -14,10 +14,6 @@ module Beseder.Resources.Timer.TimerResImpl where
 
 import           Protolude    
 import           Control.Concurrent.STM.TVar
-import           Control.Monad.Cont
-import           Haskus.Utils.Types
-import           Haskus.Utils.Variant
-import           Beseder.Base.Base
 import           Beseder.Base.Common
 import           Beseder.Resources.Timer.TimerRes
 

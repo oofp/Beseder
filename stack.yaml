@@ -1,4 +1,4 @@
-resolver: lts-13.4
+resolver: lts-14.1
 
 
 packages:
@@ -28,6 +28,6 @@ flags: {}
 # Extra package databases containing global packages
 extra-package-dbs: []
 
-ignore-revision-mismatch: true
+# ignore-revision-mismatch: true
 
 

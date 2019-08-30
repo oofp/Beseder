@@ -76,3 +76,4 @@ type family FromSingletonList (xs :: [*]) :: * where
   FromSingletonList '[x] = x
   FromSingletonList _ = TypeError ('Text "Should have one element")
 
+  

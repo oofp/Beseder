@@ -203,7 +203,7 @@ foreverFlowEx' ::
 foreverFlowEx' f flowToExec = do 
   ei_v_ex_v_xs <- flowToExec
   case ei_v_ex_v_xs of 
-    lft@(Left v_ex) -> undefined -- "v_ex is '[]"
+    Left _v_ex -> undefined -- "v_ex is '[]"
     Right v_xs -> do 
       ei_v_ex_v_xs' <- f (return $ Right v_xs)
       case ei_v_ex_v_xs' of
@@ -303,7 +303,7 @@ applyReqByName :: (MonadTrans q, Monad (q m), TT a (TargetByName name a),
     Request m req (TargetByName name a)) =>
     ReqByName name req a
     -> q m (Variant (ReqResult req (TargetByName name a)))
-applyReqByName rbn@(ReqByName req a) =
+applyReqByName rbn@(ReqByName req _a) =
   contR req (transformForReq (byNameR rbn))
 
 -- request by name on tuple
@@ -338,6 +338,30 @@ instance
   ) => Request m  (NamedRequest req name) (NamedTuple x) where 
   type ReqResult (NamedRequest req name) (NamedTuple x) = ReqResult req (TargetByName name x)
   request (NamedRequest req named) (NamedTuple x) = request req (transformForReq (byName named x))  
+
+instance 
+  ( Request m req (NamedTuple x) 
+  , MonadIO m
+  , res ~ Union ('[x]) (ReqResult req (NamedTuple x))
+  , Liftable (ReqResult req (NamedTuple x)) res 
+  , Liftable ('[x]) res 
+  ) => Request m  (Maybe req) (NamedTuple x) where 
+  type ReqResult (Maybe req) (NamedTuple x) = Union ('[x]) (ReqResult req (NamedTuple x))
+  request (Just req) namedTuple_x = liftVariant <$> (request req namedTuple_x)  
+  request Nothing (NamedTuple x) = return $ liftVariant (variantFromValue x)  
+
+instance 
+  ( Request m req1 (NamedTuple x) 
+  , Request m req2 (NamedTuple x) 
+  , MonadIO m
+  , res ~ Union (ReqResult req1 (NamedTuple x)) (ReqResult req2 (NamedTuple x))
+  , Liftable (ReqResult req1 (NamedTuple x)) res 
+  , Liftable (ReqResult req2 (NamedTuple x)) res 
+  ) => Request m  (Either req1 req2) (NamedTuple x) where 
+  type ReqResult (Either req1 req2) (NamedTuple x) = Union (ReqResult req1 (NamedTuple x)) (ReqResult req2 (NamedTuple x))
+  request (Left req1) namedTuple_x = liftVariant <$> (request req1 namedTuple_x)  
+  request (Right req2) namedTuple_x = liftVariant <$> (request req2 namedTuple_x)  
+
 
 data TerminateRes = TerminateRes deriving (Eq,Show)
 newtype NamedTupleClr x = NamedTupleClr x

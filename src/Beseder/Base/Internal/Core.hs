@@ -265,6 +265,32 @@ instance (Monad m, Request m req state1) => Request m req (state1,state2) where
     state1Res <- request req state1
     return $ productVariant state1Res (variantFromValue state2)
 
+{-
+instance 
+  ( Monad m
+  , Request m req1 state
+  , Request m req2 state
+  , res ~ Union (ReqResult req1 state) (ReqResult req2 state)
+  , Liftable (ReqResult req1 state) res
+  , Liftable (ReqResult req2 state) res
+  ) => Request m (Either req1 req2) state where
+  type ReqResult (Either req1 req2) state = Union (ReqResult req1 state) (ReqResult req2 state)
+  request  (Left req1)  state = liftVariant <$> request req1 state
+  request  (Right req2)  state = liftVariant <$> request req2 state
+
+instance 
+  ( Monad m
+  , state ~ St st name
+  , Request m req state
+  , res ~ Union ('[state]) (ReqResult req state)
+  , Liftable ('[state]) res
+  , Liftable (ReqResult req state) res
+  ) => Request m (Maybe req) state where
+  type ReqResult (Maybe req) (St st name) = Union ('[St st name]) (ReqResult req (St st name))
+  request  (Just req)  state = liftVariant <$> request req state
+  request  Nothing  state = return $ liftVariant (variantFromValue state)
+-}
+
 instance (MonadIO m, ClearableState m state1) => ClearableState m (state1,state2) where
   type ClearResult (state1,state2) = state2
   clearState (state1,state2) =
@@ -381,7 +407,7 @@ type instance  StateTrans (TransWrap xs) = 'Dynamic
 
 instance (MonadIO m) => Transition m (TransWrap '[]) where
   type NextStates (TransWrap '[]) = '[]
-  next req t_empty = undefined
+  next _req _t_empty = undefined
 
 instance 
   ( MonadIO m

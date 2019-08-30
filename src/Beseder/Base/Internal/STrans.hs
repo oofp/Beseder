@@ -41,7 +41,6 @@ import           Beseder.Base.Internal.SplitOps
 import           Beseder.Utils.ListHelper
 import           Beseder.Utils.VariantHelper
 import           Beseder.Base.Internal.SplitFlow
-import           Beseder.Utils.Lst
 
 -- transformation defunc data and their evaluators
 data WithResFunc :: res -> * -> [*] -> Exp ([*],[*])

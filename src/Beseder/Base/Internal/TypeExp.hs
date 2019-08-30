@@ -27,4 +27,3 @@ type family PrependIfTrue (f ::Bool) a (as :: [*]) where
     PrependIfTrue 'False a as = as         
     PrependIfTrue 'True a as = a ': as         
 
-  

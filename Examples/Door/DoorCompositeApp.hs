@@ -55,5 +55,3 @@ doorTrans openTimeout closedTimeout = do
   liftIO $ putStrLn ("Door is open now"::Text)
   pumpEvents 
   clearAllResources 
-
-
