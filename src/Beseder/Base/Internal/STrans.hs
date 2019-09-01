@@ -24,12 +24,9 @@ import           Protolude                    hiding (Product, handle,TypeError,
 import           Control.Monad.Cont
 import           Control.Monad.Identity
 import           Haskus.Utils.Flow
-import           Data.Text
 import           GHC.TypeLits
-import           Haskus.Utils.Tuple
 import           Haskus.Utils.Types.List
 import           Haskus.Utils.Variant
-import           Type.Errors hiding (Eval,Exp)
 
 import           Beseder.Base.Internal.Core
 import           Beseder.Base.Internal.Flow
@@ -97,6 +94,9 @@ infixr 2 :>>=
 
 data IffFunc :: (* -> [*] -> ([*],[*]) -> *) -> * -> [*] -> Exp ([*],[*])
 type instance Eval (IffFunc f_a sp xs) = UnionRs (Eval (f_a sp xs)) xs
+
+data IfJustFunc :: (* -> [*] -> ([*],[*]) -> *) -> * -> [*] -> Exp ([*],[*])
+type instance Eval (IfJustFunc f_a sp xs) = UnionRs (Eval (f_a sp xs)) xs
 
 data IfElseFunc :: (* -> [*] -> ([*],[*]) -> *) ->  (* -> [*] -> ([*],[*]) -> *) -> * -> [*] -> Exp ([*],[*])
 type instance Eval (IfElseFunc f_a f_b sp xs) = UnionRsEx (Eval (f_a sp xs)) (Eval (f_b sp xs))
@@ -252,10 +252,10 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     , Transition m (ExtendedStateTrans x)
     , xs ~ (NextStates (ExtendedStateTrans x))
     , '(rs,ex) ~ Eval (GetNextFunc sp (x ': ys))
-    , zs ~ Union rs ex
+    , zs ~ Union xs ys
+    , SplicC sp rs ex zs
     , Liftable xs zs
     , Liftable ys zs
-    , rs_ex ~ ListSplitterRes2 sp zs
     ) => STrans (ContT Bool) m sp (x ': ys) '(rs,ex) GetNextFunc ()
   GetNextAllTrans ::
     ( Transition m (TransWrap xs) 
@@ -266,10 +266,10 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     ( TT x (TargetByName name x)
     , Request m req (TargetByName name x)
     , xs ~ (ReqResult req (TargetByName name x))
-    , '(rs,ex) ~ Eval (InvokeFunc req name sp (x ': ys))
-    , zs ~ Union rs ex
+    , zs ~ Union xs ys
     , Liftable xs zs
     , Liftable ys zs
+    , SplicC sp rs ex zs
     , Show req
     , KnownSymbol name
     ) => Named name -> req -> STrans q m sp (x ': ys) '(rs,ex) (InvokeFunc req name) ()
@@ -376,6 +376,12 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     , Eval (f1 sp xs) ~ '(rs1, ex1)  --assert 
     , Eval (f2 sp xs) ~ '(rs2, ex2) --assert
     ) => Bool -> STrans q m sp xs '(rs1,ex1) f1 ()  -> STrans q m sp xs '(rs2,ex2) f2 () -> STrans q m sp xs '(rs, ex) (IfElseFunc f1 f2) ()  
+  IfJustTrans ::
+    ( rs ~ Union rs1 xs
+    , Liftable rs1 rs
+    , Liftable xs rs
+    , Eval (f1 sp xs) ~ '(rs1, ex)  --assert 
+    ) => (Maybe b) -> (b -> STrans q m sp xs '(rs1,ex) f1 ())  -> STrans q m sp xs '(rs, ex) (IfJustFunc f1) ()  
   LiftIOTrans :: MonadIO m => IO a -> STrans q m sp xs '(xs, '[]) IDFunc a
   DictTrans ::
     ( TransDict q m dict keyName xs a
@@ -505,6 +511,7 @@ applyTrans (WithResTrans named resFact) sp curSnap = splitV_ sp <$> andRes named
 applyTrans (WithResAllTrans named resFact) sp curSnap = splitV_ sp <$> andResAll named resFact curSnap
 applyTrans (NewResTrans named resPars) sp curSnap = splitV_ sp <$> andMkResAll named resPars curSnap
 applyTrans (InvokeAllTrans named req) sp curSnap = splitV_ sp <$> andReqAll named req curSnap
+applyTrans (InvokeTrans named req) sp curSnap = splitV_ sp <$> andReq' named req curSnap
 applyTrans (ComposeTrans t1 t2) sp curSnap = compose t1 t2 sp curSnap 
 applyTrans (ComposeDirTrans t1 t2) sp curSnap =  
   applyTrans t2 sp (fmap (\(Right (v_as,())) -> v_as) (applyTrans t1 sp curSnap))
@@ -559,6 +566,7 @@ applyTrans (WhileTrans t) sp curSnap= do
 applyTrans WhatNextTrans sp curSnap = fmap (\v->Right (v,Proxy)) curSnap  
 applyTrans WhatSplitterTrans sp curSnap = fmap (\v->Right (v,Proxy)) curSnap
 applyTrans NoopTrans sp curSnap = fmap (\v->Right (v,())) curSnap
+applyTrans GetNextTrans sp curSnap = splitV_ sp <$> andNext curSnap      
 applyTrans GetNextAllTrans sp curSnap = splitV_ sp <$> andNextAll curSnap      
 applyTrans (ClearAllTrans named) sp curSnap = splitV_ sp <$>  andClearAll named curSnap
 applyTrans ClearAllVarTrans sp curSnap = Right <$>  andClearAllVar curSnap
@@ -594,6 +602,10 @@ applyTrans (IffTrans fl t1) sp curSnap =
       fmap liftRightRes (applyTrans t1 sp curSnap)
     else 
       fmap (\v-> Right (liftVariant v,())) curSnap
+applyTrans (IfJustTrans (Just b) tf) sp curSnap = 
+  fmap liftRightRes (applyTrans (tf b) sp curSnap)
+applyTrans (IfJustTrans Nothing tf) sp curSnap = 
+  fmap (\v-> Right (liftVariant v,())) curSnap
 applyTrans (DictTrans dict named) sp curSnap = applyTransApp (getTransFromDict dict named) sp curSnap
 applyTrans (AppWrapperTrans app) sp curSnap = applyTransApp app sp curSnap
 applyTrans (InstrumentTrans (Instrumentor fnc) t) sp curSnap = do 

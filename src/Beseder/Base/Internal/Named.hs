@@ -16,7 +16,6 @@
 module Beseder.Base.Internal.Named where
 
 import           Data.Text
-import           GHC.Exts
 import           GHC.TypeLits
 import           Protolude
 import           qualified GHC.Show (Show (..))

@@ -44,7 +44,7 @@ import           Beseder.Utils.ListHelper
 import           Beseder.Utils.VariantHelper
 import           Type.Errors hiding (Eval,Exp)
 import           Beseder.Resources.State.StateLogger 
-
+import           Control.Monad.Trans
 
 class ToTrans (funcData :: * -> [*] -> Exp ([*],[*])) dict q m sp (xs :: [*]) a where
   reifyTrans :: Proxy funcData -> dict -> STrans q m sp xs (Eval (funcData sp xs)) funcData a
@@ -53,6 +53,21 @@ newtype STransPar q m sp xs rs_ex func a b = STransPar {getTrans :: b -> STrans 
 class ToTransPar (funcData :: * -> [*] -> Exp ([*],[*])) dict q m sp (xs :: [*]) a b where
   reifyTransPar :: Proxy funcData -> dict -> STransPar q m sp xs (Eval (funcData sp xs)) funcData a b
 
+--not sure if it will properly infer  
+instance  
+  ( ToTransPar (funcData :: * -> [*] -> Exp ([*],[*])) dict q m sp (xs :: [*]) () b 
+  , Eval (funcData sp xs) ~ '(rs, '[]) 
+  , MonadTrans q
+  , Monad (q m)
+  ) => ToTransPar funcData dict q m sp xs c (b,c) where
+ reifyTransPar px dict =  
+    STransPar $ \(b, c) -> 
+      ( AppWrapperTrans $ MkApp $ do
+          let (STransPar tf) = reifyTransPar px dict 
+          tf b 
+          return c
+      )
+      
 instance 
   ( Request m (NamedRequest TerminateRes name) (VWrap xs NamedTupleClr)
   , zs ~ ReqResult (NamedRequest TerminateRes name) (VWrap xs NamedTupleClr)
@@ -135,7 +150,26 @@ instance
         transB :: STransPar q m sp rs1 '(rs2, ex2)  f_b b a
         transB = reifyTransPar (Proxy @f_b) dict
       in BindTrans transA (getTrans transB)     
-  
+
+instance 
+  ( ex_un ~ Union ex1 ex2
+  , Liftable ex1 ex_un
+  , Liftable ex2 ex_un
+  , Eval (f_a sp as) ~ '(rs1, ex1)  --assert 
+  , Eval (f_b sp rs1) ~ '(rs2, ex2) --assert
+  , Composer q m sp as rs1 ex1 f_a rs2 ex2 f_b ex_un b 
+  , ToTransPar f_a dict q m sp as () a1
+  , ToTransPar f_b dict q m sp rs1 b a2
+  , ComposeFam' (IsIDFunc f_a) f_a f_b sp as ~ '(rs2,ex_un)
+  ) => ToTransPar (ComposeFunc f_a f_b) dict q m sp as b (a1,a2) where 
+    reifyTransPar _ dict =   
+      let
+        transParA :: STransPar q m sp as '(rs1, ex1) f_a () a1  
+        transParA = reifyTransPar (Proxy @f_a) dict  
+        transParB :: STransPar q m sp rs1 '(rs2, ex2)  f_b b a2
+        transParB = reifyTransPar (Proxy @f_b) dict
+      in STransPar (\(a1,a2) -> ComposeTrans ((getTrans transParA) a1) ((getTrans transParB) a2))     
+          
 instance 
   ( ListSplitter sp1 xs
   , xs_sub ~ ListSplitterRes sp1 xs
@@ -218,6 +252,18 @@ instance
         transSub = reifyTrans (Proxy @f1) dict
     in IffTrans fl transSub)   
   
+instance 
+  ( rs ~ Union rs1 xs
+  , Liftable rs1 rs
+  , Liftable xs rs
+  , Eval (f1 sp xs) ~ '(rs1, ex)  
+  , ToTransPar f1 dict q m sp xs () b 
+  ) => ToTransPar (IfJustFunc f1) dict q m sp xs () (Maybe b) where
+  reifyTransPar _ dict = STransPar (\maybeB -> 
+    let transPar :: STransPar q m sp xs '(rs1, ex) f1 () b 
+        transPar = reifyTransPar (Proxy @f1) dict
+    in IfJustTrans maybeB (getTrans transPar))  
+    
 instance 
   ( Liftable xs rs
   ) => ToTrans (ConstFunc rs) dict q m sp xs () where
@@ -327,7 +373,7 @@ instance
   , MonadIO m
   ) => ToTrans (PutStrLn txt) dict q m sp xs () where
     reifyTrans _ dict = AppWrapperTrans $ MkApp $ SDo.liftIO $ putStrLn (symbolVal (Proxy @txt))
-
+    
 data ValidateOutput :: ([*] -> Exp Type) ->  (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp ([*],[*])
 type instance Eval (ValidateOutput valFunc f sp xs) = ValidateFam valFunc (Eval (f sp xs))  
  
@@ -411,7 +457,6 @@ instance (Eval (xc m xs)) => GetStransApp (Patch xc m a) xs m a where
   getStransApp (IoP io_a) = MkApp $ SDo.liftIO io_a
   getStransApp (MnP m_a) = MkApp $ SDo.op m_a
 
-
 newtype Patches entries = Patches entries  
 
 instance (TT tpl (TargetByName key tpl), GetTarget (TargetByName key tpl) (TypeByName key tpl), Eval (xc m xs), St (Patch xc m a) key ~ TypeByName key tpl) => 
@@ -423,5 +468,3 @@ instance (TT tpl (TargetByName key tpl), GetTarget (TargetByName key tpl) (TypeB
 
 as :: st -> Named name -> St st name
 as st named = St st
-
-

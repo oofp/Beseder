@@ -39,6 +39,7 @@ import           qualified GHC.Show (Show (..))
 newtype D a = D a deriving (Show, Eq)
 
 newtype InitData a = InitData a deriving (Show, Eq)
+instance GetInstance a => GetInstance (InitData a) where getInstance = InitData getInstance 
 
 instance (Monad m) => CreateRes m name (InitData a) (V '[(St (D a) name)]) where
   createRes _named  (InitData a) = return (variantFromValue $ St (D a))

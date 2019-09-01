@@ -88,3 +88,5 @@ instance
 type instance StateTrans (St (PSt st) name) = 'Static
 instance (Monad m) => TermState m (St (PSt st) name) where
   terminate _ = return ()
+
+  

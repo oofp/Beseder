@@ -48,6 +48,7 @@ module Beseder.Base.Control
     , (:>>=) 
     , IffFunc
     , IfElseFunc 
+    , IfJustFunc
     , CaptureFunc 
     , EmbedFunc 
     , IDFunc 
