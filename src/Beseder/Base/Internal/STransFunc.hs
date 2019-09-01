@@ -109,6 +109,11 @@ instance
   reifyTrans _ dict = GetNextAllTrans   
        
 instance 
+  ( MonadReader a (q m)
+  ) => ToTrans AskFunc dict q m sp xs a where
+  reifyTrans _ dict = AskTrans   
+       
+instance 
   ( ex_un ~ Union ex1 ex2
   , Liftable ex1 ex_un
   , Liftable ex2 ex_un
@@ -251,7 +256,7 @@ instance
     let transSub :: STrans q m sp xs '(rs1, ex) f1 ()  
         transSub = reifyTrans (Proxy @f1) dict
     in IffTrans fl transSub)   
-  
+
 instance 
   ( rs ~ Union rs1 xs
   , Liftable rs1 rs

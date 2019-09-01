@@ -120,6 +120,9 @@ type instance Eval (EmbedFunc sp1 f_sub sp xs) = ListSplitterRes2 sp (UnionTuple
 data IDFunc :: * -> [*] -> Exp ([*],[*])
 type instance Eval (IDFunc sp xs) = '(xs,'[])
 
+data AskFunc :: * -> [*] -> Exp ([*],[*])
+type instance Eval (AskFunc sp xs) = '(xs,'[])
+
 data DictFunc :: Symbol -> * -> [*] -> Exp ([*],[*])
 type instance Eval (DictFunc keyName sp xs) = '(xs,'[])
 
@@ -325,6 +328,7 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     , Eval (f_sub (sp :&& sp1) (ListSplitterRes sp1 xs)) ~ '(rs_sub, ex) --assert
     ) => sp1 -> STrans q m (sp :&& sp1) xs_sub '(rs_sub,ex) f_sub () -> STrans q m sp xs '(rs,ex1) (EmbedFunc sp1 f_sub) ()
   ReturnTrans :: a -> STrans q m sp xs '(xs, '[]) IDFunc a 
+  AskTrans :: MonadReader a (q m) => STrans q m sp xs '(xs, '[]) AskFunc a 
   ForeverTrans :: 
     ( Eval (f sp xs) ~ '(xs,ex)
     ) => STrans q m sp xs '(xs,ex) f () -> STrans q m sp xs '(('[]),ex) (ForeverFunc f) ()
@@ -520,6 +524,10 @@ applyTrans (BindTrans t1 f_t2) sp curSnap =
 applyTrans (BindDirTrans t1 f_t2) sp curSnap = 
   applyTrans t1 sp curSnap >>= (\(Right (v_as,a)) -> applyTrans (f_t2 a) sp (return v_as))
 applyTrans (ReturnTrans a) sp curSnap = fmap (\v_xs -> Right (v_xs,a)) curSnap
+applyTrans AskTrans sp curSnap = do 
+  v_xs <- curSnap
+  a <- ask 
+  return $ Right (v_xs,a)
 applyTrans (LiftIOTrans io_a) sp curSnap = do 
   v_xs <- curSnap
   a <- lift $ liftIO io_a 

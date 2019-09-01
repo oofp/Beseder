@@ -103,6 +103,10 @@ instance Show (CrReqF m sfunc) where
 instance GetInstance (CrReqF m sfunc) where
   getInstance = CrReqF
     
+newtype CrReqFP m sfunc patch = CrReqFP patch 
+instance Show (CrReqFP m sfunc patch) where
+  show _ = "InvokeHCompositeFP"
+
 type family StCrHList (rs :: [*]) hfunc dict (name :: Symbol) where
     StCrHList '[] hfunc dict name = '[]
     StCrHList (x ': xs) hfunc dict name = St (CrH x hfunc dict) name ': StCrHList xs hfunc dict name
@@ -154,6 +158,18 @@ instance
         ps = Proxy
         t = reifyTrans ps dict
     in fmap (mkStCrHVar named px dict . getResults) (runIdentityT $ applyTrans t NoSplitter (return (variantFromValue x)))  
+
+instance 
+  ( Monad m
+  , Request m (CrReqF m sfunc) (StCrH x hfunc (patch,dict) name)
+  ) => Request m (CrReqFP m sfunc patch) (StCrH x hfunc dict name) where   
+    type ReqResult (CrReqFP m sfunc patch) (StCrH x hfunc dict name) = ReqResult (CrReqF m sfunc) (StCrH x hfunc (patch,dict) name) 
+    request (CrReqFP patch) (St (CrH x dict)) =
+      let reqF :: CrReqF m sfunc
+          reqF =  getInstance
+          stCrHP :: StCrH x hfunc (patch,dict) name
+          stCrHP = St (CrH x (patch,dict))
+      in request reqF stCrHP    
 
 instance  
   ( MonadIO m

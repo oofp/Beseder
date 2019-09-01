@@ -76,4 +76,8 @@ type family FromSingletonList (xs :: [*]) :: * where
   FromSingletonList '[x] = x
   FromSingletonList _ = TypeError ('Text "Should have one element")
 
-  
+type family ListElem (n :: Nat) (xs :: [*]) :: * where
+  ListElem n '[] = TypeError ('Text "no element found")
+  ListElem 0 (x ': xs) = x
+  ListElem n (x ': xs) = ListElem (n-1) xs
+    
