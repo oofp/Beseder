@@ -159,7 +159,7 @@ instance (MonadIO m, CommProv commPars i o e m) => Transition m (CommMsgRcvd nam
     TypeError ( 'Text "Use GetNextMessage before to read next incoming message") 
   next _ _ = undefined
                   
-getIncomingMsg :: CommProv commPars i o e m  => CommMsgRcvd name commPars i o e m  -> i
+getIncomingMsg :: forall m name commPars i o e. CommProv commPars i o e m  => CommMsgRcvd name commPars i o e m  -> i
 getIncomingMsg (St rcvdMsgState) = getRecvdMsg rcvdMsgState       
   
 getCommFailure :: CommProv commPars i o e m  => CommFailed name commPars i o e m  -> e

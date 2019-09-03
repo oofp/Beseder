@@ -19,6 +19,7 @@ library
   exposed-modules:     Beseder.Base.Base
                      , Beseder.Base.Control
                      , Beseder.Base.Common
+                     , Beseder.Utils
                      , Beseder.Resources.State.MonoStateRes
                      , Beseder.Resources.State.DataRes
                      , Beseder.Resources.State.PureRes

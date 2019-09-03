@@ -56,7 +56,9 @@ data ModifyData a b = ModifyData (a -> b)
 instance Show (ModifyData a b) where
   show _ = "Modify"
 
-
+instance GetInstance a => GetInstance (SetData a) where
+  getInstance = SetData getInstance
+  
 instance (Monad m) => Request m (SetData a) (St (D b) name) where
   type ReqResult (SetData a) (St (D b) name) = '[St (D a) name]
   request (SetData a) (St _) = return $ variantFromValue (St (D a))
