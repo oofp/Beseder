@@ -50,6 +50,7 @@ type Handler funcData dict m xs = ToTrans funcData dict IdentityT m NoSplitter x
 data CrH a hfunc dict = CrH a dict
 
 type StCrH a hfunc dict name = St (CrH a hfunc dict) name
+type instance Unwrap (StCrH a hfunc dict name) = a
 
 type instance StateTrans (StCrH a hfunc dict name) = StateTrans a
 

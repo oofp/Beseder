@@ -16,6 +16,8 @@ type Exp a = a -> Type
 
 type family Eval (e :: Exp a) :: a
 
+type family Unwrap (wrapped :: *) :: *
+
 data TFilterList :: (a -> Exp Bool) -> [*] -> Exp [*]
 
 type instance Eval (TFilterList f '[]) = '[]

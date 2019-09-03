@@ -42,6 +42,7 @@ newtype Cr a = Cr a
 type StCr a name = St (Cr a) name
 
 type instance StateTrans (StCr a name) = StateTrans a
+type instance Unwrap (StCr a name) = a
 
 newtype CrRes m initState sfunc = CrRes (STrans IdentityT m NoSplitter '[()] '(('[initState]),'[]) sfunc ())
 instance Show (CrRes m initState sfunc) where

@@ -3,6 +3,7 @@ module Beseder.Base.Common
     ( Named (..)
     , Exp 
     , Eval 
+    , Unwrap
     , St (..)
     , First
     , GetInstance (..)
