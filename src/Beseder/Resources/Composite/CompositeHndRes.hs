@@ -20,6 +20,8 @@ module  Beseder.Resources.Composite.CompositeHndRes
   ( StCrH
   , CrReqH (..)
   , CrReqF (..)
+  -- , CrReqFP (..)
+  , CrReqFR (..)
   , CrResH (..)
   , CrResF (..)
   , Handler (..)
@@ -42,10 +44,12 @@ import            Beseder.Utils.ListHelper
 import            Beseder.Base.Internal.STransFunc
 import            Beseder.Base.Internal.TypeExp
 import            Control.Monad.Identity (IdentityT, runIdentityT)
+import            Control.Monad.Reader (ReaderT, runReaderT)
 import            qualified GHC.Show (Show (..))
 
 
 type Handler funcData dict m xs = ToTrans funcData dict IdentityT m NoSplitter xs ()
+type HandlerR funcData dict r m xs = ToTrans funcData dict (ReaderT r) m NoSplitter xs ()
 
 data CrH a hfunc dict = CrH a dict
 
@@ -108,6 +112,10 @@ newtype CrReqFP m sfunc patch = CrReqFP patch
 instance Show (CrReqFP m sfunc patch) where
   show _ = "InvokeHCompositeFP"
 
+newtype CrReqFR m sfunc r = CrReqFR r 
+instance Show (CrReqFR m sfunc r) where
+  show _ = "InvokeHCompositeFR"
+  
 type family StCrHList (rs :: [*]) hfunc dict (name :: Symbol) where
     StCrHList '[] hfunc dict name = '[]
     StCrHList (x ': xs) hfunc dict name = St (CrH x hfunc dict) name ': StCrHList xs hfunc dict name
@@ -160,6 +168,24 @@ instance
         t = reifyTrans ps dict
     in fmap (mkStCrHVar named px dict . getResults) (runIdentityT $ applyTrans t NoSplitter (return (variantFromValue x)))  
 
+instance 
+  ( Monad m
+  , MkStCrHVar name hfunc dict xs
+  , HandlerR sfunc dict r m '[x]
+  , Eval (sfunc NoSplitter '[x]) ~ '(xs, '[])
+  ) => Request m (CrReqFR m sfunc r) (StCrH x hfunc dict name) where
+  type ReqResult (CrReqFR m sfunc r) (StCrH x hfunc dict name) = StCrHList (First (Eval (sfunc NoSplitter '[x]))) hfunc dict name 
+  request (CrReqFR r) (St (CrH x dict))=
+    let named :: Named name
+        named = Named  
+        px :: Proxy hfunc
+        px = Proxy
+        ps :: Proxy sfunc
+        ps = Proxy
+        t = reifyTrans ps dict
+    in fmap (mkStCrHVar named px dict . getResults) (runReaderT (applyTrans t NoSplitter (return (variantFromValue x))) r)  
+  
+  
 instance 
   ( Monad m
   , Request m (CrReqF m sfunc) (StCrH x hfunc (patch,dict) name)

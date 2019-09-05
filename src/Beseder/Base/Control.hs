@@ -56,6 +56,7 @@ module Beseder.Base.Control
     , AlignFunc 
     , ConstFunc
     , DictFunc
+    , AskFunc
     , module Beseder.Base.Internal.STransFunc
     , module Beseder.Base.Internal.Instruments
     , STrans
