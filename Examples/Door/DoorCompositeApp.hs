@@ -53,5 +53,7 @@ doorTrans openTimeout closedTimeout = do
   invoke #dr (getInstance @UnlockDoorRq)
   invoke #dr (getInstance @OpenDoorRq)
   liftIO $ putStrLn ("Door is open now"::Text)
+  px <- whatNext
+  r1 :: _ <- return (rs px)
   pumpEvents 
   clearAllResources 

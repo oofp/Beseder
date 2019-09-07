@@ -90,12 +90,15 @@ type DoorHandler m =
          :>> PutStrLn "OpenTimer triggered; door closed"
         )
 
+data DoorHnd m
+type instance TransFuncSyn (DoorHnd m) = DoorHandler m
+
 doorDict openTimeout closedTimeout 
   = Patches  
     ( CnP (StartTimer openTimeout) `as` #openTimeout,
     ( CnP (StartTimer closedTimeout) `as` #closedTimeout))
       
-selfClosingDoorRes :: (Int,Int) -> CrResF TaskQ (InitDoor TaskQ) (DoorHandler TaskQ) _
+selfClosingDoorRes :: (Int,Int) -> CrResF TaskQ (InitDoor TaskQ) (DoorHnd TaskQ) _
 selfClosingDoorRes (openTimeout, closedTimeout) = 
   CrResF (doorDict openTimeout closedTimeout) 
 

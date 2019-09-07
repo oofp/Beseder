@@ -120,8 +120,14 @@ type instance Eval (EmbedFunc sp1 f_sub sp xs) = ListSplitterRes2 sp (UnionTuple
 data IDFunc :: * -> [*] -> Exp ([*],[*])
 type instance Eval (IDFunc sp xs) = '(xs,'[])
 
+data MapFunc :: (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp ([*],[*])
+type instance Eval (MapFunc f sp xs) = Eval (f sp xs)
+
 data AskFunc :: * -> [*] -> Exp ([*],[*])
 type instance Eval (AskFunc sp xs) = '(xs,'[])
+
+data AsksFunc :: * -> [*] -> Exp ([*],[*])
+type instance Eval (AsksFunc sp xs) = '(xs,'[])
 
 data DictFunc :: Symbol -> * -> [*] -> Exp ([*],[*])
 type instance Eval (DictFunc keyName sp xs) = '(xs,'[])
@@ -328,7 +334,9 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     , Eval (f_sub (sp :&& sp1) (ListSplitterRes sp1 xs)) ~ '(rs_sub, ex) --assert
     ) => sp1 -> STrans q m (sp :&& sp1) xs_sub '(rs_sub,ex) f_sub () -> STrans q m sp xs '(rs,ex1) (EmbedFunc sp1 f_sub) ()
   ReturnTrans :: a -> STrans q m sp xs '(xs, '[]) IDFunc a 
+  MapTrans :: (a -> b) -> STrans q m sp xs rs_ex func a -> STrans q m sp xs rs_ex (MapFunc func) b 
   AskTrans :: MonadReader a (q m) => STrans q m sp xs '(xs, '[]) AskFunc a 
+  AsksTrans :: MonadReader a (q m) => (a -> b) -> STrans q m sp xs '(xs, '[]) AsksFunc b 
   ForeverTrans :: 
     ( Eval (f sp xs) ~ '(xs,ex)
     ) => STrans q m sp xs '(xs,ex) f () -> STrans q m sp xs '(('[]),ex) (ForeverFunc f) ()
@@ -524,10 +532,19 @@ applyTrans (BindTrans t1 f_t2) sp curSnap =
 applyTrans (BindDirTrans t1 f_t2) sp curSnap = 
   applyTrans t1 sp curSnap >>= (\(Right (v_as,a)) -> applyTrans (f_t2 a) sp (return v_as))
 applyTrans (ReturnTrans a) sp curSnap = fmap (\v_xs -> Right (v_xs,a)) curSnap
+applyTrans (MapTrans f t) sp curSnap = do
+  ei_xs_ex <- applyTrans t sp curSnap 
+  case ei_xs_ex of 
+    Right (v_xs, a) -> return $ Right (v_xs, f a)
+    Left v_ex -> return $ Left v_ex
 applyTrans AskTrans sp curSnap = do 
   v_xs <- curSnap
   a <- ask 
   return $ Right (v_xs,a)
+applyTrans (AsksTrans f) sp curSnap = do 
+    v_xs <- curSnap
+    b <- asks f
+    return $ Right (v_xs,b)
 applyTrans (LiftIOTrans io_a) sp curSnap = do 
   v_xs <- curSnap
   a <- lift $ liftIO io_a 

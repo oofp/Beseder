@@ -9,6 +9,10 @@ module Beseder.Base.Base
     , StateTransKind (..)
     , StateTrans 
     , TermRequest 
+    , (:=)
+    , Rs
+    , RsL
+    , rs
     ) where
 
 import Beseder.Base.Internal.Core 

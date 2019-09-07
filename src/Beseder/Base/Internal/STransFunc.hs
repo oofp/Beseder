@@ -112,7 +112,12 @@ instance
   ( MonadReader a (q m)
   ) => ToTrans AskFunc dict q m sp xs a where
   reifyTrans _ dict = AskTrans   
-       
+
+instance 
+  ( MonadReader a (q m)
+  ) => ToTransPar AsksFunc dict q m sp xs b (a->b) where
+  reifyTransPar _ dict = STransPar AsksTrans   
+  
 instance 
   ( ex_un ~ Union ex1 ex2
   , Liftable ex1 ex_un
@@ -257,6 +262,18 @@ instance
         transSub = reifyTrans (Proxy @f1) dict
     in IffTrans fl transSub)   
 
+instance 
+  ( rs ~ Union rs1 xs
+  , Liftable rs1 rs
+  , Liftable xs rs
+  , Eval (f1 sp xs) ~ '(rs1, ex)  
+  , ToTrans f1 dict q m sp xs a 
+  ) => ToTransPar (MapFunc f1) dict q m sp xs b (a -> b) where
+  reifyTransPar _ dict = STransPar (\f_ab -> 
+    let transSub :: STrans q m sp xs '(rs1, ex) f1 a 
+        transSub = reifyTrans (Proxy @f1) dict
+    in MapTrans f_ab transSub)   
+  
 instance 
   ( rs ~ Union rs1 xs
   , Liftable rs1 rs
@@ -452,6 +469,7 @@ data Patch (xc :: (* -> *) -> [*] -> Constraint -> *) (m :: * -> *) a where
   FnP :: Named resName -> (res -> a) -> Patch (HasResC resName res) m a 
   MnP :: m a -> Patch MonadC m a 
   IoP :: IO a -> Patch MonadIOC m a 
+  MpP :: Patch xc m a -> (a -> b) -> Patch xs m b
 
 class GetStransApp fct xs m a where
   getStransApp :: fct -> STransApp q m sp xs '(xs,'[]) a 

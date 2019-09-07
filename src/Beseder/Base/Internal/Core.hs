@@ -434,3 +434,17 @@ type family IsStateEmptyFam a :: Bool where
 data IsStateEmpty :: Type -> Exp Bool 
 type instance Eval (IsStateEmpty a) = IsStateEmptyFam a
   
+--
+data (:=) (n :: Symbol) (st :: k) 
+type family Rs i  --(i :: k1) :: k2
+type instance Rs (St st name) = name := Rs (st)  
+type instance Rs (a,b) = (Rs a,Rs b) 
+type family RsL (xs :: [*]) :: [*] where 
+  RsL '[] = '[]
+  RsL (x ': xs) = Rs x ': RsL xs
+    
+--type instance Rs '[] = '[] 
+--type instance Rs (x ': xs) = (Rs x, Rs xs) 
+
+rs :: Proxy (a :: [*]) -> Proxy (RsL a)
+rs _ = Proxy

@@ -13,6 +13,21 @@ build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
 
+Flag TimerExample
+  Description: Enable build of timer example (medium compile time)
+  Default:     False
+  Manual:      False
+
+Flag CommExample
+  Description: Enable build of Comm example (longer compile time)
+  Default:     False
+  Manual:      False
+
+Flag DoorExample
+  Description: Enable build of Door example (shorter compile time)
+  Default:     False
+  Manual:      False
+
 library 
   hs-source-dirs:      src
   ghc-options:         -Wall -fomit-interface-pragmas -fprint-potential-instances  -fno-warn-unticked-promoted-constructors 
@@ -78,56 +93,6 @@ library
                      , pretty-simple
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings, NoImplicitPrelude
-
-executable TimerApps
-  hs-source-dirs:      Examples/Timer
-  main-is:             Main.hs
-  other-modules:       TimerApps
-  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-T -dshow-passes -fomit-interface-pragmas -fprint-potential-instances
-  build-depends:       base
-                     , beseder
-                     , text
-                     , mtl
-                     , protolude
-                     , haskus-utils
-  default-language:    Haskell2010
-  default-extensions:  OverloadedStrings, NoImplicitPrelude
-
-executable CommApps
-  hs-source-dirs:      Examples/Comm
-  main-is:             Main.hs
-  other-modules:       CommApps
-  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-T -dshow-passes -fomit-interface-pragmas -fprint-potential-instances
-  build-depends:       base
-                     , beseder
-                     , text
-                     , mtl
-                     , protolude
-                     , haskus-utils
-                     , websockets
-                     , network
-                     , bytestring
-  default-language:    Haskell2010
-  default-extensions:  OverloadedStrings, NoImplicitPrelude
-
-executable DoorApps
-  hs-source-dirs:      Examples/Door
-  main-is:             Main.hs
-  other-modules:       PureDoor
-                     , SelfClosingDoor
-  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-T -dshow-passes -fomit-interface-pragmas -fprint-potential-instances
-  build-depends:       base
-                     , beseder
-                     , text
-                     , mtl
-                     , protolude
-                     , haskus-utils
-                     , websockets
-                     , network
-                     , bytestring
-  default-language:    Haskell2010
-  default-extensions:  OverloadedStrings, NoImplicitPrelude
-
 
 source-repository head
   type:     git

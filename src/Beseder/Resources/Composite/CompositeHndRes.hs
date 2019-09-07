@@ -20,19 +20,16 @@ module  Beseder.Resources.Composite.CompositeHndRes
   ( StCrH
   , CrReqH (..)
   , CrReqF (..)
-  -- , CrReqFP (..)
   , CrReqFR (..)
   , CrResH (..)
   , CrResF (..)
-  , Handler (..)
+  , Handler 
+  , TransFuncSyn
   ) where
 
 import            Protolude hiding (First)
 import            GHC.TypeLits (Symbol, ErrorMessage (..), TypeError)
-import            Control.Concurrent.STM.TVar
 import            Haskus.Utils.Variant 
-import            Haskus.Utils.Tuple
-import            Haskus.Utils.Types.List
 import            Beseder.Base.Base
 import            Beseder.Base.Internal.SplitOps
 import            Beseder.Base.Internal.Classes
@@ -48,10 +45,14 @@ import            Control.Monad.Reader (ReaderT, runReaderT)
 import            qualified GHC.Show (Show (..))
 
 
+-- Constraints
 type Handler funcData dict m xs = ToTrans funcData dict IdentityT m NoSplitter xs ()
 type HandlerR funcData dict r m xs = ToTrans funcData dict (ReaderT r) m NoSplitter xs ()
 
+type family TransFuncSyn (sn :: *) :: (* -> [*] -> Exp ([*], [*]))
+
 data CrH a hfunc dict = CrH a dict
+type instance Rs (CrH a hfunc dict) = Rs a
 
 type StCrH a hfunc dict name = St (CrH a hfunc dict) name
 type instance Unwrap (StCrH a hfunc dict name) = a
@@ -203,20 +204,23 @@ instance
   , ExtendStateTrans x
   , StateTrans x ~ 'Dynamic
   , Transition m (ExtendedStateTrans x)
-  , Handler hfunc dict m (NextStates (ExtendedStateTrans x))
-  , Eval (hfunc NoSplitter (NextStates (ExtendedStateTrans x))) ~ '(rs, '[])
+  , hf ~ TransFuncSyn hfunc
+  , Handler hf dict m (NextStates (ExtendedStateTrans x))
+  , Eval (hf NoSplitter (NextStates (ExtendedStateTrans x))) ~ '(rs, '[])
   , MkStCrHVar name hfunc dict rs
   ) => Transition m  (StCrH x hfunc dict name) where
-  type NextStates (StCrH x hfunc dict name) = StCrHList (First (Eval (hfunc NoSplitter (NextStates (ExtendedStateTrans x))))) hfunc dict name 
+  type NextStates (StCrH x hfunc dict name) = StCrHList (First (Eval ((TransFuncSyn hfunc) NoSplitter (NextStates (ExtendedStateTrans x))))) hfunc dict name 
   next (St (CrH x dict)) cb = 
     let named :: Named name
         named = Named 
-        px :: Proxy hfunc
+        px :: Proxy (TransFuncSyn hfunc)
         px = Proxy 
+        pxh :: Proxy hfunc
+        pxh = Proxy 
     in next (extendStateTrans x) 
       (\v_next -> do 
         let t = reifyTrans px dict
-        v_res <- fmap (mkStCrHVar named px dict . getResults) (runIdentityT $ applyTrans t NoSplitter (return v_next))   
+        v_res <- fmap (mkStCrHVar named pxh dict . getResults) (runIdentityT $ applyTrans t NoSplitter (return v_next))   
         cb v_res)
 
 instance  

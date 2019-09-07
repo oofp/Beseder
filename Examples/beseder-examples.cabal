@@ -1,0 +1,67 @@
+name:                beseder-examples
+version:             0.1.1.0
+-- synopsis:
+-- description:
+homepage:            https://github.com/oofp/Beseder#readme
+license:             OtherLicense
+license-file:        LICENSE
+author:              oofp
+maintainer:          oofp
+copyright:           2018-2020 oofp
+category:            Control
+build-type:          Simple
+extra-source-files:  
+cabal-version:       >=1.10
+
+executable TimerApps
+  hs-source-dirs:      Timer
+  main-is:             Main.hs
+  other-modules:       TimerApps
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-T -dshow-passes -fomit-interface-pragmas -fprint-potential-instances
+  build-depends:       base
+                    , beseder
+                    , text
+                    , mtl
+                    , protolude
+                    , haskus-utils
+  default-language:    Haskell2010
+  default-extensions:  OverloadedStrings, NoImplicitPrelude
+
+executable CommApps
+  hs-source-dirs:      ./Comm
+  main-is:             Main.hs
+  other-modules:       CommApps
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-T -dshow-passes -fomit-interface-pragmas -fprint-potential-instances
+  build-depends:       base
+                    , beseder
+                    , text
+                    , mtl
+                    , protolude
+                    , haskus-utils
+                    , websockets
+                    , network
+                    , bytestring
+  default-language:    Haskell2010
+  default-extensions:  OverloadedStrings, NoImplicitPrelude
+
+executable DoorApps
+    hs-source-dirs:      ./Door
+    main-is:             Main.hs
+    other-modules:       PureDoor
+                      , SelfClosingDoor
+    ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-T -dshow-passes -fomit-interface-pragmas -fprint-potential-instances
+    build-depends:       base
+                      , beseder
+                      , text
+                      , mtl
+                      , protolude
+                      , haskus-utils
+                      , websockets
+                      , network
+                      , bytestring
+    default-language:    Haskell2010
+    default-extensions:  OverloadedStrings, NoImplicitPrelude
+
+source-repository head
+  type:     git
+  location: https://github.com/oofp/Beseder
