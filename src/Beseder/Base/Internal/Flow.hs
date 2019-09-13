@@ -820,3 +820,6 @@ swapEither (Right a) = Left a
 swapEither' :: Either a (b,()) -> Either b (a,()) 
 swapEither' (Left a) = Right (a,())
 swapEither' (Right (a,())) = Left a
+
+pxFromFlow :: MFlow q m a -> Proxy a
+pxFromFlow _ = Proxy 

@@ -102,6 +102,27 @@ instance {-# OVERLAPS #-} TT (a, (b, (c,(d,e)))) (RT a (RT b (RT c (RT d e)))) w
 instance {-# OVERLAPS #-} TT (a, (b, (c,(d,(e,f))))) (RT a (RT b (RT c (RT d (RT e f))))) where
     tt = coerce -- (a,(b,(c,(d,(e,f))))) = RT (a, RT (b, RT (c, (RT (d, (RT (e,f)))))))
     
+instance {-# OVERLAPS #-} TT (a, (b, (c,(d,(e,(f,g)))))) (RT a (RT b (RT c (RT d (RT e (RT f g)))))) where
+  tt = coerce -- (a,(b,(c,(d,(e,f))))) = RT (a, RT (b, RT (c, (RT (d, (RT (e,f)))))))
+
+instance {-# OVERLAPS #-} TT (a, (b, (c,(d,(e,(f,(g,h))))))) (RT a (RT b (RT c (RT d (RT e (RT f (RT g h))))))) where
+  tt = coerce -- (a,(b,(c,(d,(e,f))))) = RT (a, RT (b, RT (c, (RT (d, (RT (e,f)))))))
+    
+instance {-# OVERLAPS #-} TT (a, (b, (c,(d,(e,(f,(g,(h,i)))))))) (RT a (RT b (RT c (RT d (RT e (RT f (RT g (RT h i )))))))) where
+  tt = coerce 
+
+instance {-# OVERLAPS #-} TT (a, (b, (c,(d,(e,(f,(g,(h,(i,j))))))))) (RT a (RT b (RT c (RT d (RT e (RT f (RT g (RT h (RT i j ))))))))) where
+  tt = coerce 
+        
+instance {-# OVERLAPS #-} TT (a, (b, (c,(d,(e,(f,(g,(h,(i,(j,k)))))))))) (RT a (RT b (RT c (RT d (RT e (RT f (RT g (RT h (RT i (RT j k)))))))))) where
+  tt = coerce 
+      
+instance {-# OVERLAPS #-} TT (a, (b, (c,(d,(e,(f,(g,(h,(i,(j,(k,l))))))))))) (RT a (RT b (RT c (RT d (RT e (RT f (RT g (RT h (RT i (RT j (RT k  l)))))))))))  where
+  tt = coerce 
+
+instance {-# OVERLAPS #-} TT (a, (b, (c,(d,(e,(f,(g,(h,(i,(j,(k,(l,m)))))))))))) (RT a (RT b (RT c (RT d (RT e (RT f (RT g (RT h (RT i (RT j (RT k (RT l m)))))))))))) where
+  tt = coerce 
+    
 newtype ByName name a  = ByName a
 
 transformForReq :: TT a (TargetByName name a) => ByName name a -> TargetByName name a

@@ -108,6 +108,20 @@ instance
   ) => ToTrans GetNextAllFunc dict (ContT Bool) m sp xs () where
   reifyTrans _ dict = GetNextAllTrans   
        
+
+instance 
+  ( Eval (f sp xs) ~ '(xs1,ex)
+  , xs2 ~ FilterList xs xs1
+  , xs3 ~ FilterList xs2 xs1
+  , VariantSplitter xs2 xs3 xs1
+  , Liftable xs3 xs
+  , ToTrans f dict q m sp xs ()
+  ) => ToTrans (GetNewStateFunc f) dict q m sp xs () where
+    reifyTrans _ dict = 
+      let t :: STrans q m sp xs '(xs1, ex) f ()  
+          t = reifyTrans (Proxy @f) dict
+      in GetNewStateTrans t      
+
 instance 
   ( MonadReader a (q m)
   ) => ToTrans AskFunc dict q m sp xs a where
@@ -198,6 +212,32 @@ instance
       in CaptureTrans getInstance transSub  
           
 
+instance 
+  ( ListSplitter sp1 xs
+  , xs_sub ~ ListSplitterRes sp1 xs
+  , ex_sub ~ FilterList xs_sub xs 
+  , VariantSplitter xs_sub ex_sub xs
+  , rs ~ Union rs_sub1 rs_sub2  
+  , Liftable rs_sub1 rs
+  , Liftable rs_sub2 rs
+  , ex ~ Union ex1 ex2  
+  , Liftable ex1 ex
+  , Liftable ex2 ex
+  , GetInstance sp1
+  , ToTrans f_sub1 dict q m sp xs_sub ()
+  , ToTrans f_sub2 dict q m sp ex_sub ()
+  , Eval (f_sub1 sp xs_sub) ~ '(rs_sub1, ex1) -- assert
+  , Eval (f_sub2 sp ex_sub) ~ '(rs_sub2, ex2) -- assert
+  ) => ToTrans (CaptureOrElseFunc sp1 f_sub1 f_sub2) dict q m sp xs () where  
+    reifyTrans _ dict =
+      let transSub1 :: STrans q m sp xs_sub '(rs_sub1, ex1) f_sub1 ()  
+          transSub1 = reifyTrans (Proxy @f_sub1) dict
+          transSub2 :: STrans q m sp ex_sub '(rs_sub2, ex2) f_sub2 ()  
+          transSub2 = reifyTrans (Proxy @f_sub2) dict
+      in CaptureOrElseTrans getInstance transSub1 transSub2 
+          
+  
+      
 instance       
   ( sp2 ~ (sp :&& sp1) 
   , SplicC sp1 xs_sub ex_sub xs
@@ -317,8 +357,13 @@ buildTrans dict = reifyTrans (Proxy @f) dict
 
 -- aliases
 type On sp1 f_sub = CaptureFunc sp1 f_sub
+type OnOr sp1 f_sub1 f_sub2 = CaptureOrElseFunc sp1 f_sub1 f_sub2
 type Try sp1 f_sub = EmbedFunc sp1 f_sub
+type Reach sp f_sub = Try (Not sp) f_sub
+type SkipTo sp = Reach sp (PumpEvents)
 type Next = On Dynamics GetNextAllFunc
+type NextState = GetNewStateFunc Next 
+type NextStateHnd hnd = GetNewStateFunc (Next :>> hnd) 
 type Invoke name req = InvokeAllFunc req name 
 
 type name :-> req = InvokeAllFunc req name

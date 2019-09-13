@@ -114,8 +114,18 @@ type instance Eval (CaptureFunc sp1 f_sub sp xs) = CaptureFam (ListSplitterRes2 
 type family UnionTuple xs_ex :: [*] where
   UnionTuple '(xs,ex) = Union xs ex
 
+type family CaptureOrElseFam (xs_ex_sub :: ([*],[*])) (f_sub1 :: * -> [*] -> ([*],[*]) -> *) (f_sub2 :: * -> [*] -> ([*],[*]) -> *) (sp :: *)  (xs :: [*]) :: ([*],[*]) where
+  CaptureOrElseFam '(xs_sub,ex_sub) f_sub1 f_sub2 sp xs = UnionRsEx (Eval (f_sub1 sp xs_sub)) (Eval (f_sub2 sp ex_sub))    
+data CaptureOrElseFunc :: * -> (* -> [*] -> ([*],[*]) -> *) ->  (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp ([*],[*])
+type instance Eval (CaptureOrElseFunc sp1 f_sub1 f_sub2 sp xs) = CaptureOrElseFam (ListSplitterRes2 sp1 xs) f_sub1 f_sub2 sp xs
+
 data EmbedFunc :: * -> (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp ([*],[*])
 type instance Eval (EmbedFunc sp1 f_sub sp xs) = ListSplitterRes2 sp (UnionTuple (CaptureFam (ListSplitterRes2 sp1 xs) f_sub (sp :&& sp1) xs))
+
+data GetNewStateFunc :: (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp ([*],[*])
+type instance Eval (GetNewStateFunc f sp xs) = GetNewStateFam  (Eval (f sp xs)) xs
+type family GetNewStateFam (rs_ex :: ([*],[*])) (xs :: [*]) :: ([*],[*]) where 
+  GetNewStateFam '(rs,ex) xs = '(FilterList xs rs, ex)
 
 data IDFunc :: * -> [*] -> Exp ([*],[*])
 type instance Eval (IDFunc sp xs) = '(xs,'[])
@@ -321,6 +331,21 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     , GetInstance sp1
     , Eval (f_sub sp xs_sub) ~ '(rs_sub, ex) -- assert
     ) => sp1 -> STrans q m sp xs_sub '(rs_sub,ex) f_sub () -> STrans q m sp xs '(rs1, ex) (CaptureFunc sp1 f_sub) ()
+  CaptureOrElseTrans ::
+    ( ListSplitter sp1 xs
+    , xs_sub ~ ListSplitterRes sp1 xs
+    , ex_sub ~ FilterList xs_sub xs 
+    , VariantSplitter xs_sub ex_sub xs
+    , rs ~ Union rs_sub1 rs_sub2  
+    , Liftable rs_sub1 rs
+    , Liftable rs_sub2 rs
+    , ex ~ Union ex1 ex2  
+    , Liftable ex1 ex
+    , Liftable ex2 ex
+    , GetInstance sp1
+    , Eval (f_sub1 sp xs_sub) ~ '(rs_sub1, ex1) -- assert
+    , Eval (f_sub2 sp ex_sub) ~ '(rs_sub2, ex2) -- assert
+    ) => sp1 -> STrans q m sp xs_sub '(rs_sub1,ex1) f_sub1 () -> STrans q m sp ex_sub '(rs_sub2,ex2) f_sub2 () -> STrans q m sp xs '(rs, ex) (CaptureOrElseFunc sp1 f_sub1 f_sub2) ()
   EmbedTrans ::
     ( sp2 ~ (sp :&& sp1) 
     , SplicC sp1 xs_sub ex_sub xs
@@ -340,6 +365,13 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
   ForeverTrans :: 
     ( Eval (f sp xs) ~ '(xs,ex)
     ) => STrans q m sp xs '(xs,ex) f () -> STrans q m sp xs '(('[]),ex) (ForeverFunc f) ()
+  GetNewStateTrans :: 
+    ( Eval (f sp xs) ~ '(xs1,ex)
+    , xs2 ~ FilterList xs xs1
+    , xs3 ~ FilterList xs2 xs1
+    , VariantSplitter xs2 xs3 xs1
+    , Liftable xs3 xs
+    ) => STrans q m sp xs '(xs1,ex) f () -> STrans q m sp xs '(xs2,ex) (GetNewStateFunc f) ()
   WhileTrans :: 
     ( Eval (f sp xs) ~ '(xs,ex)
     ) => STrans q m sp xs '(xs,ex) f Bool -> STrans q m sp xs '(xs,ex) f ()
@@ -555,6 +587,13 @@ applyTrans (CaptureTrans sp1 t) sp curSnap = do
     Right v_xs1 -> do
       fmap (fmap (\(v_xs2,())-> (liftVariant v_xs2,()))) (applyTrans t sp (return v_xs1))
     Left v_ex -> return $Right (liftVariant v_ex,())
+applyTrans (CaptureOrElseTrans sp1 t1 t2) sp curSnap = do 
+  v_xs <- curSnap
+  case splitV sp1 v_xs of
+    Right v_xs1 -> 
+      fmap liftRes (applyTrans t1 sp (return v_xs1))
+    Left v_ex -> 
+      fmap liftRes (applyTrans t2 sp (return v_ex))
 applyTrans (EmbedTrans sp1 t) sp curSnap = 
   let 
     merge3 ::
@@ -588,6 +627,16 @@ applyTrans (WhileTrans t) sp curSnap= do
     Right (v_xs, True) -> applyTrans (WhileTrans t) sp (return v_xs)
     Right (v_xs, False) -> return $ Right (v_xs,())
     Left v_ex -> return $ Left v_ex
+applyTrans (GetNewStateTrans t) sp curSnap = do 
+  ei_xs_ex <- applyTrans t sp curSnap 
+  case ei_xs_ex of 
+    Right (v_xs1, ()) -> do
+      let px_xs = pxFromFlow curSnap
+          px_xs2 = proxyOfFilter v_xs1 px_xs
+      case splitVar1' v_xs1 px_xs2 of
+        Left v_xs2 -> return (Right (v_xs2,()))
+        Right v_xs3 -> applyTrans (GetNewStateTrans t) sp (return (liftVariant v_xs3))   
+    Left v_ex -> return $ Left v_ex    
 applyTrans WhatNextTrans sp curSnap = fmap (\v->Right (v,Proxy)) curSnap  
 applyTrans WhatSplitterTrans sp curSnap = fmap (\v->Right (v,Proxy)) curSnap
 applyTrans NoopTrans sp curSnap = fmap (\v->Right (v,())) curSnap
