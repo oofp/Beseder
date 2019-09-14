@@ -54,6 +54,7 @@ class ToTransPar (funcData :: * -> [*] -> Exp ([*],[*])) dict q m sp (xs :: [*])
   reifyTransPar :: Proxy funcData -> dict -> STransPar q m sp xs (Eval (funcData sp xs)) funcData a b
 
 --not sure if it will properly infer  
+{- caused overlapping  
 instance  
   ( ToTransPar (funcData :: * -> [*] -> Exp ([*],[*])) dict q m sp (xs :: [*]) () b 
   , Eval (funcData sp xs) ~ '(rs, '[]) 
@@ -67,7 +68,8 @@ instance
           tf b 
           return c
       )
-      
+-}
+
 instance 
   ( Request m (NamedRequest TerminateRes name) (VWrap xs NamedTupleClr)
   , zs ~ ReqResult (NamedRequest TerminateRes name) (VWrap xs NamedTupleClr)
@@ -185,7 +187,8 @@ instance
   , ToTransPar f_a dict q m sp as () a1
   , ToTransPar f_b dict q m sp rs1 b a2
   , ComposeFam' (IsIDFunc f_a) f_a f_b sp as ~ '(rs2,ex_un)
-  ) => ToTransPar (ComposeFunc f_a f_b) dict q m sp as b (a1,a2) where 
+  , a12 ~ (a1,a2)
+  ) => ToTransPar (ComposeFunc f_a f_b) dict q m sp as b a12 where 
     reifyTransPar _ dict =   
       let
         transParA :: STransPar q m sp as '(rs1, ex1) f_a () a1  
@@ -274,7 +277,8 @@ instance
   , zs ~ ReqResult (NamedRequest req name) (VWrap xs NamedTuple)
   -- , WhenStuck (ReqResult (NamedRequest req name) (VWrap xs NamedTuple)) (DelayError ('Text "No request supported detected"))
   , SplicC sp rs ex zs
-  ) => ToTransPar (InvokeAllFunc req (name :: Symbol)) dict q m sp xs () req where 
+  , reqVal ~ req
+  ) => ToTransPar (InvokeAllFunc req (name :: Symbol)) dict q m sp xs () reqVal where 
   reifyTransPar _ _  = STransPar (InvokeAllTrans (Named @name))
 
 instance 

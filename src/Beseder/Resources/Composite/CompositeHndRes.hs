@@ -17,7 +17,8 @@
 {-# LANGUAGE InstanceSigs #-}
 
 module  Beseder.Resources.Composite.CompositeHndRes 
-  ( StCrH
+  ( StCrH  
+  , CrH (..) --TODO: hide it eventually
   , CrReqH (..)
   , CrReqF (..)
   , CrReqFR (..)
