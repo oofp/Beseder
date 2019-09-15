@@ -4,10 +4,12 @@ module Beseder.Base.Control
     , newRes
     , invoke
     , nextEv
+    , newState
     , clear
     , forever
     , while
     , try
+    , reach
     , on
     , iff
     , ifElse

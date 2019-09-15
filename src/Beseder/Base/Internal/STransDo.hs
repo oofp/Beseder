@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds             #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
@@ -12,9 +11,6 @@
 {-# LANGUAGE UndecidableInstances  #-}
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RebindableSyntax      #-}
 
@@ -118,6 +114,15 @@ nextEv ::
   ) => STrans (ContT Bool) m sp xs '(Union rs ex_sub,ex) (CaptureFunc (By 'Dynamic) GetNextAllFunc) ()
 nextEv = Beseder.Base.Internal.STransDo.on @(By 'Dynamic) GetNextAllTrans
 
+newState ::
+  ( Eval (f sp xs) ~ '(xs1,ex)
+  , xs2 ~ FilterList xs xs1
+  , xs3 ~ FilterList xs2 xs1
+  , VariantSplitter xs2 xs3 xs1
+  , Liftable xs3 xs
+  ) => STrans q m sp xs '(xs1,ex) f () -> STrans q m sp xs '(xs2,ex) (GetNewStateFunc f) ()
+newState = GetNewStateTrans 
+  
 termAndClearAllResources :: 
   ( TermState m (ClrVar xs), MonadTrans q
   , rs_ex ~ Eval (ClearAllVarFunc sp xs)
@@ -215,6 +220,21 @@ try :: forall sp1 sp sp2 xs_sub ex_sub ex1 rs rs_sub ex zs xs q m f_sub.
   , Eval (f_sub (sp :&& sp1) (ListSplitterRes sp1 xs)) ~ '(rs_sub, ex) --assert
   ) => STrans q m (sp :&& sp1) xs_sub '(rs_sub,ex) f_sub () -> STrans q m sp xs '(rs,ex1) (EmbedFunc sp1 f_sub) ()
 try = embed (getInstance @sp1)
+
+reach :: forall notsp1 sp1 sp sp2 xs_sub ex_sub ex1 rs rs_sub ex zs xs q m f_sub. 
+  ( sp1 ~ (Not notsp1)
+  , sp2 ~ (sp :&& sp1) 
+  , SplicC sp1 xs_sub ex_sub xs
+  , zs ~ Union rs_sub (Union ex_sub ex)
+  , Liftable ex zs
+  , Liftable ex_sub zs
+  , Liftable rs_sub zs
+  , SplicC sp rs ex1 zs
+  , '(rs,ex1) ~ ListSplitterRes2 sp zs
+  , GetInstance sp1
+  , Eval (f_sub (sp :&& sp1) (ListSplitterRes sp1 xs)) ~ '(rs_sub, ex) --assert
+  ) => STrans q m (sp :&& sp1) xs_sub '(rs_sub,ex) f_sub () -> STrans q m sp xs '(rs,ex1) (EmbedFunc sp1 f_sub) ()
+reach = embed (getInstance @sp1)
 
 forever ::
   ( Eval (f sp xs) ~ '(xs,ex)
