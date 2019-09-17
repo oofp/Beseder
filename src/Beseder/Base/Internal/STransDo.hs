@@ -274,6 +274,13 @@ opRes ::
   ) => Named name -> (x -> m a) -> STrans q m sp xs '(xs, '[]) IDFunc a
 opRes = OpResAllTrans
 
+getM :: 
+  ( Monad m
+  , GetTypeByNameVar name x xs
+  ) => Named name -> (x -> m a) -> STrans q m sp xs '(xs, '[]) IDFunc a
+getM = opRes
+
+
 liftIO ::
   ( MonadIO m
   ) => IO a -> STrans q m sp xs '(xs, '[]) IDFunc a

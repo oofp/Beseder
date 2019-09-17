@@ -156,6 +156,9 @@ splitVar ::
   ) => Variant cs -> Proxy as -> Proxy bs -> Either (Variant as) (Variant bs)
 splitVar  = splitVar'
 
+proxyOfVar :: Variant cs -> Proxy cs
+proxyOfVar _ = Proxy
+
 proxyOfFilter :: (bs ~ FilterList as cs) => Variant cs -> Proxy as -> Proxy bs
 proxyOfFilter v_cs p_as = Proxy
 

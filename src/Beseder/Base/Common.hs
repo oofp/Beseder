@@ -19,9 +19,14 @@ module Beseder.Base.Common
     , SyncTransApp 
     , GetTypeByNameVar 
     , getVarLength
+    , toVarOfSt
+    , ListOfNamed
+    , ToVarOfNamed 
+    , nameFromSt
     ) where
 
 import Beseder.Base.Internal.Core 
+import Beseder.Base.Internal.NamedVar 
 import Beseder.Base.Internal.Named 
 import Beseder.Base.Internal.TypeExp 
 import Beseder.Base.Internal.Classes 

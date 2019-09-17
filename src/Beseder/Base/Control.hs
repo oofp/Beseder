@@ -14,6 +14,9 @@ module Beseder.Base.Control
     , iff
     , ifElse
     , gets
+    , opRes
+    , op
+    , getM
     , termAndClearAllResources 
     , clearAllResources
     , handleEvents

@@ -50,6 +50,7 @@ library
                      , Beseder.Base.Internal.Core
                      , Beseder.Base.Internal.Flow
                      , Beseder.Base.Internal.Named
+                     , Beseder.Base.Internal.NamedVar
                      , Beseder.Base.Internal.STrans
                      , Beseder.Base.Internal.STransInstr
                      , Beseder.Base.Internal.STransDo
