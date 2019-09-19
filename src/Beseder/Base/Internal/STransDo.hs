@@ -176,7 +176,7 @@ capture ::
   , Liftable rs_sub rs1
   , Liftable ex_sub rs1
   , GetInstance sp1
-  , Eval (f_sub sp xs_sub) ~ '(rs_sub, ex) -- assert
+  -- , Eval (f_sub sp xs_sub) ~ '(rs_sub, ex) -- assert
   ) => sp1 -> STrans q m sp xs_sub '(rs_sub,ex) f_sub () -> STrans q m sp xs '(rs1, ex) (CaptureFunc sp1 f_sub) ()
 capture = CaptureTrans 
 
@@ -189,7 +189,7 @@ on :: forall sp1 sp xs xs_sub ex_sub rs1 rs_sub q m ex f_sub.
   , Liftable rs_sub rs1
   , Liftable ex_sub rs1
   , GetInstance sp1
-  , Eval (f_sub sp xs_sub) ~ '(rs_sub, ex) -- assert
+  --, Eval (f_sub sp xs_sub) ~ '(rs_sub, ex) -- assert
   ) => STrans q m sp xs_sub '(rs_sub,ex) f_sub () -> STrans q m sp xs '(rs1, ex) (CaptureFunc sp1 f_sub) ()
 on = capture (getInstance @sp1)
 
@@ -203,7 +203,7 @@ embed ::
   , SplicC sp rs ex1 zs
   , '(rs,ex1) ~ ListSplitterRes2 sp zs
   , GetInstance sp1
-  , Eval (f_sub (sp :&& sp1) (ListSplitterRes sp1 xs)) ~ '(rs_sub, ex) --assert
+  --, Eval (f_sub (sp :&& sp1) (ListSplitterRes sp1 xs)) ~ '(rs_sub, ex) --assert
   ) => sp1 -> STrans q m (sp :&& sp1) xs_sub '(rs_sub,ex) f_sub () -> STrans q m sp xs '(rs,ex1) (EmbedFunc sp1 f_sub) ()
 embed = EmbedTrans
 
@@ -217,7 +217,7 @@ try :: forall sp1 sp sp2 xs_sub ex_sub ex1 rs rs_sub ex zs xs q m f_sub.
   , SplicC sp rs ex1 zs
   , '(rs,ex1) ~ ListSplitterRes2 sp zs
   , GetInstance sp1
-  , Eval (f_sub (sp :&& sp1) (ListSplitterRes sp1 xs)) ~ '(rs_sub, ex) --assert
+  --, Eval (f_sub (sp :&& sp1) (ListSplitterRes sp1 xs)) ~ '(rs_sub, ex) --assert
   ) => STrans q m (sp :&& sp1) xs_sub '(rs_sub,ex) f_sub () -> STrans q m sp xs '(rs,ex1) (EmbedFunc sp1 f_sub) ()
 try = embed (getInstance @sp1)
 
@@ -232,7 +232,7 @@ reach :: forall notsp1 sp1 sp sp2 xs_sub ex_sub ex1 rs rs_sub ex zs xs q m f_sub
   , SplicC sp rs ex1 zs
   , '(rs,ex1) ~ ListSplitterRes2 sp zs
   , GetInstance sp1
-  , Eval (f_sub (sp :&& sp1) (ListSplitterRes sp1 xs)) ~ '(rs_sub, ex) --assert
+  -- , Eval (f_sub (sp :&& sp1) (ListSplitterRes sp1 xs)) ~ '(rs_sub, ex) --assert
   ) => STrans q m (sp :&& sp1) xs_sub '(rs_sub,ex) f_sub () -> STrans q m sp xs '(rs,ex1) (EmbedFunc sp1 f_sub) ()
 reach = embed (getInstance @sp1)
 

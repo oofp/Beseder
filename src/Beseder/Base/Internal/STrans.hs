@@ -329,7 +329,7 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     , Liftable rs_sub rs1
     , Liftable ex_sub rs1
     , GetInstance sp1
-    , Eval (f_sub sp xs_sub) ~ '(rs_sub, ex) -- assert
+    --, Eval (f_sub sp xs_sub) ~ '(rs_sub, ex) -- assert
     ) => sp1 -> STrans q m sp xs_sub '(rs_sub,ex) f_sub () -> STrans q m sp xs '(rs1, ex) (CaptureFunc sp1 f_sub) ()
   CaptureOrElseTrans ::
     ( ListSplitter sp1 xs
@@ -343,8 +343,8 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     , Liftable ex1 ex
     , Liftable ex2 ex
     , GetInstance sp1
-    , Eval (f_sub1 sp xs_sub) ~ '(rs_sub1, ex1) -- assert
-    , Eval (f_sub2 sp ex_sub) ~ '(rs_sub2, ex2) -- assert
+    --, Eval (f_sub1 sp xs_sub) ~ '(rs_sub1, ex1) -- assert
+    --, Eval (f_sub2 sp ex_sub) ~ '(rs_sub2, ex2) -- assert
     ) => sp1 -> STrans q m sp xs_sub '(rs_sub1,ex1) f_sub1 () -> STrans q m sp ex_sub '(rs_sub2,ex2) f_sub2 () -> STrans q m sp xs '(rs, ex) (CaptureOrElseFunc sp1 f_sub1 f_sub2) ()
   EmbedTrans ::
     ( sp2 ~ (sp :&& sp1) 
@@ -356,7 +356,7 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     , SplicC sp rs ex1 zs
     , '(rs,ex1) ~ ListSplitterRes2 sp zs
     , GetInstance sp1
-    , Eval (f_sub (sp :&& sp1) (ListSplitterRes sp1 xs)) ~ '(rs_sub, ex) --assert
+    --, Eval (f_sub (sp :&& sp1) (ListSplitterRes sp1 xs)) ~ '(rs_sub, ex) --assert
     ) => sp1 -> STrans q m (sp :&& sp1) xs_sub '(rs_sub,ex) f_sub () -> STrans q m sp xs '(rs,ex1) (EmbedFunc sp1 f_sub) ()
   ReturnTrans :: a -> STrans q m sp xs '(xs, '[]) IDFunc a 
   MapTrans :: (a -> b) -> STrans q m sp xs rs_ex func a -> STrans q m sp xs rs_ex (MapFunc func) b 
@@ -408,7 +408,7 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     ( rs ~ Union rs1 xs
     , Liftable rs1 rs
     , Liftable xs rs
-    , Eval (f1 sp xs) ~ '(rs1, ex)  --assert 
+    -- , Eval (f1 sp xs) ~ '(rs1, ex)  --assert 
     ) => Bool -> STrans q m sp xs '(rs1,ex) f1 ()  -> STrans q m sp xs '(rs, ex) (IffFunc f1) ()  
   IfElseTrans ::
     ( ex ~ Union ex1 ex2 
@@ -417,8 +417,8 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     , rs ~ Union rs1 rs2
     , Liftable rs1 rs
     , Liftable rs2 rs
-    , Eval (f1 sp xs) ~ '(rs1, ex1)  --assert 
-    , Eval (f2 sp xs) ~ '(rs2, ex2) --assert
+    --, Eval (f1 sp xs) ~ '(rs1, ex1)  --assert 
+    --, Eval (f2 sp xs) ~ '(rs2, ex2) --assert
     ) => Bool -> STrans q m sp xs '(rs1,ex1) f1 ()  -> STrans q m sp xs '(rs2,ex2) f2 () -> STrans q m sp xs '(rs, ex) (IfElseFunc f1 f2) ()  
   IfJustTrans ::
     ( rs ~ Union rs1 xs
