@@ -21,8 +21,10 @@ module Beseder.Base.Control
     , clearAllResources
     , handleEvents
     , pumpEvents
+    , extendForLoop
     , noop
     , whatNext
+    , whatSplitter
     , (>>)
     , (>>=)
     , return

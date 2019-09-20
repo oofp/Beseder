@@ -249,6 +249,9 @@ while = WhileTrans
 whatNext :: STrans q m sp xs '(xs, '[]) IDFunc (Proxy xs) 
 whatNext = WhatNextTrans 
 
+whatSplitter :: STrans q m sp xs '(xs, '[]) IDFunc (Proxy sp)
+whatSplitter = WhatSplitterTrans 
+
 noop :: STrans q m sp xs '(xs, '[]) IDFunc () 
 noop = NoopTrans 
 
@@ -340,6 +343,12 @@ handleLoop hnd = do
   ExtendTo loopState
   Beseder.Base.Internal.STransDo.forever $ do
     AlignTrans hnd
+
+extendForLoop :: 
+  ( rs ~ First (TransformLoop sp xs f)
+  , Liftable xs rs
+  ) => STrans q m sp as '(bs,ex) f () -> STrans q m sp xs '(rs,'[]) (ExtendForLoopFunc f) () 
+extendForLoop = ExtendForLoop
 
 handleLoop' ::
   ( loopRes ~ First (TransformLoop sp xs f)
