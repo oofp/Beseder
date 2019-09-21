@@ -159,6 +159,13 @@ type instance Eval (AlignFunc f sp xs) = '(xs, Second (Eval (f sp xs)))
 data ExtendForLoopFunc :: (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp ([*],[*])
 type instance Eval (ExtendForLoopFunc f sp xs) = '(First (TransformLoop sp xs f), '[]) 
 
+data ReplicateFunc :: n -> (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp ([*],[*])
+type instance Eval (ReplicateFunc n f sp xs) = ReplicateFam sp '(xs, '[]) f n  
+
+type family ReplicateFam sp (xs :: ([*],[*])) (f :: * -> [*] -> Exp ([*],[*])) (n :: Nat) :: ([*],[*]) where
+  ReplicateFam sp xs_ex f 0 = xs_ex
+  ReplicateFam sp '(xs,ex) f n = ReplicateFam sp (UnionExs (Eval (f sp xs)) ex) f (n-1)      
+
 type family First ab  where
   First '(a,b) = a
 
@@ -715,6 +722,17 @@ type family TransformLoop'' sp (nextXs :: ([*],[*])) (isSublist :: Bool) (totalX
 data TransformLoopFunc ::  (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp ([*],[*])
 type instance Eval (TransformLoopFunc f sp xs) = TransformLoop sp xs f
 
+type family TotalSteps sp (xs :: [*]) (f :: * -> [*] -> Exp ([*],[*])) :: Nat where
+  TotalSteps sp xs f = TotalSteps' sp (First(Eval (f sp xs))) f 1     
+
+type family TotalSteps' sp (xs :: [*]) (f :: * -> [*] -> Exp ([*],[*])) (steps :: Nat) :: Nat where
+  TotalSteps' sp '[] f n = n     
+  TotalSteps' sp xs f n = TotalSteps' sp (First(Eval (f sp xs))) f (n+1)     
+ 
+{-  
+class ApplyTimes sp (xs :: [*]) (f :: * -> [*] -> Exp ([*],[*])) (steps :: Nat) where
+  applyTimes :: sp (xs :: [*]) (f :: * -> [*] -> Exp ([*],[*]))
+-}
 
 transRes :: STrans q m sp xs rs_ex sfunc a -> Proxy (Eval (sfunc sp xs))
 transRes _ = Proxy

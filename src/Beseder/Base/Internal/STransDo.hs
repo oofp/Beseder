@@ -13,6 +13,7 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RebindableSyntax      #-}
+{-# LANGUAGE InstanceSigs          #-}
 
 {-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
@@ -21,8 +22,8 @@
 module Beseder.Base.Internal.STransDo 
   where
 
-import           Protolude                hiding (Product, handle,return, lift, liftIO, (>>), (>>=), forever, First, try,on)
-import           Control.Monad.Cont       hiding (return, lift, liftIO, (>>), (>>=), forever)
+import           Protolude                hiding (Product, handle,return, lift, liftIO, (>>), (>>=), forever, First, try,on, replicate)
+import           Control.Monad.Cont       hiding (return, lift, liftIO, (>>), (>>=), forever, replicate)
 --import           Haskus.Utils.Flow
 import           Haskus.Utils.Types.List
 import           Haskus.Utils.Variant
@@ -37,6 +38,7 @@ import           Beseder.Base.Internal.SplitOps
 import           Beseder.Base.Internal.TypeExp
 import           Beseder.Utils.ListHelper
 import           Beseder.Utils.VariantHelper
+import           GHC.TypeLits
 
 withRes' ::
   ( CreateRes m name resFact (V '[res])
@@ -462,3 +464,35 @@ getLoopFuncRes ::
 getLoopFuncRes _ _ _ = return Proxy
 
 
+--
+{-
+class ReplcateTrans q m sp xs func (n :: Nat) func1 where
+  replicate :: Proxy n -> STrans q m sp xs (Eval (func sp xs)) func () -> STrans q m sp xs (Eval (func1 sp xs)) func1 ()
+
+instance ReplcateTrans q m sp xs func 1 func where
+  --replicate :: Proxy 1 -> STrans q m sp xs rs_ex func () -> STrans q m sp xs (Eval (func sp xs)) func ()
+  replicate _ t = t
+
+instance 
+  ( ReplcateTrans q m sp xs func n func_n, n1 ~ (n + 1)
+  , Eval (func_n sp xs) ~ '(rs1, ex1)  --assert 
+  , Eval (func sp rs1) ~  '(rs2, ex2) --assert
+  , ex_un ~ Union ex1 ex2
+  , Liftable ex1 ex_un
+  , Liftable ex2 ex_un
+  , Composer q m sp xs rs1 ex1 func_n rs2 ex2 func ex_un ()) => 
+  ReplcateTrans q m sp xs func n1 (ComposeFunc func_n func) where
+    replicate _ t = ComposeTrans (replicate (Proxy @n) t) t
+-}
+
+--t2 :: (_) => STrans q m sp xs rs_ex f () -> STrans q m sp xs1 rs_ex1 f () -> STrans q m sp xs _ _ ()   
+--t2 ta tb = ComposeTrans ta tb
+
+--nextEvAll = ComposeTrans nextEvAll' nextEvAll'
+{-  
+instance 
+  ( ReplcateTrans q m sp xs rs_ex func n
+  , n1 ~ (n + 1)
+  ) => ReplcateTrans q m sp xs rs_ex func n1  where
+    replicate _ t = AppWrapperTrans (MkApp (t >> (replicate (Proxy @n) t)))
+-}

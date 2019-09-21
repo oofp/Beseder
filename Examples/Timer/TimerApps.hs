@@ -39,6 +39,7 @@ import           Beseder.Resources.Timer
 import           Data.String 
 import           Control.Monad.Cont (ContT)
 import           qualified Protolude 
+import           Beseder.Base.Internal.STransFunc
 
 type TimerHelloFunc m =
   (ComposeFunc
@@ -130,3 +131,14 @@ complexLogicTimersApp timeoutSec1 timeoutSec2 timeoutSec3 timeoutSec4 = do
   res3 :: _ <- whatNext
   clearAllResources
 -}
+
+
+twoTimersWait :: TaskPoster m => Int -> Int -> AsyncTransApp m _ _
+twoTimersWait timeoutSec1 timeoutSec2 = do
+  liftIO $ putStrLn ("Entered twoTimersOn" :: Text)
+  newRes #t1 TimerRes 
+  invoke #t1 (StartTimer timeoutSec1)  
+  withRes #t2 TimerRes
+  invoke #t2 (StartTimer timeoutSec2) 
+  on @Dynamics
+    (on @("t1" :? IsTimerTriggered) waitFor)

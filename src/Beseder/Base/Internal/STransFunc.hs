@@ -22,7 +22,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Beseder.Base.Internal.STransFunc where
-
+import qualified Protolude
 import           Protolude                    hiding (Product, handle, return, gets, lift, liftIO,
                                                 (>>), (>>=), forever, until,try,on, First, TypeError)
 import           Control.Monad.Cont (ContT)
@@ -540,3 +540,54 @@ instance (TT tpl (TargetByName key tpl), GetTarget (TargetByName key tpl) (TypeB
 
 as :: st -> Named name -> St st name
 as st named = St st
+
+--
+reifyTrans' :: ToTrans funcData dict q m sp xs () => Proxy sp ->  dict -> Proxy xs -> Proxy funcData -> (STrans q m sp xs (Eval (funcData sp xs)) funcData ())
+reifyTrans' _px_sp dict _ f_px = reifyTrans f_px dict -- Protolude.return $
+
+--type GetNextAllFunc2 = GetNextAllFunc :>> GetNextAllFunc
+--reify2 :: ToTrans GetNextAllFunc2 () q m sp xs () => Proxy sp ->  Proxy xs -> (STrans q m sp xs (Eval ((GetNextAllFunc2) sp xs)) GetNextAllFunc2 ())
+--reify2 px_sp px_xs = reifyTrans' px_sp () px_xs (Proxy @GetNextAllFunc2) 
+
+instance 
+  ( ToTrans f dict q m sp as ()
+  , (UnionExs (Eval (f sp as)) '[]) ~ Eval (f sp as)
+  ) => ToTrans (ReplicateFunc 1 f) dict q m sp as () where
+    reifyTrans _ dict = 
+      let t :: STrans q m sp as (Eval (f sp as)) f ()
+          t = reifyTrans (Proxy @f) dict
+      in AppWrapperTrans $ MkApp t
+
+instance 
+  ( ex_un ~ Union ex1 ex2
+  , Liftable ex1 ex_un
+  , Liftable ex2 ex_un
+  , f_a ~ ReplicateFunc n f
+  , f_b ~ f
+  , Eval (f_a sp as) ~ '(rs1, ex1)  --assert 
+  , Eval (f_b sp rs1) ~ '(rs2, ex2) --assert
+  , Composer q m sp as rs1 ex1 f_a rs2 ex2 f_b ex_un () 
+  --, Composer q m sp as rs1 ex1 (ReplicateFunc n f) rs2 ex2 f ex_un ()
+  , ToTrans f_a dict q m sp as ()
+  , ToTrans f_b dict q m sp rs1 ()
+  , ComposeFam' (IsIDFunc f_a) f_a f_b sp as ~ '(rs2,ex_un)
+  , n1 ~ (n + 1)
+  , (2 <=? n1) ~ True 
+  , ReplicateFam sp '(as, '[]) f n1 ~ '(rs2, ex_un)
+  ) => ToTrans (ReplicateFunc n1 f) dict q m sp as () where
+  reifyTrans _ dict = 
+    let t :: STrans q m sp as (Eval ((f_a :>> f_b) sp as)) (f_a :>> f_b) ()
+        t = reifyTrans (Proxy @(f_a :>> f_b)) dict
+    in AppWrapperTrans $ MkApp t      
+    
+      
+getWaitForProxy :: Proxy sp -> Proxy xs -> Proxy (ReplicateFunc (TotalSteps sp xs GetNextAllFunc) GetNextAllFunc)
+getWaitForProxy _ _ = Proxy
+
+waitFor :: (_) => STrans q m sp xs _ _ ()
+waitFor = do
+  px_xs <- whatNext
+  px_sp <- whatSplitter 
+  let px_waitFor = getWaitForProxy px_sp px_xs 
+      t = reifyTrans' px_sp () px_xs px_waitFor
+  t    
