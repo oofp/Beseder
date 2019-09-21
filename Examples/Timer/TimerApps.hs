@@ -140,5 +140,8 @@ twoTimersWait timeoutSec1 timeoutSec2 = do
   invoke #t1 (StartTimer timeoutSec1)  
   withRes #t2 TimerRes
   invoke #t2 (StartTimer timeoutSec2) 
-  on @Dynamics
-    (on @("t1" :? IsTimerTriggered) waitFor)
+  withRes #t3 TimerRes
+  invoke #t3 (StartTimer timeoutSec2) 
+  --on @Dynamics
+  --  (try @(Not ("t1" :? IsTimerTriggered)) waitFor)
+  skipTo @("t1" :? IsTimerTriggered)

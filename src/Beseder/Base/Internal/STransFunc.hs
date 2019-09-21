@@ -39,6 +39,7 @@ import           Beseder.Base.Internal.TupleHelper
 import           Beseder.Base.Internal.SplitOps
 import           Beseder.Base.Internal.STrans
 import           Beseder.Base.Internal.STransDo
+import           Beseder.Base.Internal.NatOne
 import           qualified Beseder.Base.Internal.STransDo as SDo
 import           Beseder.Utils.ListHelper
 import           Beseder.Utils.VariantHelper
@@ -552,7 +553,7 @@ reifyTrans' _px_sp dict _ f_px = reifyTrans f_px dict -- Protolude.return $
 instance 
   ( ToTrans f dict q m sp as ()
   , (UnionExs (Eval (f sp as)) '[]) ~ Eval (f sp as)
-  ) => ToTrans (ReplicateFunc 1 f) dict q m sp as () where
+  ) => ToTrans (ReplicateFunc One f) dict q m sp as () where
     reifyTrans _ dict = 
       let t :: STrans q m sp as (Eval (f sp as)) f ()
           t = reifyTrans (Proxy @f) dict
@@ -571,15 +572,12 @@ instance
   , ToTrans f_a dict q m sp as ()
   , ToTrans f_b dict q m sp rs1 ()
   , ComposeFam' (IsIDFunc f_a) f_a f_b sp as ~ '(rs2,ex_un)
-  , n1 ~ (n + 1)
-  , (2 <=? n1) ~ True 
-  , ReplicateFam sp '(as, '[]) f n1 ~ '(rs2, ex_un)
-  ) => ToTrans (ReplicateFunc n1 f) dict q m sp as () where
+  , ReplicateFam sp '(as, '[]) f (Succ n) ~ '(rs2, ex_un)
+  ) => ToTrans (ReplicateFunc (Succ n) f) dict q m sp as () where
   reifyTrans _ dict = 
     let t :: STrans q m sp as (Eval ((f_a :>> f_b) sp as)) (f_a :>> f_b) ()
         t = reifyTrans (Proxy @(f_a :>> f_b)) dict
     in AppWrapperTrans $ MkApp t      
-    
       
 getWaitForProxy :: Proxy sp -> Proxy xs -> Proxy (ReplicateFunc (TotalSteps sp xs GetNextAllFunc) GetNextAllFunc)
 getWaitForProxy _ _ = Proxy
@@ -591,3 +589,13 @@ waitFor = do
   let px_waitFor = getWaitForProxy px_sp px_xs 
       t = reifyTrans' px_sp () px_xs px_waitFor
   t    
+
+skipTo :: forall sp1 sp q m xs. (_) => STrans q m sp xs _ _ ()
+skipTo = do
+  try @(Dynamics :&& (Not sp1)) $ do
+    px_xs <- whatNext
+    px_sp <- whatSplitter 
+    let px_waitFor = getWaitForProxy px_sp px_xs 
+        t = reifyTrans' px_sp () px_xs px_waitFor
+    t    
+  

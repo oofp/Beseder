@@ -75,6 +75,7 @@ module Beseder.Base.Control
     , Instrumentor (..)
     , TransDict (..)
     , Has 
+    , NatOne (..)
     ) where
 
 
@@ -84,3 +85,4 @@ import Beseder.Base.Internal.SplitOps
 import Beseder.Base.Internal.STransFunc
 import Beseder.Base.Internal.STransInstr
 import Beseder.Base.Internal.Instruments
+import Beseder.Base.Internal.NatOne

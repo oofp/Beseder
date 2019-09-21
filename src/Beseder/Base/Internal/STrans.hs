@@ -38,6 +38,7 @@ import           Beseder.Base.Internal.SplitOps
 import           Beseder.Utils.ListHelper
 import           Beseder.Utils.VariantHelper
 import           Beseder.Base.Internal.SplitFlow
+import           Beseder.Base.Internal.NatOne
 
 -- transformation defunc data and their evaluators
 data WithResFunc :: res -> * -> [*] -> Exp ([*],[*])
@@ -162,9 +163,9 @@ type instance Eval (ExtendForLoopFunc f sp xs) = '(First (TransformLoop sp xs f)
 data ReplicateFunc :: n -> (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp ([*],[*])
 type instance Eval (ReplicateFunc n f sp xs) = ReplicateFam sp '(xs, '[]) f n  
 
-type family ReplicateFam sp (xs :: ([*],[*])) (f :: * -> [*] -> Exp ([*],[*])) (n :: Nat) :: ([*],[*]) where
-  ReplicateFam sp xs_ex f 0 = xs_ex
-  ReplicateFam sp '(xs,ex) f n = ReplicateFam sp (UnionExs (Eval (f sp xs)) ex) f (n-1)      
+type family ReplicateFam sp (xs :: ([*],[*])) (f :: * -> [*] -> Exp ([*],[*])) (n :: NatOne) :: ([*],[*]) where
+  ReplicateFam sp '(xs,ex) f One = UnionExs (Eval (f sp xs)) ex
+  ReplicateFam sp '(xs,ex) f (Succ n) = ReplicateFam sp (UnionExs (Eval (f sp xs)) ex) f n      
 
 type family First ab  where
   First '(a,b) = a
@@ -722,12 +723,12 @@ type family TransformLoop'' sp (nextXs :: ([*],[*])) (isSublist :: Bool) (totalX
 data TransformLoopFunc ::  (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp ([*],[*])
 type instance Eval (TransformLoopFunc f sp xs) = TransformLoop sp xs f
 
-type family TotalSteps sp (xs :: [*]) (f :: * -> [*] -> Exp ([*],[*])) :: Nat where
-  TotalSteps sp xs f = TotalSteps' sp (First(Eval (f sp xs))) f 1     
+type family TotalSteps sp (xs :: [*]) (f :: * -> [*] -> Exp ([*],[*])) :: NatOne where
+  TotalSteps sp xs f = TotalSteps' sp (First(Eval (f sp xs))) f 'One     
 
-type family TotalSteps' sp (xs :: [*]) (f :: * -> [*] -> Exp ([*],[*])) (steps :: Nat) :: Nat where
+type family TotalSteps' sp (xs :: [*]) (f :: * -> [*] -> Exp ([*],[*])) (steps :: NatOne) :: NatOne where
   TotalSteps' sp '[] f n = n     
-  TotalSteps' sp xs f n = TotalSteps' sp (First(Eval (f sp xs))) f (n+1)     
+  TotalSteps' sp xs f n = TotalSteps' sp (First(Eval (f sp xs))) f (Succ n)     
  
 {-  
 class ApplyTimes sp (xs :: [*]) (f :: * -> [*] -> Exp ([*],[*])) (steps :: Nat) where
