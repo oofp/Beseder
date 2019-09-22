@@ -58,6 +58,7 @@ library
                      , Beseder.Base.Internal.SplitOps
                      , Beseder.Base.Internal.TupleHelper
                      , Beseder.Base.Internal.TypeExp
+                     , Beseder.Base.Internal.NatOne
                      , Beseder.Utils.ListHelper
                      , Beseder.Utils.Lst
                      , Beseder.Utils.VariantHelper 

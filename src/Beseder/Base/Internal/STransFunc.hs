@@ -582,8 +582,8 @@ instance
 getWaitForProxy :: Proxy sp -> Proxy xs -> Proxy (ReplicateFunc (TotalSteps sp xs GetNextAllFunc) GetNextAllFunc)
 getWaitForProxy _ _ = Proxy
 
-waitFor :: (_) => STrans q m sp xs _ _ ()
-waitFor = do
+wait :: (_) => STrans q m sp xs _ _ ()
+wait = do
   px_xs <- whatNext
   px_sp <- whatSplitter 
   let px_waitFor = getWaitForProxy px_sp px_xs 
