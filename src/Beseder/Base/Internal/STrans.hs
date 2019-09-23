@@ -193,7 +193,12 @@ type SplicC sp xs ex zs =
   , '(xs,ex) ~ ListSplitterRes2 sp zs
   )
 
+type family NameOfRes res :: Symbol where
+  NameOfRes (St st resName) = resName
 
+type family TypeOfRes res  where
+  TypeOfRes (St st resName) = st
+    
 class TransDict (q :: (* -> *) -> * -> *) (m :: * -> *) dict (key :: Symbol) (xs :: [*]) (a :: *) | q m xs dict key -> a where 
   getTransFromDict  :: dict -> Named key -> STransApp q m sp xs '(xs,'[]) a
 

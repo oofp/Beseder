@@ -365,7 +365,7 @@ type On sp1 f_sub = CaptureFunc sp1 f_sub
 type OnOr sp1 f_sub1 f_sub2 = CaptureOrElseFunc sp1 f_sub1 f_sub2
 type Try sp1 f_sub = EmbedFunc sp1 f_sub
 type Reach sp f_sub = Try (Not sp) f_sub
-type SkipTo sp = Reach sp (PumpEvents)
+--type SkipTo sp = Reach sp (PumpEvents)
 type Next = On Dynamics GetNextAllFunc
 type NextState = GetNewStateFunc Next 
 type NextStateHnd hnd = GetNewStateFunc (Next :>> hnd) 
@@ -503,12 +503,6 @@ data EmptyC :: (* -> *) -> [*] -> Exp Constraint
 data MonadIOC :: (* -> *) -> [*] -> Exp Constraint
 data MonadC :: (* -> *) -> [*] -> Exp Constraint
 
-type family NameOfRes res :: Symbol where
-  NameOfRes (St st resName) = resName
-
-type family TypeOfRes res  where
-  TypeOfRes (St st resName) = st
-  
 type instance Eval (EmptyC m xs) = ()
 type instance Eval (HasResC resName res m xs) = (Has res xs, res ~ St (TypeOfRes res) resName)
 type instance Eval (MonadIOC m xs) = MonadIO m
@@ -599,3 +593,11 @@ skipTo = do
         t = reifyTrans' px_sp () px_xs px_waitFor
     t    
   
+data WaitFunc :: * -> [*] -> Exp ([*],[*])
+type instance Eval (WaitFunc sp xs) = Eval ((ReplicateFunc (TotalSteps sp xs GetNextAllFunc) GetNextAllFunc) sp xs)
+type Wait = WaitFunc
+
+data SkipToFunc :: * -> * -> [*] -> Exp ([*],[*])
+type instance Eval (SkipToFunc sp1 sp xs) = Eval ((Try ((Not sp1) :&& Dynamics) WaitFunc) sp xs) 
+type SkipTo = SkipToFunc
+
