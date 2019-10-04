@@ -246,6 +246,22 @@ try :: forall sp1 sp sp2 xs_sub ex_sub ex zs rs_sub rs q m ex1 xs f_sub.
   ) => STrans q m (sp :&& sp1) xs_sub rs_sub ex f_sub () -> STrans q m sp xs rs ex1 (EmbedFunc sp1 f_sub) ()
 try t = embed (getInstance @sp1) t
 
+reach :: forall sp1_not sp1 sp sp2 xs_sub ex_sub ex zs rs_sub rs q m ex1 xs f_sub.
+  ( sp1 ~ Not sp1_not
+  , sp2 ~ (sp :&& sp1) 
+  , SplicC sp1 xs_sub ex_sub xs
+  , zs ~ Union rs_sub (Union ex_sub ex)
+  , Liftable ex zs
+  , Liftable ex_sub zs
+  , Liftable rs_sub zs
+  , SplicC sp rs ex1 zs
+  , '(rs,ex1) ~ ListSplitterRes2 sp zs
+  , Monad (q m)
+  , MonadTrans q
+  , GetInstance sp1
+  ) => STrans q m (sp :&& sp1) xs_sub rs_sub ex f_sub () -> STrans q m sp xs rs ex1 (EmbedFunc sp1 f_sub) ()
+reach t = embed (getInstance @(Not sp1_not)) t
+
 capture ::
   ( ListSplitter sp1 xs
   , xs_sub ~ ListSplitterRes sp1 xs

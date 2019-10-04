@@ -8,6 +8,7 @@ module Beseder.Base.Control
     , forever
     , while
     , try
+    , reach
     , on
     , iff
     , ifElse

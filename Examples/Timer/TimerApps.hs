@@ -39,6 +39,7 @@ timerHello timeoutSec1 = do
 timerHelloApp :: TaskPoster m  => Int -> STransApp (ContT Bool) m NoSplitter '[()] '[()] '[] () 
 timerHelloApp = MkApp . timerHello
 
+{-
 twoTimersOn :: TaskPoster m => Int -> Int -> STransApp (ContT Bool) m NoSplitter '[()] '[()] '[] ()
 twoTimersOn timeoutSec1 timeoutSec2 = MkApp $ do
   liftIO $ putStrLn ("Entered twoTimersOn" :: Text)
@@ -67,6 +68,7 @@ timersPump timeoutSec1 timeoutSec2 timeoutSec3 timeoutSec4 = MkApp $ do
   invoke #t4 (StartTimer timeoutSec4) 
   pumpEvents
   clearAllResources
+-}
 
 complexLogicTimersApp :: TaskPoster m => Int -> Int -> Int -> Int -> STransApp (ContT Bool) m NoSplitter '[()] '[()] '[] ()
 complexLogicTimersApp timeoutSec1 timeoutSec2 timeoutSec3 timeoutSec4 = MkApp $ do
@@ -90,3 +92,12 @@ complexLogicTimersApp timeoutSec1 timeoutSec2 timeoutSec3 timeoutSec4 = MkApp $ 
   res3 :: _ <- whatNext
   clearAllResources
 
+
+timerReach :: TaskPoster m  => Int -> STrans (ContT Bool) m NoSplitter '[()] '[()] '[] _ () 
+timerReach timeoutSec1 = do
+  liftIO $ putStrLn ("Entered timerHello"::Text)
+  newRes #t1 TimerRes 
+  invoke #t1  (StartTimer timeoutSec1)  
+  reach @("t1" :? IsTimerTriggered) nextEv 
+  clear #t1 
+  
