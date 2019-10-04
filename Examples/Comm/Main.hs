@@ -56,7 +56,7 @@ commRes1 = CommRes echoWS
 commRes2 :: ConsoleRes 
 commRes2 = consoleRes
 
-proxyWsConsoleApp :: STransApp (ContT Bool) TaskQ NoSplitter '[()] '(('[()]),'[]) ()
+proxyWsConsoleApp :: STransApp (ContT Bool) TaskQ NoSplitter '[()] '[()] '[] ()
 proxyWsConsoleApp = proxyApp commRes1 commRes2 show id ((==)"q")
 
 main :: IO ()

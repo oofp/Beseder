@@ -44,24 +44,6 @@ executable CommApps
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings, NoImplicitPrelude
 
-executable DoorApps
-    hs-source-dirs:      ./Door
-    main-is:             Main.hs
-    other-modules:       PureDoor
-                      , SelfClosingDoor
-    ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-T -dshow-passes -fomit-interface-pragmas -fprint-potential-instances
-    build-depends:       base
-                      , beseder
-                      , text
-                      , mtl
-                      , protolude
-                      , haskus-utils
-                      , websockets
-                      , network
-                      , bytestring
-    default-language:    Haskell2010
-    default-extensions:  OverloadedStrings, NoImplicitPrelude
-
 source-repository head
   type:     git
   location: https://github.com/oofp/Beseder

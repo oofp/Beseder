@@ -260,17 +260,17 @@ headToTailV v_xs =
 getVarLength :: forall xs. KnownNat (Length xs) => Variant xs -> Int
 getVarLength v_xs = natValue @(Length xs)
 
-concatEither :: forall xs ys. KnownNat (Length xs) => Either (V ys) (V xs) -> V (Concat xs ys)
+concatEither :: forall xs ys. KnownNat (Length xs) => Either (V xs) (V ys) -> V (Concat xs ys)
 {-# INLINE concatEither #-}
-concatEither (Right v_xs) = appendVariant @ys v_xs
-concatEither (Left v_ys) = prependVariant @xs v_ys
+concatEither (Left v_xs) = appendVariant @ys v_xs
+concatEither (Right v_ys) = prependVariant @xs v_ys
 
 
 unionEither :: forall xs ys zs. 
   ( KnownNat (Length xs)
   , zs ~ (Concat xs ys)
   , Liftable zs (Nub zs)
-  ) => Either (V ys) (V xs) -> V (Union xs ys)
+  ) => Either (V xs) (V ys) -> V (Union xs ys)
 {-# INLINE unionEither #-}
 unionEither  = nubVariant . concatEither 
 

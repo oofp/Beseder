@@ -13,21 +13,19 @@
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE FunctionalDependencies #-}
-
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Beseder.Base.Internal.STrans where
+module Beseder.Base.Internal.STransIx where
 
-import           Protolude                    hiding (Product, handle,TypeError,First)
-import           Control.Monad.Cont
-import           Control.Monad.Identity
-import           Haskus.Utils.Flow
-import           GHC.TypeLits
+import           Protolude                    hiding (Product, handle,TypeError,First,forever, on)
+import           Control.Monad.Cont (ContT)
+import           Control.Monad.Identity (IdentityT)
+import           Control.Monad.Trans (MonadTrans)
+import           Haskus.Utils.Flow            hiding (forever)
 import           Haskus.Utils.Types.List
 import           Haskus.Utils.Variant
-
 import           Beseder.Base.Internal.Core
 import           Beseder.Base.Internal.Flow
 import           Beseder.Base.Internal.Named
@@ -39,142 +37,8 @@ import           Beseder.Utils.ListHelper
 import           Beseder.Utils.VariantHelper
 import           Beseder.Base.Internal.SplitFlow
 import           Beseder.Base.Internal.NatOne
+import           Beseder.Base.Internal.STransDef
 
--- transformation defunc data and their evaluators
-data WithResFunc :: res -> * -> [*] -> Exp ([*],[*])
-type instance Eval (WithResFunc res sp (x ': ys)) = ListSplitterRes2 sp (Union '[AppendToTupleResult x res] ys)
-
-data WithResAllFunc :: res -> * -> [*] -> Exp ([*],[*])
-type instance Eval (WithResAllFunc res sp xs) = ListSplitterRes2 sp (AppendToTupleList xs res)
-
-data NewResFunc :: (resPars :: *) -> name -> (* -> *) -> * -> [*] -> Exp ([*],[*])
-type instance Eval (NewResFunc resPars name m sp xs) = ListSplitterRes2 sp (AppendToTupleList xs (St (ResSt m resPars) name))
-
-data InvokeAllFunc :: (req :: *) -> name -> * -> [*] -> Exp ([*],[*])
-type instance Eval (InvokeAllFunc req name sp xs) = ListSplitterRes2 sp (ReqResult (NamedRequest req name) (VWrap xs NamedTuple))
-
-data ClearAllFunc :: name -> * -> [*] -> Exp ([*],[*])
-type instance Eval (ClearAllFunc name sp xs) = ListSplitterRes2 sp (ReqResult (NamedRequest TerminateRes name) (VWrap xs NamedTupleClr))
-
-data GetNextFunc :: * -> [*] -> Exp ([*],[*])
-type instance Eval (GetNextFunc sp (x ': ys)) = ListSplitterRes2 sp (Union (NextStates (ExtendedStateTrans x)) ys)
-
-data GetNextAllFunc :: * -> [*] -> Exp ([*],[*])
-type instance Eval (GetNextAllFunc sp xs) = ListSplitterRes2 sp (NextStates (TransWrap xs))
-
-data InvokeFunc :: (req :: *) -> name -> * -> [*] -> Exp ([*],[*])
-type instance Eval (InvokeFunc req name sp (x ': ys)) = ListSplitterRes2 sp (Union (ReqResult req (TargetByName name x)) ys)
-
-data ClearAllVarFunc :: * -> [*] -> Exp ([*],[*])
-type instance Eval (ClearAllVarFunc sp xs) = '(('[()]) , '[])
-
-type family ComposeFam (as_ex :: ([*],[*])) (sp :: *) (f_b :: * -> [*] -> ([*],[*]) -> *) :: ([*],[*]) where
-  ComposeFam '(as1,ex1) sp f_b = UnionExs (Eval (f_b sp as1)) ex1
-type family UnionExs (bs_ex :: ([*],[*]))  (ex_a :: [*]) :: ([*],[*]) where
-  UnionExs '(bs,ex_b) ex_a = '(bs, Union ex_a ex_b)
-
-type family IsIDFunc (f :: * -> [*] -> ([*],[*]) -> *) :: Bool where
-  IsIDFunc IDFunc = 'True
-  IsIDFunc _ = 'False
-
-type family ComposeFam' (isID :: Bool) (f_a :: * -> [*] -> ([*],[*]) -> *) (f_b :: * -> [*] -> ([*],[*]) -> *) (sp :: *) (as :: [*]) :: ([*],[*]) where   
-  ComposeFam' True f_a f_b sp as = Eval (f_b sp as)
-  ComposeFam' False f_a f_b sp as = ComposeFam (Eval (f_a sp as)) sp f_b
-
-data BindFunc :: (* -> [*] -> ([*],[*]) -> *) ->  (* -> [*] -> ([*],[*]) -> *) -> * -> [*] -> Exp ([*],[*])
-type instance Eval (BindFunc f_a f_b sp as) = Eval (ComposeFunc f_a f_b sp as)
-  
-data ComposeFunc :: (* -> [*] -> ([*],[*]) -> *) ->  (* -> [*] -> ([*],[*]) -> *) -> * -> [*] -> Exp ([*],[*])
-type instance Eval (ComposeFunc f_a f_b sp as) = ComposeFam' (IsIDFunc f_a) f_a f_b sp as -- ComposeFam (Eval (f_a sp as)) sp f_b
-
-type (:>>) f_a f_b = ComposeFunc f_a f_b
-infixl 1 :>>
-
-type (:>>=) f_a f_b = BindFunc f_a f_b
-infixr 2 :>>=
-
-data IffFunc :: (* -> [*] -> ([*],[*]) -> *) -> * -> [*] -> Exp ([*],[*])
-type instance Eval (IffFunc f_a sp xs) = UnionRs (Eval (f_a sp xs)) xs
-
-data IfJustFunc :: (* -> [*] -> ([*],[*]) -> *) -> * -> [*] -> Exp ([*],[*])
-type instance Eval (IfJustFunc f_a sp xs) = UnionRs (Eval (f_a sp xs)) xs
-
-data IfElseFunc :: (* -> [*] -> ([*],[*]) -> *) ->  (* -> [*] -> ([*],[*]) -> *) -> * -> [*] -> Exp ([*],[*])
-type instance Eval (IfElseFunc f_a f_b sp xs) = UnionRsEx (Eval (f_a sp xs)) (Eval (f_b sp xs))
-
-type family UnionRsEx (t1 :: ([*],[*])) (t2 :: ([*],[*])) :: ([*],[*]) where
-  UnionTuple '(rs1, ex1) '(rs2, ex2) = '(Union rs1 rs2, Union ex1 ex2) 
-
-type family CaptureFam (xs_ex_sub :: ([*],[*])) (f_sub :: * -> [*] -> ([*],[*]) -> *) (sp :: *)  (xs :: [*]) :: ([*],[*]) where
-  CaptureFam '(xs_sub,ex_sub) f_sub sp xs = UnionRs (Eval (f_sub sp xs_sub)) ex_sub   
-type family UnionRs (bs_ex :: ([*],[*]))  (ex_a :: [*]) :: ([*],[*]) where
-  UnionRs '(bs,ex_b) ex_a = '(Union bs ex_a, ex_b)
-data CaptureFunc :: * -> (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp ([*],[*])
-type instance Eval (CaptureFunc sp1 f_sub sp xs) = CaptureFam (ListSplitterRes2 sp1 xs) f_sub sp xs
-
-type family UnionTuple xs_ex :: [*] where
-  UnionTuple '(xs,ex) = Union xs ex
-
-type family CaptureOrElseFam (xs_ex_sub :: ([*],[*])) (f_sub1 :: * -> [*] -> ([*],[*]) -> *) (f_sub2 :: * -> [*] -> ([*],[*]) -> *) (sp :: *)  (xs :: [*]) :: ([*],[*]) where
-  CaptureOrElseFam '(xs_sub,ex_sub) f_sub1 f_sub2 sp xs = UnionRsEx (Eval (f_sub1 sp xs_sub)) (Eval (f_sub2 sp ex_sub))    
-data CaptureOrElseFunc :: * -> (* -> [*] -> ([*],[*]) -> *) ->  (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp ([*],[*])
-type instance Eval (CaptureOrElseFunc sp1 f_sub1 f_sub2 sp xs) = CaptureOrElseFam (ListSplitterRes2 sp1 xs) f_sub1 f_sub2 sp xs
-
-data EmbedFunc :: * -> (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp ([*],[*])
-type instance Eval (EmbedFunc sp1 f_sub sp xs) = ListSplitterRes2 sp (UnionTuple (CaptureFam (ListSplitterRes2 sp1 xs) f_sub (sp :&& sp1) xs))
-
-data GetNewStateFunc :: (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp ([*],[*])
-type instance Eval (GetNewStateFunc f sp xs) = GetNewStateFam  (Eval (f sp xs)) xs
-type family GetNewStateFam (rs_ex :: ([*],[*])) (xs :: [*]) :: ([*],[*]) where 
-  GetNewStateFam '(rs,ex) xs = '(FilterList xs rs, ex)
-
-data IDFunc :: * -> [*] -> Exp ([*],[*])
-type instance Eval (IDFunc sp xs) = '(xs,'[])
-
-data MapFunc :: (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp ([*],[*])
-type instance Eval (MapFunc f sp xs) = Eval (f sp xs)
-
-data AskFunc :: * -> [*] -> Exp ([*],[*])
-type instance Eval (AskFunc sp xs) = '(xs,'[])
-
-data AsksFunc :: * -> [*] -> Exp ([*],[*])
-type instance Eval (AsksFunc sp xs) = '(xs,'[])
-
-data DictFunc :: Symbol -> * -> [*] -> Exp ([*],[*])
-type instance Eval (DictFunc keyName sp xs) = '(xs,'[])
-
-type family ForeverFam (xs_ex :: ([*],[*])) (sp :: *) (xs :: [*]) :: ([*],[*]) where
-  ForeverFam '(xs,ex) sp xs = '(('[]),ex)
-  ForeverFam '(ys,ex) sp xs = 
-    TypeError 
-      ( 'Text "Forever input `"
-        ':<>: 'ShowType xs ':<>: 'Text "' and output `"
-        ':<>: 'ShowType ys ':<>: 'Text " dont match'")
-  
-data ForeverFunc :: (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp  ([*],[*]) 
-type instance Eval (ForeverFunc f sp xs) = ForeverFam (Eval (f sp xs)) sp xs
-
-data AlignFunc :: (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp ([*],[*])
-type instance Eval (AlignFunc f sp xs) = '(xs, Second (Eval (f sp xs))) 
-
-data ExtendForLoopFunc :: (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp ([*],[*])
-type instance Eval (ExtendForLoopFunc f sp xs) = '(First (TransformLoop sp xs f), '[]) 
-
-data ReplicateFunc :: n -> (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp ([*],[*])
-type instance Eval (ReplicateFunc n f sp xs) = ReplicateFam sp '(xs, '[]) f n  
-
-type family ReplicateFam sp (xs :: ([*],[*])) (f :: * -> [*] -> Exp ([*],[*])) (n :: NatOne) :: ([*],[*]) where
-  ReplicateFam sp '(xs,ex) f One = UnionExs (Eval (f sp xs)) ex
-  ReplicateFam sp '(xs,ex) f (Succ n) = ReplicateFam sp (UnionExs (Eval (f sp xs)) ex) f n      
-
-type family First ab  where
-  First '(a,b) = a
-
-type family Second ab  where
-  Second '(a,b) = b
-
-data ConstFunc :: [*] -> * -> [*] -> Exp ([*],[*])
-type instance Eval (ConstFunc cs sp xs) = '(cs,'[])
 
 -- Constrains
 type family ComposeCFam sp f_a as as1 f_b bs zs where 
@@ -198,38 +62,507 @@ type family NameOfRes res :: Symbol where
 
 type family TypeOfRes res  where
   TypeOfRes (St st resName) = st
-    
-class TransDict (q :: (* -> *) -> * -> *) (m :: * -> *) dict (key :: Symbol) (xs :: [*]) (a :: *) | q m xs dict key -> a where 
-  getTransFromDict  :: dict -> Named key -> STransApp q m sp xs '(xs,'[]) a
 
-data Instrumentor (m :: * -> *) (c :: ([*] -> (* -> *) -> Constraint -> *)) = Instrumentor (forall xs. Eval (c xs m) => V xs -> m ())   
+type family Has (st :: *) (xs :: [*]) where
+  Has (St st name) xs = GetTypeByNameVar name (St st name) xs
+
+type family HasWithName (st :: *) (name :: Symbol) (xs :: [*]) where
+  HasWithName (St st name) name1 xs = (GetTypeByNameVar name (St st name) xs, (St st name) ~ (St st name1))
+    
+    
+splitV_ :: 
+  ( ListSplitter sp ys
+  , '(xs,ex) ~ ListSplitterRes2 sp ys 
+  , VariantSplitter xs ex ys
+  ) => sp -> V ys -> Either (V ex) (V xs, ())  
+splitV_ sp v_ys = fmap (\v_xs->(v_xs,())) (splitV sp v_ys)
 
 {-
-type family InternalLists (funcData :: * -> [*] -> ([*],[*]) -> *) (sp :: *) (xs :: [*]) :: [[*]] where
-  InternalLists (ComposeFunc f1 f2) sp xs = '[xs, First (Eval (f1 sp xs))]
-  InternalLists (EmbedFunc sp1 f) sp xs = '[ListSplitterRes sp1 xs]
-  InternalLists (CaptureFunc sp1 f) sp xs = '[ListSplitterRes sp1 xs]
-  InternalLists funcData sp xs = '[xs]
+class 
+  ('(rs_n,ex_n) ~ Eval (ReplicateFunc n sfunc sp xs)) =>
+    ReplcateTrans (n :: NatOne) q (m :: * -> *) (sp :: *) xs rs_n ex_n (sfunc :: * -> [*] -> ([*],[*]) -> *) where
+      replicateTrans :: Proxy n -> STransF q m sp sfunc () -> STrans q m sp xs rs_n ex_n (ReplicateFunc n sfunc) ()  
 
-type family InstrumentorCs'  (c :: [*] -> (* -> *) ->Constraint)  (xss :: [[*]]) (m :: * -> *) :: Constraint where
-  InstrumentorCs' c '[] m = ()
-  InstrumentorCs' c (xs ': xss) m = (c xs m , InstrumentorCs' c xss m) 
-    
-type family InstrumentorCs  (c :: [*] -> (* -> *) ->Constraint)  (sp :: *) (xs :: [*]) (m :: * -> *) (funcData :: * -> [*] -> ([*],[*]) -> *) :: Constraint where
-  InstrumentorCs c sp xs m funcData = InstrumentorCs' c (InternalLists funcData sp xs) m  
+instance (Eval (sfunc sp xs) ~  '(rs, ex), '(rs,ex) ~ Eval (ReplicateFunc One sfunc sp xs)) =>
+  -- (forall xs rs ex. Eval (sfunc sp xs) ~  '(rs, ex), forall xs rs ex. '(rs,ex) ~ Eval (ReplicateFunc One sfunc sp xs)) => 
+  ReplcateTrans One q m sp xs rs ex sfunc where
+    replicateTrans _px (MkF (STrans t)) = STrans (\sp v_xs -> t sp v_xs)
 -}
 
-type family InstrumentorCs  (c :: [*] -> (* -> *) ->Constraint -> *)  (sp :: *) (xs :: [*]) (m :: * -> *) (funcData :: * -> [*] -> ([*],[*]) -> *) :: Constraint where
-  InstrumentorCs c sp xs m (ComposeFunc f1 f2) = (Eval (c xs m), Eval (c (First (Eval (f1 sp xs))) m), InstrumentorCs c sp xs m f1, InstrumentorCs c sp (First (Eval (f1 sp xs))) m f2)  
-  InstrumentorCs c sp xs m (BindFunc f1 f2) = (Eval (c xs m), Eval (c (First (Eval (f1 sp xs))) m), InstrumentorCs c sp xs m f1, InstrumentorCs c sp (First (Eval (f1 sp xs))) m f2)  
-  InstrumentorCs c sp xs m (EmbedFunc sp1 f) = (Eval (c (ListSplitterRes sp1 xs) m), InstrumentorCs c (sp :&& sp1) (ListSplitterRes sp1 xs) m f)  
-  InstrumentorCs c sp xs m (CaptureFunc sp1 f) = (Eval (c (ListSplitterRes sp1 xs) m), InstrumentorCs c sp (ListSplitterRes sp1 xs) m f)  
-  InstrumentorCs c sp xs m (IffFunc f_a) = (Eval (c xs m), InstrumentorCs c sp xs m f_a)
-  InstrumentorCs c sp xs m (IfElseFunc f_a f_b) = (Eval (c xs m), InstrumentorCs c sp xs m f_a, InstrumentorCs c sp xs m f_b)
-  InstrumentorCs c sp xs m (ForeverFunc f) = (Eval (c xs m), InstrumentorCs c sp xs m f)
-  InstrumentorCs c sp xs m f = (Eval (c xs m))
+{-  
+instance (ReplicateTrans n q m sp xs rs ex rs_n ex_n sfunc) => ReplcateTrans (Succ n) q m sp xs rs ex rs_n1 ex_n1 sfunc where
+  replicateTrans _px strans@(STrans t) = do
+    replicateTrans (Proxy@) 
+-}
+
+--  
+newtype STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs :: [*]) (ex :: [*]) (sfunc :: * -> [*] -> ([*],[*]) -> *) (a :: *) =
+        STrans {runTrans :: sp -> V xs -> q m (Either (V ex) (V rs,a))}
+
+data STransApp q (m :: * -> *) (sp :: *) (xs :: [*]) (rs :: [*]) (ex :: [*])  (a :: *) where
+  MkApp :: STrans q m sp xs rs ex func a -> STransApp  q m sp xs rs ex a 
+        
+--data STransF q (m :: * -> *) (sp :: *) (sfunc :: * -> [*] -> ([*],[*]) -> *) (a :: *) where
+--  MkF :: '(rs,ex) ~ Eval (sfunc sp xs) => STrans q m sp xs rs ex sfunc a -> STransF q m sp sfunc a 
+
+returnT :: Monad (q m) => a -> STrans q m sp xs xs '[] IDFunc a
+returnT a = STrans (\_sp v_xs -> return (Right (v_xs,a)))
+
+bindT :: 
+  ( Monad (q m)
+  , KnownNat (Length ex1)
+  ) => STrans q m sp xs rs1 ex1 f1 a -> (a -> STrans q m sp rs1 rs2 ex2 f2 b) -> STrans q m sp xs rs2 (Concat ex1 ex2) (BindFunc f1 f2) b
+bindT (STrans t1) f = 
+    STrans $ (\sp v_xs -> 
+      do
+        ei_rs1a_ex1 <- t1 sp v_xs
+        ei_res <- case ei_rs1a_ex1 of 
+          Right (v_rs1,a) ->
+            let 
+              (STrans t2) = f a
+              -- mapResult :: Either (V ex2) (V rs2, b) -> Either (Either (V ex1) (V ex2)) (V rs2, b)
+              mapResult (Right r) = Right r 
+              mapResult (Left ex2) = Left (Right ex2) -- :: Either (V ex1) (V ex2))
+            in fmap mapResult (t2 sp v_rs1)
+          Left v_ex1 -> return $ Left (Left v_ex1) --  :: Either (V ex1) (V ex2))
+        return (  
+          case ei_res of
+            Right v_rs2_b -> Right v_rs2_b
+            Left ei_ex1_ex2 -> Left $ concatEither ei_ex1_ex2))    
+
+composeT :: 
+  ( Monad (q m)
+  , KnownNat (Length ex1)
+  ) => STrans q m sp xs rs1 ex1 f1 () -> STrans q m sp rs1 rs2 ex2 f2 b -> STrans q m sp xs rs2 (Concat ex1 ex2) (ComposeFunc f1 f2) b
+composeT (STrans t1) (STrans t2) = 
+    STrans $ (\sp v_xs -> 
+      do
+        ei_rs1a_ex1 <- t1 sp v_xs
+        ei_res <- case ei_rs1a_ex1 of 
+          Right (v_rs1,()) ->
+            let 
+              -- mapResult :: Either (V ex2) (V rs2, b) -> Either (Either (V ex1) (V ex2)) (V rs2, b)
+              mapResult (Right r) = Right r 
+              mapResult (Left ex2) = Left (Right ex2) -- :: Either (V ex1) (V ex2))
+            in fmap mapResult (t2 sp v_rs1)
+          Left v_ex1 -> return $ Left (Left v_ex1) --  :: Either (V ex1) (V ex2))
+        return (  
+          case ei_res of
+            Right v_rs2_b -> Right v_rs2_b
+            Left ei_ex1_ex2 -> Left $ concatEither ei_ex1_ex2))    
+
+newRes ::
+  ( MkRes m resPars
+  , res ~ St (ResSt m resPars) name
+  , zs ~ AppendToTupleList xs res
+  , SplicC sp rs ex zs
+  , Monad (q m)
+  , MonadTrans q
+  , KnownSymbol name
+  , AppendToTuple (Variant xs) res
+  , AppendToTupleResult (Variant xs) res ~ Variant (AppendToTupleList xs res)  
+  , IsTypeUniqueList name xs 
+  ) => Named name -> resPars -> STrans  q m sp xs rs ex (NewResFunc resPars name m) ()
+newRes named resPars = STrans (\sp v_xs -> splitV_ sp <$> andMkResAll named resPars (return v_xs))  
+
+invoke ::
+  ( Request m (NamedRequest req name) (VWrap xs NamedTuple)
+  , Show req
+  , KnownSymbol name
+  , zs ~ ReqResult (NamedRequest req name) (VWrap xs NamedTuple)
+  , Monad (q m)
+  , MonadTrans q
+  --, WhenStuck (ReqResult (NamedRequest req name) (VWrap xs NamedTuple)) (DelayError ('Text "No request supported detected"))
+  , SplicC sp rs ex zs
+  ) => Named name -> req -> STrans q m sp xs rs ex (InvokeAllFunc req name) ()
+invoke named req = STrans (\sp v_xs -> splitV_ sp <$> andReqAll named req (return v_xs))  
+
+
+clear ::
+  ( Request m (NamedRequest TerminateRes name) (VWrap xs NamedTupleClr)
+  , zs ~ ReqResult (NamedRequest TerminateRes name) (VWrap xs NamedTupleClr)
+  , Monad (q m)
+  , MonadTrans q
+  , KnownSymbol name
+  , SplicC sp rs ex zs
+  ) => Named name -> STrans q m sp xs rs ex (ClearAllFunc name) ()
+clear named = STrans (\sp v_xs -> splitV_ sp <$> andClearAll named (return v_xs))  
+
+nextEv' ::
+  ( Transition m (TransWrap xs) 
+  , SplicC sp rs ex zs
+  , zs ~ NextStates (TransWrap xs)
+  ) => STrans (ContT Bool) m sp xs rs ex GetNextAllFunc ()
+nextEv' = STrans (\sp v_xs -> splitV_ sp <$> andNextAll (return v_xs))
+
+embed ::
+  ( sp2 ~ (sp :&& sp1) 
+  , SplicC sp1 xs_sub ex_sub xs
+  , zs ~ Union rs_sub (Union ex_sub ex)
+  , Liftable ex zs
+  , Liftable ex_sub zs
+  , Liftable rs_sub zs
+  , SplicC sp rs ex1 zs
+  , '(rs,ex1) ~ ListSplitterRes2 sp zs
+  , Monad (q m)
+  , MonadTrans q
+  ) => sp1 -> STrans q m (sp :&& sp1) xs_sub rs_sub ex f_sub () -> STrans q m sp xs rs ex1 (EmbedFunc sp1 f_sub) ()
+embed sp1 (STrans t) = 
+  STrans 
+    (\sp v_xs ->
+        let 
+          merge3 ::
+            ( zs ~ Union xs (Union ex1 ex2)
+            , Liftable xs zs
+            , Liftable ex1 zs
+            , Liftable ex2 zs
+            ) => Either (Either (V ex2) (V ex1)) (V xs) -> V zs
+          merge3 (Left (Left v_ex2)) = liftVariant v_ex2  
+          merge3 (Left (Right v_ex1)) = liftVariant v_ex1 
+          merge3 (Right v_xs) = liftVariant v_xs
+        in do 
+          v_3 <- case splitV sp1 v_xs of 
+            Right v_x_sub -> do 
+              ei_xs1_ex1 <- t (sp :&& sp1) v_x_sub
+              case ei_xs1_ex1 of 
+                Right (v_xs1,()) -> return $ Right v_xs1 
+                Left v_ex1 -> return $ (Left (Left v_ex1)) 
+            Left v_ex -> return $ (Left (Right v_ex)) 
+          let v_zs = merge3 v_3  
+          return (splitV_ sp v_zs))
+
+try :: forall sp1 sp sp2 xs_sub ex_sub ex zs rs_sub rs q m ex1 xs f_sub.
+  ( sp2 ~ (sp :&& sp1) 
+  , SplicC sp1 xs_sub ex_sub xs
+  , zs ~ Union rs_sub (Union ex_sub ex)
+  , Liftable ex zs
+  , Liftable ex_sub zs
+  , Liftable rs_sub zs
+  , SplicC sp rs ex1 zs
+  , '(rs,ex1) ~ ListSplitterRes2 sp zs
+  , Monad (q m)
+  , MonadTrans q
+  , GetInstance sp1
+  ) => STrans q m (sp :&& sp1) xs_sub rs_sub ex f_sub () -> STrans q m sp xs rs ex1 (EmbedFunc sp1 f_sub) ()
+try t = embed (getInstance @sp1) t
+
+capture ::
+  ( ListSplitter sp1 xs
+  , xs_sub ~ ListSplitterRes sp1 xs
+  , ex_sub ~ FilterList xs_sub xs 
+  , VariantSplitter xs_sub ex_sub xs
+  , rs1 ~ Union rs_sub ex_sub  
+  , Liftable rs_sub rs1
+  , Liftable ex_sub rs1
+  , Monad (q m)
+  , MonadTrans q
+  ) => sp1 -> STrans q m sp xs_sub rs_sub ex f_sub () -> STrans q m sp xs rs1 ex (CaptureFunc sp1 f_sub) ()
+capture sp1 (STrans t) =
+  STrans 
+    (\sp v_xs ->
+      case splitV sp1 v_xs of
+        Right v_xs1 -> do
+          fmap (fmap (\(v_xs2,())-> (liftVariant v_xs2,()))) (t sp v_xs1)
+        Left v_ex -> return $ Right (liftVariant v_ex,()))
+    
+
+on :: forall sp1 xs xs_sub q m ex_sub ex rs1 f_sub rs_sub sp.
+  ( ListSplitter sp1 xs
+  , xs_sub ~ ListSplitterRes sp1 xs
+  , ex_sub ~ FilterList xs_sub xs 
+  , VariantSplitter xs_sub ex_sub xs
+  , rs1 ~ Union rs_sub ex_sub  
+  , Liftable rs_sub rs1
+  , Liftable ex_sub rs1
+  , Monad (q m)
+  , MonadTrans q
+  , GetInstance sp1
+  ) => STrans q m sp xs_sub rs_sub ex f_sub () -> STrans q m sp xs rs1 ex (CaptureFunc sp1 f_sub) ()
+on t = capture (getInstance @sp1) t
+
+
+forever :: 
+  ( Monad (q m)
+  , MonadTrans q
+  -- , Eval (f sp xs) ~ '(xs,ex)
+  ) => STrans q m sp xs xs ex f () -> STrans q m sp xs ('[]) ex (ForeverFunc f) ()
+forever (STrans t) =
+  STrans 
+    (\sp v_xs_init -> 
+      let 
+        go v_xs = do
+          ei_xs_ex <- t sp v_xs
+          case ei_xs_ex of 
+            Right (v_xs1, ()) -> go v_xs1
+            Left v_ex -> return $ Left v_ex
+      in 
+        go v_xs_init)
+
+while :: 
+  ( Monad (q m)
+  , MonadTrans q
+  -- , Eval (f sp xs) ~ '(xs,ex)
+  ) => STrans q m sp xs xs ex f Bool -> STrans q m sp xs xs ex f ()
+while (STrans t) =
+  STrans 
+    (\sp v_xs_init -> 
+      let 
+        go v_xs = do
+          ei_xs_ex <- t sp v_xs
+          case ei_xs_ex of 
+            Right (v_xs1, True) -> go v_xs1
+            Right (v_xs1, False) -> return $ Right (v_xs1,())
+            Left v_ex -> return $ Left v_ex
+      in 
+        go v_xs_init)
+
+
+nextEv :: 
+  ( sp1 ~ Dynamics
+  , SplicC sp1 xs_sub ex_sub xs
+  , Transition m (TransWrap xs_sub) 
+  , zs ~ NextStates (TransWrap xs_sub)
+  , SplicC sp rs ex zs
+  , rs1 ~ (Union rs ex_sub)
+  , Liftable rs rs1
+  , Liftable ex_sub rs1
+  ) => STrans (ContT Bool) m sp xs rs1 ex (CaptureFunc Dynamics GetNextAllFunc) ()
+nextEv = on @Dynamics nextEv' 
+
+
+gets :: 
+  ( GetTypeByNameVar name x xs
+  , x ~ St st name
+  , Monad (q m)
+  ) => Named name -> (x -> a) -> STrans q m sp xs xs ('[]) IDFunc a 
+gets named f = STrans (\_sp v_xs -> return $ Right (v_xs , (f (getTypeByNameVar named v_xs)))) 
   
+op :: 
+  ( Monad m
+  , Monad (q m)
+  , MonadTrans q
+  ) => m a -> STrans q m sp xs xs  ('[]) IDFunc a
+op ma = 
+  STrans (\_sp v_xs -> lift ma >>= (\a -> return $ Right (v_xs,a))) 
+
+opRes :: 
+  ( Monad m
+  , Monad (q m)
+  , MonadTrans q
+  , GetTypeByNameVar name x xs
+  ) => Named name -> (x -> m a) -> STrans q m sp xs xs ('[]) IDFunc a
+opRes named f =
+  STrans 
+    (\_sp v_xs -> do
+      op_res <- lift $ f (getTypeByNameVar named v_xs)
+      return $ Right (v_xs, op_res))
+iff ::
+  ( rs ~ Union rs1 xs
+  , Liftable rs1 rs
+  , Liftable xs rs
+  , Monad (q m)
+  -- , Eval (f1 sp xs) ~ '(rs1, ex)  --assert 
+  ) => Bool -> STrans q m sp xs rs1 ex f1 ()  -> STrans q m sp xs rs ex (IffFunc f1) () 
+iff fl (STrans t) =
+  STrans 
+    (\sp v_xs ->
+      if fl
+        then do
+          ei <- t sp v_xs
+          case ei of
+            Left v_ex -> return $ Left v_ex
+            Right (v_rs1,()) -> return (Right (liftVariant v_rs1,()))
+        else return (Right (liftVariant v_xs,())))
+
+ifElse ::
+  ( ex ~ Union ex1 ex2 
+  , Liftable ex1 ex
+  , Liftable ex2 ex
+  , rs ~ Union rs1 rs2
+  , Liftable rs1 rs
+  , Liftable rs2 rs
+  , Monad (q m)
+  --, Eval (f1 sp xs) ~ '(rs1, ex1)  --assert 
+  --, Eval (f2 sp xs) ~ '(rs2, ex2) --assert
+  ) => Bool -> STrans q m sp xs rs1 ex1 f1 ()  -> STrans q m sp xs rs2 ex2 f2 () -> STrans q m sp xs rs ex (IfElseFunc f1 f2) ()  
+ifElse fl (STrans t1) (STrans t2) =    
+  STrans 
+    (\sp v_xs ->
+      if fl
+        then do
+          ei <- t1 sp v_xs
+          case ei of
+            Left v_ex1 -> return $ Left (liftVariant v_ex1)
+            Right (v_rs1,()) -> return (Right (liftVariant v_rs1,()))
+        else do 
+          ei <- t2 sp v_xs
+          case ei of
+            Left v_ex2 -> return $ Left (liftVariant v_ex2)
+            Right (v_rs2,()) -> return (Right (liftVariant v_rs2,())))
+ifJust ::
+  ( rs ~ Union rs1 xs
+  , Liftable rs1 rs
+  , Liftable xs rs
+  , Monad (q m)
+  --, Eval (f1 sp xs) ~ '(rs1, ex)  --assert 
+  ) => (Maybe b) -> (b -> STrans q m sp xs rs1 ex f1 ())  -> STrans q m sp xs rs ex (IfJustFunc f1) ()  
+ifJust bMaybe f = 
+  STrans 
+    (\sp v_xs -> case bMaybe of
+      Just b -> do
+        ei <- runTrans (f b) sp v_xs
+        case ei of 
+          Left v_ex1 -> return $ Left v_ex1
+          Right (v_rs1,()) -> return (Right (liftVariant v_rs1,()))
+      Nothing  -> return (Right (liftVariant v_xs,())))     
+
+liftIO :: 
+  ( MonadIO m
+  , MonadTrans q
+  , Monad (q m)
+  ) => IO a -> STrans q m sp xs xs ('[]) IDFunc a
+liftIO ioa = op (Protolude.liftIO ioa)
+
+whatNext :: Monad (q m) => STrans q m sp xs xs ('[]) IDFunc (Proxy xs)
+whatNext = STrans (\_sp v_xs -> return $ Right (v_xs, proxyOfVar v_xs))
+
+noop :: Monad (q m) => STrans q m sp xs xs ('[]) IDFunc ()
+noop = STrans (\_sp v_xs -> return $ Right (v_xs, ()))
+
+newState :: 
+  ( Eval (f sp xs) ~ '(xs1,ex)
+  , xs2 ~ FilterList xs xs1
+  , xs3 ~ FilterList xs2 xs1
+  , VariantSplitter xs2 xs3 xs1
+  , Liftable xs3 xs
+  , Monad (q m)
+  ) => STrans q m sp xs xs1 ex f () -> STrans q m sp xs xs2 ex(GetNewStateFunc f) ()
+newState (STrans t) =
+  STrans 
+    (\sp v_xs_init ->  
+      let 
+        go v_xs = do
+          ei_xs_ex <- t sp v_xs 
+          case ei_xs_ex of 
+            Right (v_xs1, ()) -> do
+              let px_xs = proxyOfVar v_xs
+                  px_xs2 = proxyOfFilter v_xs1 px_xs
+              case splitVar1' v_xs1 px_xs2 of
+                Left v_xs2 -> return (Right (v_xs2,()))
+                Right v_xs3 -> go (liftVariant v_xs3)   
+            Left v_ex -> return $ Left v_ex
+      in go v_xs_init)       
+
+termAndClearAllResources ::
+  ( TermState m (ClrVar xs), MonadTrans q
+  , '(rs, ex) ~ Eval (ClearAllVarFunc sp xs)
+  , Monad (q m)
+  ) => STrans q m sp xs rs ex ClearAllVarFunc ()
+termAndClearAllResources = 
+  STrans 
+    (\_sp v_xs -> Right <$> andClearAllVar (return v_xs))
+
+extendForHandlerLoop:: 
+  ( rs ~ First (TransformLoop sp xs f)
+  , Liftable xs rs
+  , Monad (q m)
+  ) => STrans q m sp as bs ex f () -> STrans q m sp xs rs ('[]) (ExtendForLoopFunc f) () 
+extendForHandlerLoop _strans =
+  STrans (\_sp v_xs -> return $ Right (liftVariant v_xs,()))
+
+alignWithHandler ::
+  ( Liftable rs loopRes
+  , '(rs, ex) ~ (Eval (f sp loopRes))
+  , Monad (q m)
+  ) => STrans q m sp loopRes rs ex f () -> STrans q m sp loopRes loopRes ex (AlignFunc f) ()
+alignWithHandler (STrans t) =     
+  STrans 
+    (\sp v_xs -> do
+      v_rs_ex  <- t sp v_xs
+      case v_rs_ex of 
+        Right (v_xs1,()) -> return $ Right (liftVariant v_xs1, ())
+        Left v_ex -> return $ Left v_ex)
+
+type HandleLoopFunc f = 
+  ComposeFunc
+    (ExtendForLoopFunc f) 
+    (ForeverFunc (AlignFunc f))
+
+handleLoop ::
+  ( loopRes ~ First (TransformLoop sp xs f)
+  , Eval (f sp loopRes) ~ '(rs,ex)
+  , Liftable rs loopRes 
+  , MonadTrans q
+  , Monad (q m)
+  , Liftable xs loopRes
+  ) => STrans q m sp loopRes rs ex f () -> STrans q m sp xs ('[]) ex (HandleLoopFunc f) () 
+handleLoop hnd = 
+  composeT 
+    (extendForHandlerLoop hnd) 
+    (forever (alignWithHandler hnd))
+
+class ('(rs,ex) ~ Eval (f sp xs)) => NextSteps (steps :: NatOne) m sp xs rs ex f | steps sp xs -> rs ex f where
+  nextSteps :: Proxy steps -> STrans (ContT Bool) m sp xs rs ex f ()
+
+instance 
+  ( Transition m (TransWrap xs) 
+  , SplicC sp rs ex zs
+  , zs ~ NextStates (TransWrap xs)
+  ) => NextSteps One m sp xs rs ex GetNextAllFunc where  
+    nextSteps _px = nextEv'
+
+instance 
+  ( NextSteps n m sp xs rs_n ex_n func_n
+  , Transition m (TransWrap rs_n) 
+  , SplicC sp rs_n1 ex_n1 zs_n1
+  , zs_n1 ~ NextStates (TransWrap rs_n)
+  , KnownNat (Length ex_n)
+  , ex_nn1 ~ Concat ex_n ex_n1
+  , '(rs_n1, ex_nn1) ~ Eval (ComposeFunc func_n GetNextAllFunc sp xs)
+  ) => NextSteps (Succ n) m sp xs rs_n1 ex_nn1 (ComposeFunc func_n GetNextAllFunc) where  
+    nextSteps _px = composeT (nextSteps (Proxy @n)) nextEv'
+
 --
+execTrans' :: 
+ ( MonadTrans q
+ , Monad (q m)
+ --, Eval (sfunc NoSplitter '[()]) ~ '(rs,ex)
+ ) => STrans q m NoSplitter '[()] rs ex sfunc a -> MFlowExA q m rs ex a
+execTrans' t = runTrans t NoSplitter (variantFromValue ())
+
+execTrans_ :: 
+  ( MonadTrans q
+  , Monad (q m)
+  -- , Eval (sfunc NoSplitter '[()]) ~ '(rs,'[])
+  ) => STrans q m NoSplitter '[()] rs ('[]) sfunc () -> MFlow q m rs 
+execTrans_ t = do 
+  ei <- runTrans t NoSplitter (variantFromValue ())
+  case ei of
+    Right (v_rs,()) ->  return v_rs
+    Left _ -> undefined -- cannot happen as ex ~ '[]
+
+type ExecutableFunc sfunc = Eval (sfunc NoSplitter '[()]) ~ '(('[()]),'[])    
+type ExcecutableTrans q m sfunc = STrans q m NoSplitter '[()] '[()]  ('[])  sfunc ()
+type ExcecutableApp q m sfunc = STransApp q m NoSplitter '[()] '[()]  ('[]) ()
+
+type AsyncTrans m sp xs rs ex func a = STrans (ContT Bool) m sp xs rs ex a  
+type SyncTrans m sp xs rs ex func a = STrans IdentityT m sp xs rs ex a  
+
+execTrans :: forall sfunc q m.  
+  ( MonadTrans q
+  --, ExecutableFunc sfunc
+  , Monad (q m)
+  ) => ExcecutableTrans q m sfunc -> q m () 
+execTrans t = fmap variantToValue (execTrans_ t)  
+    
+execApp ::  
+  ( MonadTrans q
+  --, ExecutableFunc sfunc
+  , Monad (q m)
+  ) => ExcecutableApp q m sfunc -> q m () 
+execApp (MkApp trns) = execTrans trns  
+
+  {-        
 data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc :: * -> [*] -> ([*],[*]) -> *) (a :: *) where
   WithResTrans ::
     ( CreateRes m name resFact (V '[res])
@@ -310,24 +643,19 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     , rs_ex ~ Eval (ClearAllVarFunc sp xs)
     ) => STrans q m sp xs rs_ex ClearAllVarFunc ()
   ComposeTrans :: 
-    ( ex_un ~ Union ex1 ex2
-    , Liftable ex1 ex_un
-    , Liftable ex2 ex_un
-    , Eval (f_a sp as) ~ '(rs1, ex1)  --assert 
-    , Eval (f_b sp rs1) ~ '(rs2, ex2) --assert
-    , Composer q m sp as rs1 ex1 f_a rs2 ex2 f_b ex_un b 
+    ( --ex_un ~ Union ex1 ex2
+    --, Liftable ex1 ex_un
+    --, Liftable ex2 ex_un
+    --, Eval (f_a sp as) ~ '(rs1, ex1)  --assert 
+    --, Eval (f_b sp rs1) ~ '(rs2, ex2) --assert
+     Composer q m sp as rs1 ex1 f_a rs2 ex2 f_b ex_un b 
     ) => STrans q m sp as '(rs1,ex1) f_a () -> STrans q m sp rs1 '(rs2,ex2) f_b b -> STrans q m sp as '(rs2,ex_un) (ComposeFunc f_a f_b) b
   ComposeDirTrans ::
     ( Eval (f_a sp as) ~ '(as, '[])  --assert 
     , Eval (f_b sp as) ~ '(rs2, ex2) --assert
     ) => STrans q m sp as '(as,'[]) f_a () -> STrans q m sp as '(rs2,ex2) f_b b -> STrans q m sp as '(rs2,ex2) f_b b
   BindTrans ::
-    ( ex_un ~ Union ex1 ex2 
-    , Liftable ex1 ex_un
-    , Liftable ex2 ex_un
-    , Eval (f_a sp as) ~ '(rs1, ex1)  --assert 
-    , Eval (f_b sp rs1) ~ '(rs2, ex2) --assert
-    , Binder q m sp as rs1 ex1 f_a a rs2 ex2 f_b ex_un b
+    ( Binder q m sp as rs1 ex1 f_a a rs2 ex2 f_b ex_un b
     ) => STrans q m sp as '(rs1,ex1) f_a a -> (a -> STrans q m sp rs1 '(rs2,ex2) f_b b) -> STrans q m sp as '(rs2,ex_un) (BindFunc f_a f_b) b
   BindDirTrans ::
     ( Eval (f_a sp as) ~ '(as, '[])  --assert 
@@ -455,13 +783,7 @@ data STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs_ex :: ([*],[*])) (sfunc ::
     ) => Instrumentor m c -> STrans q m sp xs rs_ex f a -> STrans q m sp xs rs_ex f a
   InstrumentTransTrans ::  STrans q m sp xs '(xs, '[]) f_id a -> STrans q m sp xs rs_ex f a -> STrans q m sp xs rs_ex f a
 
-splitV_ :: 
-  ( ListSplitter sp ys
-  , '(xs,ex) ~ ListSplitterRes2 sp ys 
-  , VariantSplitter xs ex ys
-  ) => sp -> V ys -> Either (V ex) (V xs, ())  
-splitV_ sp v_ys = fmap (\v_xs->(v_xs,())) (splitV sp v_ys)
-
+-}
 {-
 applyTrans' :: 
   ( MonadTrans q
@@ -469,87 +791,71 @@ applyTrans' ::
   , ListSplitterRes2 sp (Eval (sfunc sp xs)) ~ '(rs,ex)
   ) => STrans q m sp xs '(rs,ex) sfunc a -> sp -> MFlow q m xs ->  MFlowExA q m rs ex a
 applyTrans' = applyTrans 
--}
 
-{-
 type ComposerC q m sp as rs1 ex1 f_a rs2 ex2 f_b ex_un b =
-  ( ex_un ~ Union ex1 ex2
-  , Liftable ex1 ex_un
-  , Liftable ex2 ex_un
+  ( ex_un ~ Concat ex1 ex2
   , Eval (f_a sp as) ~ '(rs1, ex1)  --assert 
   , Eval (f_b sp rs1) ~ '(rs2, ex2) --assert
   , MonadTrans q
   , Monad (q m)
+  , KnownNat (Length ex1)
   )
--}
 
-class -- (ComposerC q m sp as rs1 ex1 f_a rs2 ex2 f_b ex_un b) =>
-  Composer q m sp as rs1 ex1 f_a rs2 ex2 f_b ex_un b where
+class ComposerC q m sp as rs1 ex1 f_a rs2 ex2 f_b ex_un b => Composer q m sp as rs1 ex1 f_a rs2 ex2 f_b ex_un b where
     compose :: STrans q m sp as '(rs1,ex1) f_a () -> STrans q m sp rs1 '(rs2,ex2) f_b b -> sp -> MFlow q m as ->  MFlowExA q m rs2 ex_un b  
 
-instance -- (ComposerC q m sp as rs1 '[] f_a rs2 ex2 f_b ex2 b) => 
-  ( Eval (f_b sp rs1) ~ '(rs2, ex2)
-  , Eval (f_a sp as) ~ '(rs1, '[])
-  , MonadTrans q
-  , Monad (q m)
-  ) => Composer q m sp as rs1 '[] f_a rs2 ex2 f_b ex2 b where
+instance ComposerC q m sp as rs1 '[] f_a rs2 ex2 f_b ex2 b => 
+  Composer q m sp as rs1 '[] f_a rs2 ex2 f_b ex2 b where
     compose t1 t2 sp curSnap =  
       applyTrans t2 sp (fmap (\(Right (v_as,())) -> v_as) (applyTrans t1 sp curSnap))
 
 instance 
-  ( ex_un ~ Union ex1 ex2
-  , Liftable (e ': ex1tail) ex_un
-  , Liftable ex2 ex_un
-  , Eval (f_b sp rs1) ~ '(rs2, ex2)
-  , Eval (f_a sp as) ~ '(rs1, ex1)
-  , MonadTrans q
-  , Monad (q m)
+  ( ComposerC q m sp as rs1 ex1 f_a rs2 ex2 f_b ex_un b
   , ex1 ~ (e ': ex1tail)
   ) => Composer q m sp as rs1 (e ': ex1tail) f_a rs2 ex2 f_b ex_un b where
     compose t1 t2 sp curSnap = do 
       v_as1 <- applyTrans t1 sp curSnap
-      case v_as1 of 
+      ei_res <- case v_as1 of 
         Right (v_bs,()) ->
           let 
-            liftLeft (Right r) = Right r 
-            liftLeft (Left l) = Left $ liftVariant l
-          in fmap liftLeft (applyTrans t2 sp (return v_bs))
-        Left v_ex -> return $ Left $ liftVariant v_ex
+            mapResult :: Either (V ex2) (V rs2, b) -> Either (Either (V ex1) (V ex2)) (V rs2, b)
+            mapResult (Right r) = Right r 
+            mapResult (Left ex2) = Left (Right ex2 :: Either (V ex1) (V ex2))
+          in fmap mapResult (applyTrans t2 sp (return v_bs))
+        Left v_ex1 -> return $ Left (Left v_ex1  :: Either (V ex1) (V ex2))
+      return (  
+        case ei_res of
+          Right v_rs2 -> Right v_rs2
+          Left ei_ex1_ex2 -> Left $ concatEither ei_ex1_ex2)    
 
 --
-class Binder q m sp as rs1 ex1 f_a a rs2 ex2 f_b ex_un b where
+class ComposerC q m sp as rs1 ex1 f_a rs2 ex2 f_b ex_un b => Binder q m sp as rs1 ex1 f_a a rs2 ex2 f_b ex_un b where
     bind :: STrans q m sp as '(rs1,ex1) f_a a -> (a -> STrans q m sp rs1 '(rs2,ex2) f_b b) -> sp -> MFlow q m as ->  MFlowExA q m rs2 ex_un b  
 
-instance 
-  ( Eval (f_b sp rs1) ~ '(rs2, ex2)
-  , Eval (f_a sp as) ~ '(rs1, '[])
-  , MonadTrans q
-  , Monad (q m)
-  ) => Binder q m sp as rs1 '[] f_a a rs2 ex2 f_b ex2 b where
+instance ComposerC q m sp as rs1 '[] f_a rs2 ex2 f_b ex2 b => 
+  Binder q m sp as rs1 '[] f_a a rs2 ex2 f_b ex2 b where
     bind t1 f_t2 sp curSnap =  
       applyTrans t1 sp curSnap >>= (\(Right (v_as,a)) -> applyTrans (f_t2 a) sp (return v_as))
 
-          
 instance 
-  ( ex_un ~ Union ex1 ex2
-  , Liftable (e ': ex1tail) ex_un
-  , Liftable ex2 ex_un
-  , Eval (f_b sp rs1) ~ '(rs2, ex2)
-  , Eval (f_a sp as) ~ '(rs1, ex1)
-  , MonadTrans q
-  , Monad (q m)
-  , ex1 ~ (e ': ex1tail)
-  ) => Binder q m sp as rs1 (e ': ex1tail) f_a a rs2 ex2 f_b ex_un b where
+  ( ComposerC q m sp as rs1 ex1 f_a rs2 ex2 f_b ex_un b
+  , ex1 ~ (e ': etail)
+  ) => Binder q m sp as rs1 (e ': etail) f_a a rs2 ex2 f_b ex_un b where
     bind t1 f_t2 sp curSnap = do 
       v_as1 <- applyTrans t1 sp curSnap
-      case v_as1 of 
+      ei_res <- case v_as1 of 
         Right (v_bs,a) ->
           let 
-            liftLeft (Right r) = Right r 
-            liftLeft (Left l) = Left $ liftVariant l
-          in fmap liftLeft (applyTrans (f_t2 a) sp (return v_bs))
-        Left v_ex -> return $ Left $ liftVariant v_ex
-      
+            mapResult :: Either (V ex2) (V rs2, b) -> Either (Either (V ex1) (V ex2)) (V rs2, b)
+            mapResult (Right r) = Right r 
+            mapResult (Left ex2) = Left (Right ex2 :: Either (V ex1) (V ex2))
+          in fmap mapResult (applyTrans (f_t2 a) sp (return v_bs))
+        Left v_ex1 -> return $ Left (Left v_ex1  :: Either (V ex1) (V ex2))
+      return (  
+        case ei_res of
+          Right v_rs2 -> Right v_rs2
+          Left ei_ex1_ex2 -> Left $ concatEither ei_ex1_ex2)    
+        
 applyTransSafely :: 
   ( MonadTrans q
   , Monad (q m)
@@ -714,73 +1020,7 @@ liftRightRes (Right (v_rs1, ())) = Right $ (liftVariant v_rs1, ())
 liftRightRes (Left v_ex) = Left v_ex
 
 
-type family TransformLoop sp (xs :: [*]) (f :: * -> [*] -> Exp ([*],[*])) :: ([*], [*]) where
-  TransformLoop sp xs f = TransformLoop' sp (Eval (f sp xs)) '(xs,'[]) f    
 
-type family TransformLoop' sp (nextXsEx :: ([*], [*])) (totalXsEx :: ([*], [*])) (f :: * -> [*] -> Exp ([*],[*])) ::  ([*], [*]) where
-  TransformLoop' sp '(('[]), nextEx)  '(totalXs, totalEx) f = '(totalXs, Union totalEx nextEx)    
-  TransformLoop' sp '(nextXs, nextEx) '(totalXs, totalEx) f = TransformLoop'' sp '(nextXs, nextEx)  (IsSublist totalXs nextXs) '(totalXs, totalEx) f     
-  
-type family TransformLoop'' sp (nextXs :: ([*],[*])) (isSublist :: Bool) (totalXs :: ([*],[*])) (f :: * -> [*] -> Exp ([*],[*])) :: ([*], [*]) where
-  TransformLoop'' sp nextXs True sumXs f = sumXs    
-  TransformLoop'' sp '(nextXs, nextEx) False '(totalXs, totalEx) f = TransformLoop' sp (Eval (f sp nextXs)) '(Union totalXs nextXs, Union totalEx nextEx)  f    
-
-data TransformLoopFunc ::  (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp ([*],[*])
-type instance Eval (TransformLoopFunc f sp xs) = TransformLoop sp xs f
-
-type family TotalSteps sp (xs :: [*]) (f :: * -> [*] -> Exp ([*],[*])) :: NatOne where
-  TotalSteps sp xs f = TotalSteps' sp (First(Eval (f sp xs))) f 'One     
-
-type family TotalSteps' sp (xs :: [*]) (f :: * -> [*] -> Exp ([*],[*])) (steps :: NatOne) :: NatOne where
-  TotalSteps' sp '[] f n = n     
-  TotalSteps' sp xs f n = TotalSteps' sp (First(Eval (f sp xs))) f (Succ n)     
- 
-{-  
-class ApplyTimes sp (xs :: [*]) (f :: * -> [*] -> Exp ([*],[*])) (steps :: Nat) where
-  applyTimes :: sp (xs :: [*]) (f :: * -> [*] -> Exp ([*],[*]))
--}
-
-transRes :: STrans q m sp xs rs_ex sfunc a -> Proxy (Eval (sfunc sp xs))
-transRes _ = Proxy
-
-transFunc :: forall q m sp xs rs_ex sfunc a. STrans q m sp xs rs_ex sfunc a -> Proxy sfunc
-transFunc _ = Proxy
-
-execTrans' :: 
- ( MonadTrans q
- , Monad (q m)
- --, Eval (sfunc NoSplitter '[()]) ~ '(rs,ex)
- ) => STrans q m NoSplitter '[()] '(rs,ex) sfunc a -> MFlowExA q m rs ex a
-execTrans' t = applyTrans t NoSplitter (return (variantFromValue ()))
-
-execTrans_ :: 
-  ( MonadTrans q
-  , Monad (q m)
-  -- , Eval (sfunc NoSplitter '[()]) ~ '(rs,'[])
-  ) => STrans q m NoSplitter '[()] '(rs,'[]) sfunc () -> MFlow q m rs 
-execTrans_ t = do 
-  ei <- applyTrans t NoSplitter (return (variantFromValue ()))
-  case ei of
-    Right (v_rs,()) ->  return v_rs
-    Left _ -> undefined -- cannot happen as ex ~ '[]
-
-type ExecutableFunc sfunc = Eval (sfunc NoSplitter '[()]) ~ '(('[()]),'[])    
-type ExcecutableTrans q m sfunc = STrans q m NoSplitter '[()] '(('[()]),'[]) sfunc ()
-type ExcecutableApp q m = STransApp q m NoSplitter '[()] '(('[()]),'[]) ()
-
-type AsyncTrans m sp xs rs_ex func a = STrans (ContT Bool) m sp xs rs_ex a  
-type SyncTrans m sp xs rs_ex func a = STrans IdentityT m sp xs rs_ex a  
-
-type AsyncTransApp m rs_ex func = STrans (ContT Bool) m NoSplitter '[()] rs_ex func ()  
-type SyncTransApp m rs_ex func = STrans IdentityT m NoSplitter '[()] rs_ex func ()  
-
-execTrans ::  
-  ( MonadTrans q
-  --, ExecutableFunc sfunc
-  , Monad (q m)
-  ) => ExcecutableTrans q m sfunc -> q m () 
-execTrans t = fmap variantToValue (execTrans_ t)  
-    
 
 type EvalTransFunc m func = Eval (func m NoSplitter '[()])
 
@@ -801,14 +1041,7 @@ execApp ::  (MonadTrans q, Monad (q m)) => ExcecutableApp q m  -> q m ()
 execApp (MkApp t) = execTrans t  
     
 ----
-type family Has (st :: *) (xs :: [*]) where
-  Has (St st name) xs = GetTypeByNameVar name (St st name) xs
 
-type family HasWithName (st :: *) (name :: Symbol) (xs :: [*]) where
-  HasWithName (St st name) name1 xs = (GetTypeByNameVar name (St st name) xs, (St st name) ~ (St st name1))
-  
-
----
 type family FinePrintTransFunc (func :: * -> [*] -> ([*],[*]) -> *) where 
   FinePrintTransFunc (ComposeFunc f1 f2) = FinePrintTransFunc f1 ':$$: FinePrintTransFunc f1
   FinePrintTransFunc GetNextAllFunc = 'Text "NextEv" 
@@ -816,7 +1049,7 @@ type family FinePrintTransFunc (func :: * -> [*] -> ([*],[*]) -> *) where
   FinePrintTransFunc (InvokeAllFunc req name) = 'Text "Invoke " ':<>: 'Text name ':<>: 'ShowType req   
   FinePrintTransFunc (ClearAllFunc name) = 'Text "Clear " ':<>: 'Text name 
 
-
+-}
 --printFinely :: TypeError (FinePrintTransFunc f) => Proxy f -> IO ()
 --printFinely prx = return ()
 

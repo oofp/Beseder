@@ -23,11 +23,6 @@ Flag CommExample
   Default:     False
   Manual:      False
 
-Flag DoorExample
-  Description: Enable build of Door example (shorter compile time)
-  Default:     False
-  Manual:      False
-
 library 
   hs-source-dirs:      src
   ghc-options:         -Wall -fomit-interface-pragmas -fprint-potential-instances  -fno-warn-unticked-promoted-constructors 
@@ -41,24 +36,21 @@ library
                      , Beseder.Resources.State.StateLogger  
                      , Beseder.Resources.Timer
                      , Beseder.Resources.Comm
-                     , Beseder.Resources.Composite
                      , Beseder.Misc.Misc
-                     , Beseder.Base.Internal.STransFunc
-                     , Beseder.Base.Internal.Instruments
   other-modules:       Beseder.Base.Internal.Classes
                      , Beseder.Base.Internal.Cont
                      , Beseder.Base.Internal.Core
                      , Beseder.Base.Internal.Flow
                      , Beseder.Base.Internal.Named
                      , Beseder.Base.Internal.NamedVar
-                     , Beseder.Base.Internal.STrans
-                     , Beseder.Base.Internal.STransInstr
-                     , Beseder.Base.Internal.STransDo
                      , Beseder.Base.Internal.SplitFlow
                      , Beseder.Base.Internal.SplitOps
                      , Beseder.Base.Internal.TupleHelper
                      , Beseder.Base.Internal.TypeExp
                      , Beseder.Base.Internal.NatOne
+                     , Beseder.Base.Internal.STransIx 
+                     , Beseder.Base.Internal.STransDef 
+                     , Beseder.Base.Internal.STransIxDo 
                      , Beseder.Utils.ListHelper
                      , Beseder.Utils.Lst
                      , Beseder.Utils.VariantHelper 
@@ -74,8 +66,6 @@ library
                      , Beseder.Resources.Comm.CommProvImpl
                      , Beseder.Resources.Comm.Impl.Console
                      , Beseder.Resources.Comm.Impl.WSClient
-                     , Beseder.Resources.Composite.CompositeRes
-                     , Beseder.Resources.Composite.CompositeHndRes
   build-depends:       base >= 4.7 && < 5
                      , protolude
                      , network

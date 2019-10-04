@@ -31,8 +31,7 @@ import           Protolude
 import           Beseder.Base.Common
 import           Beseder.Misc.Misc
 import           TimerApps
-import           TimerFuncApps2
 
 main :: IO ()
-main = runAsyncApp $ timerHelloApp 10 -- 1 2 3 4
+main = runAsyncApp $ complexLogicTimersApp 1 2 3 4
 

@@ -12,9 +12,10 @@
 
 module Beseder.Misc.Misc
   ( runAsyncTrans 
-  , runAsyncApp
   , runSyncTrans 
-  , reifyAsyncTrans
+  , runAsyncApp 
+  , runSyncApp 
+  , runAsyncFlow
   , TaskQ 
   ) where
 

@@ -39,7 +39,6 @@ import           Beseder.Resources.Timer
 import           Data.String 
 import           Control.Monad.Cont (ContT)
 import           qualified Protolude 
-import           Beseder.Base.Internal.STransFunc
 
 {-
 timerHello :: TaskPoster m  => Int -> STrans (ContT Bool) m NoSplitter '[()] '(('[()]),'[]) _ () -- AsyncTransApp m _ _ -- CompletedRes (TimerHelloFuncNicer m)
@@ -210,8 +209,7 @@ Result size of Desugar (before optimization)
      joins: 0/1,747}
 -}
 
-{-
-timer5_0wait :: TaskPoster m  => Int -> STrans (ContT Bool) m NoSplitter '[()] '(('[()]),'[]) _ () -- AsyncTransApp m _ _ -- CompletedRes (TimerHelloFuncNicer m)
+timer5_0wait :: TaskPoster m  => Int -> STrans (ContT Bool) m NoSplitter '[()] '[()] '[] _ () -- AsyncTransApp m _ _ -- CompletedRes (TimerHelloFuncNicer m)
 timer5_0wait timeoutSec1 = do
   liftIO $ putStrLn ("Entered timerHello"::Text)
   newRes #t1 TimerRes 
@@ -224,10 +222,9 @@ timer5_0wait timeoutSec1 = do
   invoke #t4  (StartTimer timeoutSec1)
   newRes #t5 TimerRes 
   invoke #t5  (StartTimer timeoutSec1)
-  try @Dynamics wait
+  try @Dynamics skipAll
   clearAllResources
--}
-
+  
 {-  
   !!! Renamer/typechecker [TimerBenchApp]: finished in 48906.25 milliseconds, allocated 52075.597 megabytes
   *** Desugar [TimerBenchApp]:
@@ -236,14 +233,6 @@ timer5_0wait timeoutSec1 = do
        types: 392,607,
        coercions: 60,591,249,
        joins: 0/1,792}
---
-!! Renamer/typechecker [TimerBenchApp]: finished in 68890.62 milliseconds, allocated 28763.908 megabytes
-*** Desugar [TimerBenchApp]:
-Result size of Desugar (before optimization)
-  = {terms: 5,913,
-     types: 392,367,
-     coercions: 99,172,157,
-     joins: 0/1,923}       
 -}
        
 {-
@@ -327,6 +316,7 @@ Result size of Desugar (before optimization)
        joins: 0/2,352}
   -}
 
+{-  
 timer5_1wait :: TaskPoster m  => Int -> STrans (ContT Bool) m NoSplitter '[()] _ _ () -- '(('[()]),'[]) _ () -- AsyncTransApp m _ _ -- CompletedRes (TimerHelloFuncNicer m)
 timer5_1wait timeoutSec1 = 
   ((((((((((((liftIO $ putStrLn ("Entered timerHello"::Text)) >> 
@@ -342,6 +332,7 @@ timer5_1wait timeoutSec1 =
   invoke #t5  (StartTimer timeoutSec1)) >>
   (try @Dynamics wait)) >>
   clearAllResources
+-}
   
 {-
 !!! Renamer/typechecker [TimerBenchApp]: finished in 15484.38 milliseconds, allocated 15431.132 megabytes
@@ -351,16 +342,6 @@ Result size of Desugar (before optimization)
      types: 392,855,
      coercions: 28,517,939,
      joins: 0/1,792}
- --
- !!! Parser [TimerBenchApp]: finished in 15.63 milliseconds, allocated 5.475 megabytes
-*** Renamer/typechecker [TimerBenchApp]:
-!!! Renamer/typechecker [TimerBenchApp]: finished in 20843.75 milliseconds, allocated 11325.931 megabytes
-*** Desugar [TimerBenchApp]:
-Result size of Desugar (before optimization)
-  = {terms: 5,913,
-     types: 393,124,
-     coercions: 35,030,172,
-     joins: 0/1,923}    
 -}
   
 type Timers5 m =

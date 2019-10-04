@@ -15,8 +15,6 @@ module Beseder.Base.Common
     , ExcecutableApp
     , AsyncTrans 
     , SyncTrans 
-    , AsyncTransApp 
-    , SyncTransApp 
     , GetTypeByNameVar 
     , getVarLength
     , toVarOfSt
@@ -30,6 +28,7 @@ import Beseder.Base.Internal.NamedVar
 import Beseder.Base.Internal.Named 
 import Beseder.Base.Internal.TypeExp 
 import Beseder.Base.Internal.Classes 
-import Beseder.Base.Internal.STrans
+import Beseder.Base.Internal.STransIx
+import Beseder.Base.Internal.STransDef
 import Beseder.Base.Internal.TupleHelper (GetTypeByNameVar)
 import Beseder.Utils.VariantHelper (getVarLength)

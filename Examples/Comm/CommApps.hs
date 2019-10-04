@@ -26,8 +26,6 @@ import           Beseder.Resources.Comm
 import           Beseder.Resources.State.DataRes
 --import           Data.String 
 
-type CompletedRes = '(('[()]),'[])
-
 proxyApp :: forall m i1 i2 o1 o2 e1 e2 comm1 comm2. 
   ( MonadIO m
   , CommProv comm1 i1 o1 e1 m  
@@ -39,7 +37,7 @@ proxyApp :: forall m i1 i2 o1 o2 e1 e2 comm1 comm2.
   ) => CommRes comm1 i1 o1 e1 
       -> CommRes comm2 i2 o2 e2 
       -> (i1 -> o2) -> (i2 -> o1) -> (i1 -> Bool) 
-      -> STransApp (ContT Bool) m NoSplitter '[()] CompletedRes ()
+      -> STransApp (ContT Bool) m NoSplitter '[()] '[()] '[] ()
 proxyApp comRes1 comRes2 i1o2 i2o1 contPred = MkApp $ do
   newRes #com1 comRes1
   newRes #com2 comRes2

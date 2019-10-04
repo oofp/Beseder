@@ -1,7 +1,6 @@
 
 module Beseder.Base.Control
-    ( withRes
-    , newRes
+    ( newRes
     , invoke
     , nextEv
     , newState
@@ -9,26 +8,25 @@ module Beseder.Base.Control
     , forever
     , while
     , try
-    , reach
     , on
     , iff
     , ifElse
     , gets
     , opRes
     , op
-    , getM
     , termAndClearAllResources 
     , clearAllResources
     , handleEvents
     , pumpEvents
-    , extendForLoop
+    --, extendForLoop
     , noop
     , whatNext
-    , whatSplitter
     , (>>)
     , (>>=)
     , return
     , liftIO
+    , skipAll
+    , skipTo
     , All
     , By (..)
     , Not (..)
@@ -38,51 +36,18 @@ module Beseder.Base.Control
     , Dynamics
     , Statics
     , NoSplitter
-    , EvalTransFunc
-    -- trans functions
-    , WithResFunc 
-    , WithResAllFunc 
-    , NewResFunc 
-    , InvokeAllFunc 
-    , ClearAllFunc 
-    , GetNextFunc 
-    , GetNextAllFunc 
-    , InvokeFunc 
-    , ClearAllVarFunc
-    , ComposeFunc 
-    , BindFunc 
-    , (:>>) 
-    , (:>>=) 
-    , IffFunc
-    , IfElseFunc 
-    , IfJustFunc
-    , CaptureFunc 
-    , EmbedFunc 
-    , IDFunc 
-    , ForeverFunc 
-    , AlignFunc 
-    , ConstFunc
-    , DictFunc
-    , AskFunc
-    , AsksFunc
-    , MapFunc
-    , module Beseder.Base.Internal.STransFunc
-    , module Beseder.Base.Internal.Instruments
-    , STrans
+    , module Beseder.Base.Internal.STransDef
+    , STrans (..)
     , STransApp (..)
-    , applyTransApp
-    , instrumentTrans
-    , Instrumentor (..)
-    , TransDict (..)
     , Has 
     , NatOne (..)
+    , execTrans
+    , execApp
     ) where
 
 
-import Beseder.Base.Internal.STransDo 
-import Beseder.Base.Internal.STrans
+import Beseder.Base.Internal.STransIxDo 
+--import Beseder.Base.Internal.STransIx
+import Beseder.Base.Internal.STransDef
 import Beseder.Base.Internal.SplitOps
-import Beseder.Base.Internal.STransFunc
-import Beseder.Base.Internal.STransInstr
-import Beseder.Base.Internal.Instruments
 import Beseder.Base.Internal.NatOne
