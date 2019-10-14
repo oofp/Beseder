@@ -31,12 +31,10 @@ import           Protolude
 import           Control.Monad.Cont (ContT)
 import           Beseder.Base.Common
 import           Beseder.Misc.Misc
-import           Apps.BlackJackAutoApp
-import           Game.Card
+import           Apps.BlackJackPromptApp
 
 main :: IO ()
 main = do 
-  pack <- createCardPack 
-  runSyncApp $ blackJackAutoApp pack
+  runSyncApp blackJackPromptApp 
 
 
