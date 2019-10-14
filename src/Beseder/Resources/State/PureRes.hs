@@ -15,8 +15,8 @@
 module Beseder.Resources.State.PureRes 
   ( MkPureRes (..)
   , Op (..)
-  , OpOne (..)
   , PureRes (..)
+  , PSt (..)
   ) where
 
 import           Protolude  
@@ -36,10 +36,6 @@ class Op op st where
   type OpResults (op :: *) (st :: *) :: [*]
   opReq :: op -> st -> V (OpResults op st)
 
-class OpOne op st where
-  type OpResult (op :: *) (st :: *) :: *
-  opReqOne :: op -> st -> OpResult op st
-  
 ----------------------------------------------------------------------------------------------------------  
 instance (Monad m, MkPureRes pureRes) => MkRes m (PureRes pureRes)  where
   type ResSt m (PureRes pureRes)  = PSt (PureResInitState pureRes)  
@@ -76,14 +72,6 @@ instance
   ) => Request m op (St (PSt st) name) where
   type ReqResult op  (St (PSt st) name) = PureStList name (OpResults op st)
   request op st@(St (PSt stData)) = return $ (asPureStVar (nameFromSt st)) (opReq op stData)
-
-  
-instance 
-  ( OpOne op st
-  ) => Op op st where
-  type OpResults op st = '[OpResult op st]
-  opReq op st = variantFromValue (opReqOne op st) 
-
 
 type instance StateTrans (St (PSt st) name) = 'Static
 instance (Monad m) => TermState m (St (PSt st) name) where
