@@ -88,8 +88,8 @@ extractRes (Right (v,_)) = v
 getRes :: Proxy hf -> Either (V '[]) (V '[x],()) -> CRes hf x 
 getRes _px ei = CRes (variantToValue (extractRes ei))  
 
-hfRes :: Proxy m -> Proxy hf -> res -> CRes hf res
-hfRes _pxm _px res = CRes res
+hfRes :: Proxy hf -> res -> CRes hf res
+hfRes _px res = CRes res
 
 --applyHnd :: (Monad m, _) => V xs -> (V xs -> V rs) -> m (V (First (Eval (f NoSplitter xs))))
 --applyHnd v_xs (MkHnd (STrans t)) = fmap extractRes (runIdentityT $ t NoSplitter v_xs) 
@@ -113,7 +113,7 @@ instance
     next (extendStateTrans res) (\v_next ->  
       do
         v_ys <- getStatesHandler (Proxy @hf) v_next  
-        cb (asStWrapVar (hfRes (Proxy @m) (Proxy @hf)) (Named @name) v_ys))
+        cb (asStWrapVar (hfRes (Proxy @hf)) (Named @name) v_ys))
 
 newtype CompReq m res xs = CompReq (STransApp IdentityT m NoSplitter '[res] xs '[] ())
 instance Show (CompReq m res xs) where
@@ -132,7 +132,7 @@ instance
   type ReqResult (CompReq m res xs) (StCs hf res name) = StWrapList (CRes hf) name xs 
   request cmpReq (St (CRes res)) = do 
     v_ys <- applyHnd' res cmpReq
-    return (asStWrapVar (hfRes (Proxy @m) (Proxy @hf)) (Named @name) v_ys)
+    return (asStWrapVar (hfRes (Proxy @hf)) (Named @name) v_ys)
 
 instance  
   ( Monad m
