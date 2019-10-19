@@ -34,6 +34,7 @@ import           Protolude
 import           Haskus.Utils.Variant
 import           Beseder.Base.Base
 import           Beseder.Base.Common
+import           Control.Arrow (Kleisli (..))
 import           qualified GHC.Show (Show (..))
 
 newtype D a = D a deriving (Show, Eq)
@@ -73,6 +74,13 @@ type StD a name = St (D a) name
 type instance StateTrans (St (D a) name) = 'Static
 instance Monad m => TermState m (St (D a) name) where
   terminate _ = return ()
+
+--
+instance (Monad m) => Request m (Kleisli m a b) (St (D a) name) where
+  type ReqResult (Kleisli m a b) (St (D a) name) = '[St (D b) name]
+  request (Kleisli f) (St (D a)) = do 
+    b <- f a
+    return $ variantFromValue (St (D b))
 
 --
 type InitDataPx (p :: k) = InitData (Proxy p)
@@ -118,4 +126,6 @@ instance GetInstance SetFalse where
  
 instance GetInstance SetTrue where
   getInstance = setTrue
+      
+
       

@@ -13,6 +13,7 @@
 {-# LANGUAGE UndecidableInstances      #-}
 {-# LANGUAGE OverloadedLabels          #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE ConstraintKinds           #-}
 
 module Beseder.Base.Internal.TupleHelper where
 
@@ -154,6 +155,52 @@ instance (GetTarget b c) => GetTarget (RT a b) c where
 getByName :: (TT a (TargetByName name a), GetTarget (TargetByName name a) (TypeByName name a))  => Named name -> a -> TypeByName name a
 getByName nm a = getTarget (transformForReq (byName nm a))
 
+class OrderByName (names :: [Symbol]) a  where
+  type OrderByNameRes names a
+  orderByName :: Proxy names -> a -> OrderByNameRes names a
+
+instance 
+  ( a ~ (t1,t2)
+  , TT a (TargetByName name a)
+  , GetTarget (TargetByName name a) (TypeByName name a)
+  ) => OrderByName '[name] (t1,t2) where
+    type OrderByNameRes '[name] (t1,t2) = TypeByName name (t1,t2)
+    orderByName _  = getByName (Named @name) -- a   
+
+instance 
+  ( a ~ (t1,t2)
+  , TypeByName name a ~ b
+  , TT a (TargetByName name a)
+  , GetTarget (TargetByName name a) (TypeByName name a)
+  , OrderByName (name1 ': ns) a 
+  ) => OrderByName (name ': name1 ': ns) (t1,t2) where
+    type OrderByNameRes (name ': name1 ': ns) (t1,t2) = (TypeByName name (t1,t2), OrderByNameRes (name1 ': ns) (t1,t2)) 
+    orderByName _ a = (getByName (Named @name) a, orderByName (Proxy @(name1 ': ns)) a)   
+
+type family ListOfVar (v :: *) :: [*] where
+  ListOfVar (V xs) = xs
+
+instance 
+  ( OrderByName' names x
+  , OrderByName names (V xs)
+  , a ~  OrderByNameRes names x
+  , V ys ~ OrderByNameRes names (V xs)
+  , res ~ Union '[a] ys
+  , Liftable '[a] res
+  , Liftable ys res
+  ) =>  OrderByName names (V (x ': xs)) where
+    type OrderByNameRes names (V (x ': xs)) = V (Union '[OrderByNameRes names x]  (ListOfVar (OrderByNameRes names (V xs)))) 
+    orderByName names v_x_xs =  
+      case popVariantHead v_x_xs of
+        Right x -> liftVariant (variantFromValue (orderByName names x))
+        Left v_xs -> liftVariant (orderByName names v_xs)
+
+instance OrderByName names (V '[]) where
+  type OrderByNameRes names (V '[]) = (V '[])
+  orderByName names v = v  
+
+type OrderByName' names t = (OrderByName names t, Nub names ~ names, TupleLength t ~ Length names)
+
 --- Append
 class AppendToTuple x y where
   type AppendToTupleResult x y
@@ -212,54 +259,10 @@ emptyVar = error "empty Variant; will never happen"
 instance  AppendToTuple (V '[]) a where
   type AppendToTupleResult (V '[]) a = V '[]
   appendToTuple _v_empty _a =  emptyVar
-        
---- Get
-type family GottenByName name  st :: * where
-  GottenByName name (St a name) = ByName name (St a name)
-  GottenByName name (St a name, nextPart) = ByName name (St a name)
-  GottenByName name (St a name1, nextPart) = (GottenByName name nextPart)
 
-type family GetByNameDepth name  st :: Nat where
-  GetByNameDepth name (St a name) = 0
-  GetByNameDepth name (St a name, nextPart) = 0
-  GetByNameDepth name (St a name1, nextPart) = GetByNameDepth name nextPart + 1
-
-type family GetNested  st (n ::Nat) :: * where
-  GetNested (St a name) 0 = ByName name (St a name)
-  GetNested (St a name, nextPart) 0 = ByName name (St a name)
-  GetNested (St a name, nextPart) n = GetNested  nextPart (n-1)
-
-type family GottenByName2 name st :: * where
-  GottenByName2 name st = GetNested st (GetByNameDepth name st)
-
-{-
-class GetByName name st where
-   getByName :: Named name -> st -> GottenByName2 name st
-instance GetByName name (St a name) where
-  getByName _  = ByName
-instance {-# OVERLAPS #-}  GetByName name (St a name, nextPart) where
-  getByName _ (st,_) = ByName st
-instance {-# OVERLAPS #-} (GetByName name nextPart) => GetByName name (St a name1, nextPart) where
-  getByName named (st,nextPart) = getByName named nextPart
--}
-
-{-
-class GetByName name st where
-  type GotByName name st
-  getByName :: Named name -> st -> GotByName name st
-
-instance GetByName name (St a name) where
-  type GotByName name  (St a name)  = ByName name (St a name)
-  getByName _ = ByName
-
-instance GetByName name (St a name, St b name1) where
-  type GotByName name (St a name, St b name1)  = ByName name (St a name)
-  getByName _ (a,b) = ByName a
-
-instance GetByName name (St a name1, St b name) where
-  type GotByName name (St a name1, St b name)  = ByName name (St b name)
-  getByName _ (a,b) = ByName b
--}
+type family TupleLength t :: Nat where
+  TupleLength (t1,t2) = 1 + TupleLength t2
+  TupleLength (St t name) = 1
 
 --- Remove
 type family RemovedByName name  a :: * where
@@ -409,9 +412,7 @@ type family GetAllNames (lst :: [*]) :: [Symbol] where
   GetAllNames '[] = '[]    
   GetAllNames (x ': xs) = Union (GetNames x) (GetAllNames xs)    
 
-
 --
-
 type (:<>) t1 t2 = (t1,t2) 
 infixr 1 :<>
 

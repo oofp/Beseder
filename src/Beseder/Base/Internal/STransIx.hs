@@ -16,12 +16,13 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 
 module Beseder.Base.Internal.STransIx where
 
 import           Protolude                    hiding (Product, handle,TypeError,First,forever, on)
 import           Control.Monad.Cont (ContT)
-import           Control.Monad.Identity (IdentityT)
+import           Control.Monad.Identity (IdentityT, runIdentityT)
 import           Control.Monad.Trans (MonadTrans)
 import           Haskus.Utils.Flow            hiding (forever)
 import           Haskus.Utils.Types.List
@@ -38,6 +39,7 @@ import           Beseder.Utils.VariantHelper
 import           Beseder.Base.Internal.SplitFlow
 import           Beseder.Base.Internal.NatOne
 import           Beseder.Base.Internal.STransDef
+import           Control.Arrow (Kleisli (..))
 
 
 -- Constrains
@@ -346,7 +348,7 @@ nextEv ::
 nextEv = on @Dynamics nextEv' 
 
 
-gets :: 
+gets :: -- forall x name xs st sp q m a.
   ( GetTypeByNameVar name x xs
   , x ~ St st name
   , Monad (q m)
@@ -444,6 +446,15 @@ whatNext = STrans (\_sp v_xs -> return $ Right (v_xs, proxyOfVar v_xs))
 
 noop :: Monad (q m) => STrans q m sp xs xs ('[]) IDFunc ()
 noop = STrans (\_sp v_xs -> return $ Right (v_xs, ()))
+
+order ::  
+  ( Monad (q m)
+  , v_ys ~ Variant ys
+  , Variant ys ~ OrderByNameRes names (V xs)
+  , SplicC sp rs ex ys
+  , OrderByName names (V xs) 
+  ) => Proxy names -> STrans q m sp xs rs ex (OrderFunc names) ()
+order names = STrans (\sp v_xs -> return $ splitV_ sp (orderByName names v_xs)) 
 
 newState :: 
   ( Eval (f sp xs) ~ '(xs1,ex)
@@ -578,3 +589,23 @@ execApp ::
   ) => ExcecutableApp q m sfunc -> q m () 
 execApp (MkApp trns) = execTrans trns  
 
+extractKleisliT :: (Monad (q m),Eval (sfunc NoSplitter xs) ~ '(rs,'[])) => STrans q m NoSplitter xs rs '[] sfunc () -> Kleisli (q m) (V xs) (V rs)
+extractKleisliT (STrans t) = Kleisli (\v_xs -> do
+  ei <- t NoSplitter v_xs
+  case ei of
+    Right (v_rs,()) -> return v_rs
+    Left _ -> undefined) 
+
+extractKleisli :: (Monad m,Eval (sfunc NoSplitter xs) ~ '(rs,'[])) => STrans IdentityT m NoSplitter xs rs '[] sfunc () -> Kleisli m (V xs) (V rs)
+extractKleisli (STrans t) = Kleisli (\v_xs -> runIdentityT $ do
+  ei <- t NoSplitter v_xs
+  case ei of
+    Right (v_rs,()) -> return v_rs
+    Left _ -> undefined) 
+
+extractHandler :: (Monad m,Eval (sfunc NoSplitter '[x]) ~ '(rs,'[])) => STrans IdentityT m NoSplitter '[x] rs '[] sfunc () -> (x -> m (V rs))
+extractHandler (STrans t) x = runIdentityT $ do
+  ei <- t NoSplitter (variantFromValue x)
+  case ei of
+    Right (v_rs,()) -> return v_rs
+    Left _ -> undefined

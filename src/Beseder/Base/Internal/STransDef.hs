@@ -30,10 +30,14 @@ import           Beseder.Base.Internal.TupleHelper
 import           Beseder.Base.Internal.SplitOps
 import           Beseder.Utils.ListHelper
 import           Beseder.Base.Internal.NatOne
+import           Haskus.Utils.Variant
 
 -- transformation defunc data and their evaluators
 data WithResFunc :: res -> * -> [*] -> Exp ([*],[*])
 type instance Eval (WithResFunc res sp (x ': ys)) = ListSplitterRes2 sp (Union '[AppendToTupleResult x res] ys)
+
+data OrderFunc :: [Symbol] -> * -> [*] -> Exp ([*],[*])
+type instance Eval (OrderFunc names sp xs) = ListSplitterRes2 sp (ListOfVar (OrderByNameRes names (V xs)))
 
 data WithResAllFunc :: res -> * -> [*] -> Exp ([*],[*])
 type instance Eval (WithResAllFunc res sp xs) = ListSplitterRes2 sp (AppendToTupleList xs res)

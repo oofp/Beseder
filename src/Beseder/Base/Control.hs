@@ -3,6 +3,7 @@ module Beseder.Base.Control
     ( newRes
     , invoke
     , nextEv
+    , nextEv'
     , newState
     , clear
     , forever
@@ -21,6 +22,7 @@ module Beseder.Base.Control
     , pumpEvents
     --, extendForLoop
     , noop
+    , order
     , whatNext
     , (>>)
     , (>>=)
