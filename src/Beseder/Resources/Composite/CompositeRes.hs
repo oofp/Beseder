@@ -12,6 +12,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE QuantifiedConstraints #-}
@@ -25,7 +26,7 @@ module  Beseder.Resources.Composite.CompositeRes
   , StatesHandlerProv (..)
   , compReq
   , CompReq
-  , UnwrapComp
+  , invokeC
   ) where
 
 import            Protolude hiding (First)
@@ -38,6 +39,7 @@ import            Beseder.Base.Internal.SplitOps
 import            Beseder.Base.Internal.Core
 import            Beseder.Base.Internal.StHelper
 import            Beseder.Base.Internal.STransIx
+import qualified  Beseder.Base.Internal.STransIxDo as SDo 
 import            Beseder.Base.Internal.TypeExp
 import            Control.Monad.Identity (IdentityT, runIdentityT)
 import            qualified GHC.Show (Show (..))
@@ -140,6 +142,7 @@ instance
   ) => TermState m (StCs hf res name) where
     terminate (St (CRes res)) = terminate res 
 
+invokeC :: (_) => Named name -> m req -> STrans q m sp _ _ _ _ ()
+invokeC named m_req = bindT (op m_req) (invoke named)  
 
-type family UnwrapComp t where
-  UnwrapComp (StCs hf res name) = res
+type instance UnwrapContent (StCs hf res name) = res

@@ -93,7 +93,7 @@ invokeStopTwoTimers named = do
 
 
 data IsTwoTimersAlive :: Type -> Exp Bool
-type instance Eval (IsTwoTimersAlive t) = IsTwoTimersAliveFam (UnwrapComp t)
+type instance Eval (IsTwoTimersAlive t) = IsTwoTimersAliveFam (UnwrapContent t)
 type family IsTwoTimersAliveFam t :: Bool where
   IsTwoTimersAliveFam (TimerArmed m "t1", TimerArmed m "t2") = 'True
   IsTwoTimersAliveFam _ = 'False

@@ -22,11 +22,16 @@ module Beseder.Base.Internal.StHelper
   , StWrapList
   , StVar (..)
   , StWrapVar (..)
+  , UnwrapContent
+  , AreEq
+  , IsContentEq
   ) where
 
 import            Protolude hiding (First)
 import            Haskus.Utils.Variant 
-import            Beseder.Base.Common
+import            Beseder.Base.Internal.Core
+import            Beseder.Base.Internal.Named
+import            Beseder.Base.Internal.TypeExp
 
 stWithName :: stData -> Named name -> St stData name
 stWithName stData _named = St stData
@@ -70,3 +75,13 @@ instance
           Right x -> liftVariant $ (variantFromValue (stWithName (wf x) named))
           Left v_ys -> liftVariant $ asStWrapVar wf named v_ys 
   
+  
+type family UnwrapContent t 
+
+type family AreEq a b :: Bool where
+  AreEq a a = 'True
+  AreEq a b = 'False
+
+type family IsContentEq a b :: Bool where
+  IsContentEq a b = AreEq (UnwrapContent a) b
+

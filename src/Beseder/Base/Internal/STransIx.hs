@@ -603,7 +603,7 @@ extractKleisli (STrans t) = Kleisli (\v_xs -> runIdentityT $ do
     Right (v_rs,()) -> return v_rs
     Left _ -> undefined) 
 
-extractHandler :: (Monad m,Eval (sfunc NoSplitter '[x]) ~ '(rs,'[])) => STrans IdentityT m NoSplitter '[x] rs '[] sfunc () -> (x -> m (V rs))
+extractHandler :: forall m sfunc x rs. (Monad m,Eval (sfunc NoSplitter '[x]) ~ '(rs,'[])) => STrans IdentityT m NoSplitter '[x] rs '[] sfunc () -> (x -> m (V rs))
 extractHandler (STrans t) x = runIdentityT $ do
   ei <- t NoSplitter (variantFromValue x)
   case ei of

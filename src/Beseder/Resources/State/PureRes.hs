@@ -17,6 +17,7 @@ module Beseder.Resources.State.PureRes
   , Op (..)
   , PureRes (..)
   , PSt (..)
+  , PureSt
   ) where
 
 import           Protolude  
@@ -39,7 +40,7 @@ class Op op st where
 ----------------------------------------------------------------------------------------------------------  
 instance (Monad m, MkPureRes pureRes) => MkRes m (PureRes pureRes)  where
   type ResSt m (PureRes pureRes)  = PSt (PureResInitState pureRes)  
-  mkRes (PureRes pureRes ) = pure $ PSt $ mkPureRes pureRes
+  mkRes (PureRes pureRes) = pure $ PSt $ mkPureRes pureRes
 
 type family PureStList name (dataList :: [*]) where
   PureStList name '[] = '[]
@@ -52,6 +53,8 @@ instance PureStVar ('[]) name where
   asPureStVar named _ = undefined
 
 newtype PSt a = PSt a
+type PureSt a name = St (PSt a) name
+type instance UnwrapContent (PureSt a name) = a
 
 pureStWithName :: stData -> Named name -> St (PSt stData) name
 pureStWithName stData named = St (PSt stData)

@@ -25,6 +25,9 @@ module Beseder.Base.Common
     , ListOfNamed
     , ToVarOfNamed 
     , nameFromSt
+    , UnwrapContent
+    , AreEq
+    , IsContentEq
     ) where
 
 import Beseder.Base.Internal.Core 
@@ -36,3 +39,4 @@ import Beseder.Base.Internal.STransIx
 import Beseder.Base.Internal.STransDef
 import Beseder.Base.Internal.TupleHelper (GetTypeByNameVar)
 import Beseder.Utils.VariantHelper (getVarLength)
+import Beseder.Base.Internal.StHelper
