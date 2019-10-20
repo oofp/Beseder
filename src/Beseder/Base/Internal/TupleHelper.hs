@@ -44,6 +44,14 @@ type family TypeByIndex  (n ::Nat) a where
 type family TypeByName name a where
   TypeByName name a = TypeByIndex (TargetIndex name a) a
 
+type family GetResByName name a where
+  GetResByName name (St a name) = St a name
+  GetResByName name (St a name, nextPart) = St a name
+  GetResByName name (St a name1, nextPart) = GetResByName name nextPart --recursive
+  GetResByName name (St a name1) = TypeError ('Text "Resource " :<>: 'Text name :<>: 'Text " not found at " 
+                                              :$$: 'ShowType (St a name))
+  GetResByName name () = TypeError ( 'Text "Resource " :<>: 'Text name :<>: 'Text " not found")
+
 type family TargetByName name  a :: * where
   TargetByName name (St a name) = St a name
   TargetByName name (St a name, nextPart) = (St a name, nextPart)

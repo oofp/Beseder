@@ -32,6 +32,7 @@ import            Haskus.Utils.Variant
 import            Beseder.Base.Internal.Core
 import            Beseder.Base.Internal.Named
 import            Beseder.Base.Internal.TypeExp
+import            Beseder.Base.Internal.TupleHelper
 
 stWithName :: stData -> Named name -> St stData name
 stWithName stData _named = St stData
@@ -84,4 +85,7 @@ type family AreEq a b :: Bool where
 
 type family IsContentEq a b :: Bool where
   IsContentEq a b = AreEq (UnwrapContent a) b
+
+type family GetResState st :: * where
+  GetResState (St st name) = st
 

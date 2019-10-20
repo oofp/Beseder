@@ -46,9 +46,8 @@ import           SelfClosingDoor
 doorTrans :: Int -> Int -> STransApp (ContT Bool) TaskQ NoSplitter '[()] _ _ () 
 doorTrans openTimeoutSec closedTimeoutSec = MkApp $ do
   liftIO $ putStrLn ("Entered doorApp"::Text)
-  newSelfClosingDoor @TaskQ #dr (DoorCfg openTimeoutSec closedTimeoutSec)
-  nextEv -- let door to autolock
-  -- invokeUnlockDoor
+  newSelfClosingDoor #dr (DoorCfg openTimeoutSec closedTimeoutSec)
+  skipTo @("dr" :? IsDoorLocked)
   invokeC #dr unlockDoor 
   invokeC #dr openDoor 
   skipAll                    -- let auto close and then auto lock

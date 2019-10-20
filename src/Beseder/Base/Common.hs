@@ -16,6 +16,7 @@ module Beseder.Base.Common
     , ExcecutableApp
     , AsyncTrans 
     , SyncTrans 
+    , GetResByName
     , GetTypeByNameVar
     , extractKleisli
     , extractKleisliT 
@@ -37,6 +38,6 @@ import Beseder.Base.Internal.TypeExp
 import Beseder.Base.Internal.Classes 
 import Beseder.Base.Internal.STransIx
 import Beseder.Base.Internal.STransDef
-import Beseder.Base.Internal.TupleHelper (GetTypeByNameVar)
+import Beseder.Base.Internal.TupleHelper (GetTypeByNameVar,GetResByName)
 import Beseder.Utils.VariantHelper (getVarLength)
 import Beseder.Base.Internal.StHelper

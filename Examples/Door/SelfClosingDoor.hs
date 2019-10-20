@@ -36,6 +36,9 @@ module  SelfClosingDoor
   , lockDoor
   , unlockDoor
   , DoorCfg (..)
+  , IsDoorLocked
+  , IsDoorOpen
+  , IsDoorClosed
   ) where
 
 import           Protolude                    hiding (Product, handle, return, gets, lift, liftIO,
@@ -185,3 +188,17 @@ openDoor = P.return $ compReq $ MkApp $ do
   clear #closedTimer
   doOpenDoor
 
+-- It is repetetive but partial application of type alias does not compile
+data IsDoorLocked ::  Type -> Exp Bool
+data IsDoorClosed ::  Type -> Exp Bool
+data IsDoorOpen   ::  Type -> Exp Bool
+type instance Eval (IsDoorLocked selfDoorState) = IsDoor selfDoorState (DoorLocked "door")
+type instance Eval (IsDoorClosed selfDoorState) = IsDoor selfDoorState (DoorClosed "door")
+type instance Eval (IsDoorOpen selfDoorState)   = IsDoor selfDoorState (DoorOpen "door")
+
+type family IsDoor selfDoor doorState :: Bool where
+  IsDoor selfDoor doorState = AreEq (GetResByName "door" (UnwrapContent selfDoor)) doorState
+
+-- :kind! Eval (IsDoorLocked (SelfDoorLocked IO))
+-- :kind! Eval (IsDoor DoorOpen (SelfDoorClosed IO))
+-- type CompSelfDoorLocked = StCs (DoorHnd IO) (SelfDoorLocked IO) "dr"
