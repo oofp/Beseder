@@ -32,6 +32,9 @@ import           Beseder.Utils.ListHelper
 import           Beseder.Base.Internal.NatOne
 import           Haskus.Utils.Variant
 
+data ReturnFunc :: res -> * -> [*] -> Exp ([*],[*])
+type instance Eval (ReturnFunc res sp xs) = '(xs, '[])
+
 -- transformation defunc data and their evaluators
 data WithResFunc :: res -> * -> [*] -> Exp ([*],[*])
 type instance Eval (WithResFunc res sp (x ': ys)) = ListSplitterRes2 sp (Union '[AppendToTupleResult x res] ys)

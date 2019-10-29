@@ -20,7 +20,7 @@ import           Haskus.Utils.Types
 import           Haskus.Utils.Variant
 import           Beseder.Base.Internal.Core
 import           Beseder.Base.Internal.Named
-import           Protolude                    hiding (Product, handle)
+import           Protolude hiding (Product, handle)
 import           Beseder.Base.Internal.TupleHelper
 
 type ContQ (m :: * -> *) res = ContT Bool m res 

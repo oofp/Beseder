@@ -40,6 +40,7 @@ module Beseder.Base.Control
     , Statics
     , NoSplitter
     , module Beseder.Base.Internal.STransDef
+    , module Beseder.Base.Internal.STransData
     , STrans (..)
     , STransApp (..)
     , Has 
@@ -50,7 +51,7 @@ module Beseder.Base.Control
 
 
 import Beseder.Base.Internal.STransIxDo 
---import Beseder.Base.Internal.STransIx
 import Beseder.Base.Internal.STransDef
+import Beseder.Base.Internal.STransData
 import Beseder.Base.Internal.SplitOps
 import Beseder.Base.Internal.NatOne

@@ -45,7 +45,7 @@ import           Haskus.Utils.Types.List
 import           Control.Monad.Cont (ContT)
 import           Control.Monad.Trans (MonadTrans)
 
-return :: Monad (q m) => a -> STrans q m sp xs xs '[] IDFunc a
+return :: Monad (q m) => a -> STrans q m sp xs xs '[] (ReturnFunc a) a
 return = returnT
 
 (>>=) :: 

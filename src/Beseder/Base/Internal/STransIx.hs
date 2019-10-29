@@ -107,7 +107,7 @@ data STransApp q (m :: * -> *) (sp :: *) (xs :: [*]) (rs :: [*]) (ex :: [*])  (a
 --data STransFunc q (m :: * -> *) (sp :: *) (sfunc :: * -> [*] -> ([*],[*]) -> *) (a :: *) where
 --  MkFunc :: '(rs,ex) ~ Eval (sfunc sp xs) => STrans q m sp xs rs ex sfunc a -> STransFunc q m sp sfunc a 
 
-returnT :: Monad (q m) => a -> STrans q m sp xs xs '[] IDFunc a
+returnT :: Monad (q m) => a -> STrans q m sp xs xs '[] (ReturnFunc a) a
 returnT a = STrans (\_sp v_xs -> return (Right (v_xs,a)))
 
 bindT :: 
