@@ -40,7 +40,8 @@ import           Beseder.Base.Internal.SplitFlow
 import           Beseder.Base.Internal.NatOne
 import           Beseder.Base.Internal.STransDef
 import           Control.Arrow (Kleisli (..))
-
+import           Beseder.Base.Internal.STransMonad hiding (return, (>>), (>>=))
+import           Data.Coerce
 
 -- Constrains
 type family ComposeCFam sp f_a as as1 f_b bs zs where 
@@ -113,6 +114,8 @@ returnT a = STrans (\_sp v_xs -> return (Right (v_xs,a)))
 bindT :: 
   ( Monad (q m)
   , KnownNat (Length ex1)
+  --, '(rs1,ex1) ~ Eval (f1 sp xs)
+  --, '(rs2,ex2) ~ Eval (f2 sp rs1)  
   ) => STrans q m sp xs rs1 ex1 f1 a -> (a -> STrans q m sp rs1 rs2 ex2 f2 b) -> STrans q m sp xs rs2 (Concat ex1 ex2) (BindFunc f1 f2) b
 bindT (STrans t1) f = 
     STrans $ (\sp v_xs -> 
@@ -135,6 +138,8 @@ bindT (STrans t1) f =
 composeT :: 
   ( Monad (q m)
   , KnownNat (Length ex1)
+  -- , '(rs1,ex1) ~ Eval (f1 sp xs)
+  -- , '(rs2,ex2) ~ Eval (f2 sp rs1)  
   ) => STrans q m sp xs rs1 ex1 f1 () -> STrans q m sp rs1 rs2 ex2 f2 b -> STrans q m sp xs rs2 (Concat ex1 ex2) (ComposeFunc f1 f2) b
 composeT (STrans t1) (STrans t2) = 
     STrans $ (\sp v_xs -> 
@@ -368,12 +373,13 @@ opRes ::
   , Monad (q m)
   , MonadTrans q
   , GetTypeByNameVar name x xs
-  ) => Named name -> (x -> m a) -> STrans q m sp xs xs ('[]) IDFunc a
+  ) => Named name -> (x -> m a) -> STrans q m sp xs xs ('[]) (OpResFunc name x) a
 opRes named f =
   STrans 
     (\_sp v_xs -> do
       op_res <- lift $ f (getTypeByNameVar named v_xs)
       return $ Right (v_xs, op_res))
+      
 iff ::
   ( rs ~ Union rs1 xs
   , Liftable rs1 rs
@@ -528,6 +534,9 @@ handleLoop hnd =
     (extendForHandlerLoop hnd) 
     (forever (alignWithHandler hnd))
 
+refunc :: (Eval (f sp xs) ~ Eval (f1 sp xs)) => STrans (ContT Bool) m sp xs rs ex f () -> STrans (ContT Bool) m sp xs rs ex f1 ()
+refunc = coerce
+
 class ('(rs,ex) ~ Eval (f sp xs)) => NextSteps (steps :: NatOne) m sp xs rs ex f | steps sp xs -> rs ex f where
   nextSteps :: Proxy steps -> STrans (ContT Bool) m sp xs rs ex f ()
 
@@ -546,8 +555,19 @@ instance
   , KnownNat (Length ex_n)
   , ex_nn1 ~ Concat ex_n ex_n1
   , '(rs_n1, ex_nn1) ~ Eval (ComposeFunc func_n GetNextAllFunc sp xs)
+  --) => NextSteps (Succ n) m sp xs rs_n1 ex_nn1 (NextStepsFunc (Succ n)) where --  (ComposeFunc func_n GetNextAllFunc) where  
   ) => NextSteps (Succ n) m sp xs rs_n1 ex_nn1 (ComposeFunc func_n GetNextAllFunc) where  
-    nextSteps _px = composeT (nextSteps (Proxy @n)) nextEv'
+      nextSteps _px = composeT (nextSteps (Proxy @n)) nextEv'
+
+refuncNextSteps :: (NextSteps steps m sp xs rs ex f, Eval (f sp xs) ~ Eval (NextStepsFunc steps sp xs)) =>
+  STrans (ContT Bool) m sp xs rs ex f () -> STrans (ContT Bool) m sp xs rs ex (NextStepsFunc steps) ()
+refuncNextSteps = refunc
+
+
+nextSteps' :: (_) => (NextSteps steps m sp xs rs ex f, Eval (f sp xs) ~ Eval (NextStepsFunc steps sp xs)) =>
+  Proxy steps -> STrans (ContT Bool) m sp xs rs ex (NextStepsFunc steps) ()
+nextSteps' = refuncNextSteps . nextSteps 
+
 
 --
 execTrans' :: 
@@ -609,3 +629,13 @@ extractHandler (STrans t) x = runIdentityT $ do
   case ei of
     Right (v_rs,()) -> return v_rs
     Left _ -> undefined
+
+
+instance (Monad (q m)) => STransMonad (STrans q m) where
+  type Cx (STrans q m) sp xs rs ex f = (KnownNat (Length ex)) -- ()
+
+  st_return = returnT   
+  st_compose = composeT
+  st_bind = bindT
+
+

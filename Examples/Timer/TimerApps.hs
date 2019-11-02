@@ -100,4 +100,24 @@ timerReach timeoutSec1 = do
   invoke #t1  (StartTimer timeoutSec1)  
   reach @("t1" :? IsTimerTriggered) nextEv 
   clear #t1 
-  
+
+
+
+timer4 :: TaskPoster m  => Int -> STrans (ContT Bool) m NoSplitter '[()] '[()] '[] _ () 
+timer4 timeoutSec1 = do
+  newRes #t1 TimerRes 
+  newRes #t2 TimerRes 
+  newRes #t3 TimerRes 
+  newRes #t4 TimerRes 
+  invoke #t1  (StartTimer timeoutSec1)  
+  invoke #t2  (StartTimer timeoutSec1)  
+  invoke #t3  (StartTimer timeoutSec1)  
+  invoke #t4  (StartTimer timeoutSec1)  
+  nextEv' 
+  nextEv' 
+  nextEv' 
+  nextEv' 
+  clear #t1 
+  clear #t2 
+  clear #t3 
+  clear #t4 

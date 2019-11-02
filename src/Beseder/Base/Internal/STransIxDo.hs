@@ -23,9 +23,9 @@
 
 module Beseder.Base.Internal.STransIxDo 
   ( module Beseder.Base.Internal.STransIx
-  , return
-  , (>>)
-  , (>>=)
+  --, return
+  --, (>>)
+  --, (>>=)
   , pumpEvents
   , handleEvents
   , skipAll
@@ -40,25 +40,33 @@ import           Beseder.Base.Internal.STransDef
 import           Beseder.Base.Internal.STransIx
 import           Beseder.Base.Internal.SplitOps
 import           Beseder.Base.Internal.Classes
+import           Beseder.Base.Internal.TypeExp
 import           Beseder.Utils.ListHelper
 import           Haskus.Utils.Types.List
 import           Control.Monad.Cont (ContT)
 import           Control.Monad.Trans (MonadTrans)
+import           Beseder.Base.Internal.STransMonad (return, (>>), (>>=))
 
+{-
 return :: Monad (q m) => a -> STrans q m sp xs xs '[] (ReturnFunc a) a
 return = returnT
 
 (>>=) :: 
   ( Monad (q m)
   , KnownNat (Length ex1)
+  --, '(rs1,ex1) ~ Eval (f1 sp xs)
+  --, '(rs2,ex2) ~ Eval (f2 sp rs1)  
   ) => STrans q m sp xs rs1 ex1 f1 a -> (a -> STrans q m sp rs1 rs2 ex2 f2 b) -> STrans q m sp xs rs2 (Concat ex1 ex2) (BindFunc f1 f2) b
 (>>=) = bindT
 
 (>>) :: 
   ( Monad (q m)
   , KnownNat (Length ex1)
+  --, '(rs1,ex1) ~ Eval (f1 sp xs)
+  --, '(rs2,ex2) ~ Eval (f2 sp rs1)  
   ) => STrans q m sp xs rs1 ex1 f1 () -> STrans q m sp rs1 rs2 ex2 f2 b -> STrans q m sp xs rs2 (Concat ex1 ex2) (ComposeFunc f1 f2) b
 (>>) = composeT
+-}
 
 pumpEvents ::
   ( _  

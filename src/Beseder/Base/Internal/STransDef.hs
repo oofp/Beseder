@@ -35,6 +35,12 @@ import           Haskus.Utils.Variant
 data ReturnFunc :: res -> * -> [*] -> Exp ([*],[*])
 type instance Eval (ReturnFunc res sp xs) = '(xs, '[])
 
+data OpResFunc :: name -> * -> * -> [*] -> Exp ([*],[*])
+type instance Eval (OpResFunc name x sp xs) = '(xs, '[])
+
+data OpFunc :: * -> [*] -> Exp ([*],[*])
+type instance Eval (OpFunc sp xs) = '(xs, '[])
+
 -- transformation defunc data and their evaluators
 data WithResFunc :: res -> * -> [*] -> Exp ([*],[*])
 type instance Eval (WithResFunc res sp (x ': ys)) = ListSplitterRes2 sp (Union '[AppendToTupleResult x res] ys)
@@ -197,5 +203,16 @@ type family TotalSteps sp (xs :: [*]) (f :: * -> [*] -> Exp ([*],[*])) :: NatOne
 
 type family TotalSteps' sp (xs :: [*]) (f :: * -> [*] -> Exp ([*],[*])) (steps :: NatOne) :: NatOne where
   TotalSteps' sp '[] f n = n     
-  TotalSteps' sp xs f n = TotalSteps' sp (First(Eval (f sp xs))) f ('Succ n)     
+  TotalSteps' sp xs f n = TotalSteps' sp (First(Eval (f sp xs))) f ('Succ n)    
+  
+data StepsFunc :: NatOne -> (* -> [*] -> ([*],[*]) -> *) -> * -> [*] -> Exp ([*],[*])
+type instance Eval (StepsFunc steps f sp xs) = Eval ((StepsFuncFam steps f) sp xs)
 
+type family StepsFuncFam steps (f :: * -> [*] -> Exp ([*],[*])) :: (* -> [*] -> Exp ([*],[*])) where
+  StepsFuncFam One f = f
+  StepsFuncFam (Succ n) f = ComposeFunc (StepsFuncFam n f) f 
+
+data NextStepsFunc :: NatOne -> * -> [*] -> Exp ([*],[*])
+type instance Eval (NextStepsFunc steps sp xs) = Eval (StepsFuncFam steps GetNextAllFunc sp xs)
+
+  

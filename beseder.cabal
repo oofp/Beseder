@@ -52,6 +52,10 @@ library
                      , Beseder.Base.Internal.NatOne
                      , Beseder.Base.Internal.STransIx 
                      , Beseder.Base.Internal.STransDef 
+                     , Beseder.Base.Internal.STransData 
+                     , Beseder.Base.Internal.STransDataDo 
+                     , Beseder.Base.Internal.STransDataIntrp 
+                     , Beseder.Base.Internal.STransMonad 
                      , Beseder.Base.Internal.STransIxDo 
                      , Beseder.Utils.ListHelper
                      , Beseder.Utils.Lst
