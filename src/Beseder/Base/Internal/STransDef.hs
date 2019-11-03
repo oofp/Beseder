@@ -139,6 +139,15 @@ type family GetNewStateFam (rs_ex :: ([*],[*])) (xs :: [*]) :: ([*],[*]) where
 data IDFunc :: * -> [*] -> Exp ([*],[*])
 type instance Eval (IDFunc sp xs) = '(xs,'[])
 
+data WhatNextFunc :: * -> [*] -> Exp ([*],[*])
+type instance Eval (WhatNextFunc sp xs) = '(xs,'[])
+
+data NoopFunc :: * -> [*] -> Exp ([*],[*])
+type instance Eval (NoopFunc sp xs) = '(xs,'[])
+
+data LiftIOFunc :: * -> [*] -> Exp ([*],[*])
+type instance Eval (LiftIOFunc sp xs) = '(xs,'[])
+
 data MapFunc :: (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp ([*],[*])
 type instance Eval (MapFunc f sp xs) = Eval (f sp xs)
 

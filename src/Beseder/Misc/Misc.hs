@@ -15,6 +15,7 @@ module Beseder.Misc.Misc
   , runSyncTrans 
   , runAsyncApp 
   , runSyncApp 
+  , runAsyncData
   , runAsyncFlow
   , TaskQ 
   ) where

@@ -17,17 +17,13 @@
 module Beseder.Base.Internal.STransData where
 
 import           Protolude                    hiding (Product, handle,TypeError,First,forever, on)
-import           Control.Monad.Cont (ContT)
 import           Haskus.Utils.Types.List
-import           Haskus.Utils.Variant
 import           Beseder.Base.Internal.Core
 import           Beseder.Base.Internal.Named
-import           Beseder.Base.Internal.Classes
 import           Beseder.Base.Internal.Flow hiding (newRes)
 import           Beseder.Base.Internal.TypeExp
 import           Beseder.Base.Internal.TupleHelper
 import           Beseder.Base.Internal.SplitOps
-import           Beseder.Base.Internal.NatOne
 import           Beseder.Base.Internal.STransDef
 import           Beseder.Base.Internal.STransMonad
 
@@ -74,9 +70,16 @@ data STransData (m :: * -> *) (sp :: *) (xs :: [*]) (rs :: [*]) (ex :: [*]) (sfu
     , '(rs_sub,ex) ~ Eval (f_sub sp xs_sub)
     ) => STransData m sp xs_sub rs_sub ex f_sub () -> STransData m sp xs rs1 ex (CaptureFunc sp1 f_sub) ()
   OpRes :: Named name -> (x -> m a) -> STransData m sp xs xs ('[]) (OpResFunc name x) a
+  Op :: m a -> STransData m sp xs xs ('[]) OpFunc a
+  Noop :: STransData m sp xs xs ('[]) NoopFunc ()
+  LiftIO :: IO a -> STransData m sp xs xs ('[]) LiftIOFunc a
+  WhatNext :: STransData m sp xs xs ('[]) WhatNextFunc (Proxy xs)
   NextSteps :: -- forall n sp xs rs ex m.
     ( '(rs,ex) ~ Eval (NextStepsFunc n sp xs)
     ) => Proxy n -> STransData m sp xs rs ex (NextStepsFunc n) ()
+  Forever :: 
+    ('(xs,ex) ~ Eval (f sp xs)
+    ) => STransData m sp xs xs ex f () -> STransData m sp xs ('[]) ex (ForeverFunc f) ()
 
 (>:>) ::
   ( '(rs1,ex1) ~ Eval (f1 sp xs)

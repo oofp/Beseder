@@ -364,7 +364,7 @@ op ::
   ( Monad m
   , Monad (q m)
   , MonadTrans q
-  ) => m a -> STrans q m sp xs xs  ('[]) IDFunc a
+  ) => m a -> STrans q m sp xs xs  ('[]) OpFunc a
 op ma = 
   STrans (\_sp v_xs -> lift ma >>= (\a -> return $ Right (v_xs,a))) 
 
@@ -444,15 +444,16 @@ liftIO ::
   ( MonadIO m
   , MonadTrans q
   , Monad (q m)
-  ) => IO a -> STrans q m sp xs xs ('[]) IDFunc a
-liftIO ioa = op (Protolude.liftIO ioa)
+  ) => IO a -> STrans q m sp xs xs ('[]) LiftIOFunc a
+liftIO ioa = refunc $ op (Protolude.liftIO ioa)
 
-whatNext :: Monad (q m) => STrans q m sp xs xs ('[]) IDFunc (Proxy xs)
+whatNext :: Monad (q m) => STrans q m sp xs xs ('[]) WhatNextFunc (Proxy xs)
 whatNext = STrans (\_sp v_xs -> return $ Right (v_xs, proxyOfVar v_xs))
 
-noop :: Monad (q m) => STrans q m sp xs xs ('[]) IDFunc ()
+noop :: Monad (q m) => STrans q m sp xs xs ('[]) NoopFunc ()
 noop = STrans (\_sp v_xs -> return $ Right (v_xs, ()))
 
+--needed?
 order ::  
   ( Monad (q m)
   , v_ys ~ Variant ys
@@ -534,7 +535,7 @@ handleLoop hnd =
     (extendForHandlerLoop hnd) 
     (forever (alignWithHandler hnd))
 
-refunc :: (Eval (f sp xs) ~ Eval (f1 sp xs)) => STrans (ContT Bool) m sp xs rs ex f () -> STrans (ContT Bool) m sp xs rs ex f1 ()
+refunc :: (Eval (f sp xs) ~ Eval (f1 sp xs)) => STrans q m sp xs rs ex f a -> STrans q m sp xs rs ex f1 a
 refunc = coerce
 
 class ('(rs,ex) ~ Eval (f sp xs)) => NextSteps (steps :: NatOne) m sp xs rs ex f | steps sp xs -> rs ex f where
@@ -563,7 +564,6 @@ refuncNextSteps :: (NextSteps steps m sp xs rs ex f, Eval (f sp xs) ~ Eval (Next
   STrans (ContT Bool) m sp xs rs ex f () -> STrans (ContT Bool) m sp xs rs ex (NextStepsFunc steps) ()
 refuncNextSteps = refunc
 
-
 nextSteps' :: (_) => (NextSteps steps m sp xs rs ex f, Eval (f sp xs) ~ Eval (NextStepsFunc steps sp xs)) =>
   Proxy steps -> STrans (ContT Bool) m sp xs rs ex (NextStepsFunc steps) ()
 nextSteps' = refuncNextSteps . nextSteps 
@@ -589,8 +589,8 @@ execTrans_ t = do
     Left _ -> undefined -- cannot happen as ex ~ '[]
 
 type ExecutableFunc sfunc = Eval (sfunc NoSplitter '[()]) ~ '(('[()]),'[])    
-type ExcecutableTrans q m sfunc = STrans q m NoSplitter '[()] '[()]  ('[])  sfunc ()
-type ExcecutableApp q m sfunc = STransApp q m NoSplitter '[()] '[()]  ('[]) ()
+type ExecutableTrans q m sfunc = STrans q m NoSplitter '[()] '[()]  ('[])  sfunc ()
+type ExecutableApp q m sfunc = STransApp q m NoSplitter '[()] '[()]  ('[]) ()
 
 type AsyncTrans m sp xs rs ex func a = STrans (ContT Bool) m sp xs rs ex a  
 type SyncTrans m sp xs rs ex func a = STrans IdentityT m sp xs rs ex a  
@@ -599,14 +599,14 @@ execTrans :: forall sfunc q m.
   ( MonadTrans q
   --, ExecutableFunc sfunc
   , Monad (q m)
-  ) => ExcecutableTrans q m sfunc -> q m () 
+  ) => ExecutableTrans q m sfunc -> q m () 
 execTrans t = fmap variantToValue (execTrans_ t)  
     
 execApp ::  
   ( MonadTrans q
   --, ExecutableFunc sfunc
   , Monad (q m)
-  ) => ExcecutableApp q m sfunc -> q m () 
+  ) => ExecutableApp q m sfunc -> q m () 
 execApp (MkApp trns) = execTrans trns  
 
 extractKleisliT :: (Monad (q m),Eval (sfunc NoSplitter xs) ~ '(rs,'[])) => STrans q m NoSplitter xs rs '[] sfunc () -> Kleisli (q m) (V xs) (V rs)

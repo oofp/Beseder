@@ -12,8 +12,9 @@ module Beseder.Base.Common
     , execTrans
     , execApp
     , ExecutableFunc
-    , ExcecutableTrans
-    , ExcecutableApp
+    , ExecutableTrans
+    , ExecutableApp
+    , ExecutableData (..)
     , AsyncTrans 
     , SyncTrans 
     , GetResByName
@@ -37,6 +38,7 @@ import Beseder.Base.Internal.Named
 import Beseder.Base.Internal.TypeExp 
 import Beseder.Base.Internal.Classes 
 import Beseder.Base.Internal.STransIx
+import Beseder.Base.Internal.STransDataIntrp
 import Beseder.Base.Internal.STransDef
 import Beseder.Base.Internal.TupleHelper (GetTypeByNameVar,GetResByName)
 import Beseder.Utils.VariantHelper (getVarLength)

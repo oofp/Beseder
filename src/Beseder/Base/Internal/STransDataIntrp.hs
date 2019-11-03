@@ -16,9 +16,10 @@
 
 module Beseder.Base.Internal.STransDataIntrp 
   ( interpret 
+  , ExecutableData (..)
   ) where
 
-import           Protolude                    hiding (Product, handle,TypeError,First,forever, on)
+import           Protolude                    hiding (Product, handle,TypeError,First,forever, on, liftIO)
 import           Control.Monad.Cont (ContT)
 import           Control.Monad.Trans (MonadTrans)
 import           Haskus.Utils.Types.List
@@ -90,6 +91,12 @@ type family ComposeConFam' f1 f2 q m sp xs rs ex rs1 ex1 rs2_ex2 where
     , KnownNat (Length ex1)
     )
 
+type instance STransCon (ForeverFunc f) = ForeverCon f
+data ForeverCon :: (* -> [*] -> ([*],[*]) -> *) -> ((* -> *) -> * -> *) -> (* -> *) -> * -> [*] -> [*] -> [*] -> Exp Constraint
+type instance Eval (ForeverCon f q m sp xs rs ex) = Eval (STransCon f q m sp xs xs ex)
+
+
+
 type instance STransCon (BindFunc f1 f2) = BindCon f1 f2
 data BindCon :: (* -> [*] -> ([*],[*]) -> *) -> (* -> [*] -> ([*],[*]) -> *) -> ((* -> *) -> * -> *) -> (* -> *) -> * -> [*] -> [*] -> [*] -> Exp Constraint
 type instance Eval (BindCon f1 f2 q m sp xs rs ex) = ComposeConFam f1 f2 q m sp xs rs ex (Eval (f1 sp xs))
@@ -158,6 +165,22 @@ type instance Eval (NextStepsCon steps q m sp xs rs ex) =
   , NextSteps steps m sp xs rs ex (StepsFuncFam steps GetNextAllFunc)
   )
 
+type instance STransCon OpFunc  = OpCon 
+data OpCon :: ((* -> *) -> * -> *) -> (* -> *) -> * -> [*] -> [*] -> [*] -> Exp Constraint 
+type instance Eval (OpCon q m sp xs rs1 ex1) = ()
+
+type instance STransCon LiftIOFunc  = LiftIOCon 
+data LiftIOCon :: ((* -> *) -> * -> *) -> (* -> *) -> * -> [*] -> [*] -> [*] -> Exp Constraint 
+type instance Eval (LiftIOCon q m sp xs rs1 ex1) = MonadIO m
+
+type instance STransCon NoopFunc  = NoopCon 
+data NoopCon :: ((* -> *) -> * -> *) -> (* -> *) -> * -> [*] -> [*] -> [*] -> Exp Constraint 
+type instance Eval (NoopCon q m sp xs rs1 ex1) = ()
+
+type instance STransCon WhatNextFunc  = WhatNextCon 
+data WhatNextCon :: ((* -> *) -> * -> *) -> (* -> *) -> * -> [*] -> [*] -> [*] -> Exp Constraint 
+type instance Eval (WhatNextCon q m sp xs rs1 ex1) = ()
+
 --
 interpret :: 
   ( MonadTrans q
@@ -179,3 +202,13 @@ interpret (Try sd) = embed getInstance (interpret sd)
 interpret (On sd) = capture getInstance (interpret sd) 
 interpret (OpRes named getter) = opRes named getter 
 interpret (NextSteps px) = nextSteps' px 
+interpret (Op ma) = op ma 
+interpret Noop = noop 
+interpret (LiftIO ioa) = liftIO ioa 
+interpret WhatNext = whatNext 
+interpret (Forever sd) = forever (interpret sd) 
+
+data ExecutableData q m sfunc where 
+  MkExecData :: 
+    ( Eval ((STransCon sfunc) q m NoSplitter '[()] '[()] '[])
+    ) => STransData m NoSplitter '[()] '[()] '[] sfunc () -> ExecutableData q m sfunc

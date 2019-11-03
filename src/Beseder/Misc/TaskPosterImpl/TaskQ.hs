@@ -16,6 +16,7 @@ module Beseder.Misc.TaskPosterImpl.TaskQ where
 
 import Protolude    
 import Beseder.Base.Common
+import Beseder.Base.Control (interpret)
 import Beseder.Misc.TaskPosterImpl.CallbackQueue
 import Control.Concurrent.STM.TChan
 import Control.Monad.Cont
@@ -48,15 +49,17 @@ runAsyncFlow qm = runTaskQ $ submitFlow $ void $ runContT qm (const $ return Fal
 runSyncFlow :: IdentityT TaskQ () -> IO ()
 runSyncFlow qm = runTaskQ $ void $ runIdentityT qm 
 
-runAsyncTrans :: (ExecutableFunc sfunc) => ExcecutableTrans (ContT Bool) TaskQ sfunc -> IO ()
+runAsyncTrans :: (ExecutableFunc sfunc) => ExecutableTrans (ContT Bool) TaskQ sfunc -> IO ()
 runAsyncTrans = runAsyncFlow . execTrans  
 
-runSyncTrans :: (ExecutableFunc sfunc) => ExcecutableTrans IdentityT TaskQ sfunc -> IO ()
+runSyncTrans :: (ExecutableFunc sfunc) => ExecutableTrans IdentityT TaskQ sfunc -> IO ()
 runSyncTrans = runSyncFlow . execTrans  
 
-runAsyncApp :: ExcecutableApp (ContT Bool) TaskQ sfunc -> IO ()
+runAsyncApp :: ExecutableApp (ContT Bool) TaskQ sfunc -> IO ()
 runAsyncApp = runAsyncFlow . execApp  
 
-runSyncApp :: ExcecutableApp IdentityT TaskQ sfunc -> IO ()
+runSyncApp :: ExecutableApp IdentityT TaskQ sfunc -> IO ()
 runSyncApp = runSyncFlow . execApp  
 
+runAsyncData :: (ExecutableFunc sfunc) => ExecutableData (ContT Bool) TaskQ sfunc  -> IO ()
+runAsyncData (MkExecData ed) = runAsyncFlow $ execTrans $ interpret ed

@@ -119,3 +119,20 @@ skipTo  =
   let sp1 :: sp1
       sp1 = getInstance
   in skipTo' sp1
+
+liftIO :: IO a -> STransData m sp xs xs ('[]) LiftIOFunc a
+liftIO = LiftIO
+
+whatNext :: STransData m sp xs xs ('[]) WhatNextFunc (Proxy xs)
+whatNext = WhatNext
+
+noop :: STransData m sp xs xs ('[]) NoopFunc ()
+noop = Noop
+
+op :: m a -> STransData m sp xs xs ('[]) OpFunc a
+op = Op
+
+forever :: 
+  ('(xs,ex) ~ Eval (f sp xs)
+  ) => STransData m sp xs xs ex f () -> STransData m sp xs ('[]) ex (ForeverFunc f) ()
+forever = Forever
