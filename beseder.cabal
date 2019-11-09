@@ -25,7 +25,11 @@ Flag CommExample
 
 library 
   hs-source-dirs:      src
-  ghc-options:         -Wall -fomit-interface-pragmas -fprint-potential-instances  -fno-warn-unticked-promoted-constructors 
+  ghc-options:        -Wall 
+                      -- -fwarn-redundant-constraints 
+                      -fomit-interface-pragmas 
+                      -fprint-potential-instances  
+                      -fno-warn-unticked-promoted-constructors 
   exposed-modules:     Beseder.Base.Base
                      , Beseder.Base.Control
                      , Beseder.Base.ControlData

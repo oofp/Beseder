@@ -13,7 +13,6 @@
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE FunctionalDependencies #-}
---{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -142,6 +141,12 @@ type instance Eval (IDFunc sp xs) = '(xs,'[])
 data WhatNextFunc :: * -> [*] -> Exp ([*],[*])
 type instance Eval (WhatNextFunc sp xs) = '(xs,'[])
 
+data WhatStepsFunc :: * -> [*] -> Exp ([*],[*])
+type instance Eval (WhatStepsFunc sp xs) = '(xs,'[])
+
+data QueryStateFunc :: * -> [*] -> Exp ([*],[*])
+type instance Eval (QueryStateFunc sp xs) = '(xs,'[])
+
 data NoopFunc :: * -> [*] -> Exp ([*],[*])
 type instance Eval (NoopFunc sp xs) = '(xs,'[])
 
@@ -159,6 +164,12 @@ type instance Eval (AsksFunc sp xs) = '(xs,'[])
 
 data DictFunc :: Symbol -> * -> [*] -> Exp ([*],[*])
 type instance Eval (DictFunc keyName sp xs) = '(xs,'[])
+
+data SkipFunc :: * -> [*] -> Exp ([*],[*])
+type instance Eval (SkipFunc sp xs) = Eval (NextStepsFunc (TotalSteps sp xs GetNextAllFunc) sp xs) 
+
+data OpInterFunc :: ([*] -> (* -> *) -> Constraint) -> * -> [*] -> Exp ([*],[*])
+type instance Eval (OpInterFunc c sp xs) = '(xs,'[])
 
 type family ForeverFam (xs_ex :: ([*],[*])) (sp :: *) (xs :: [*]) :: ([*],[*]) where
   ForeverFam '(xs,ex) sp xs = '(('[]),ex)
@@ -224,4 +235,12 @@ type family StepsFuncFam steps (f :: * -> [*] -> Exp ([*],[*])) :: (* -> [*] -> 
 data NextStepsFunc :: NatOne -> * -> [*] -> Exp ([*],[*])
 type instance Eval (NextStepsFunc steps sp xs) = Eval (StepsFuncFam steps GetNextAllFunc sp xs)
 
-  
+
+data ShowStateFunc :: * -> [*] -> Exp ([*],[*])
+type instance Eval (ShowStateFunc sp xs) = 
+  TypeError 
+  ( 'Text "Current state `"
+    ':<>: 'ShowType xs 
+  )
+
+

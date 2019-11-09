@@ -26,80 +26,38 @@ import           Beseder.Base.Internal.TupleHelper
 import           Beseder.Base.Internal.SplitOps
 import           Beseder.Base.Internal.STransDef
 import           Beseder.Base.Internal.STransMonad
+import           Beseder.Base.Internal.NatOne
 
-data STransData (m :: * -> *) (sp :: *) (xs :: [*]) (rs :: [*]) (ex :: [*]) (sfunc :: * -> [*] -> ([*],[*]) -> *) (a :: *) where 
-  Return :: a -> STransData m sp xs xs '[] (ReturnFunc a) a
-  Bind :: 
-    ( '(rs1,ex1) ~ Eval (f1 sp xs)
-    , '(rs2,ex2) ~ Eval (f2 sp rs1)  
-    , Concat ex1 ex2 ~ ex
-    --, KnownNat (Length ex1)
-    ) => STransData m sp xs rs1 ex1 f1 a -> (a -> STransData m sp rs1 rs2 ex2 f2 b) -> STransData m sp xs rs2 ex (BindFunc f1 f2) b 
-  Compose ::
-    ( '(rs1,ex1) ~ Eval (f1 sp xs)
-    , '(rs2,ex2) ~ Eval (f2 sp rs1)  
-    , Concat ex1 ex2 ~ ex
-    --, KnownNat (Length ex1)
-    ) => STransData m sp xs rs1 ex1 f1 () -> STransData m sp rs1 rs2 ex2 f2 b -> STransData m sp xs rs2 ex (ComposeFunc f1 f2) b 
-  NewRes ::
-    ( res ~ St (ResSt m resPars) name
-    , zs ~ AppendToTupleList xs res
-    , '(rs,ex) ~ ListSplitterRes2 sp zs
-    ) =>  Named name -> resPars -> STransData m sp xs rs ex (NewResFunc resPars name m) ()
-  Invoke ::
-    ( zs ~ ReqResult (NamedRequest req name) (VWrap xs NamedTuple)
-    , '(rs,ex) ~ ListSplitterRes2 sp zs
-    ) => Named name -> req -> STransData m sp xs rs ex (InvokeAllFunc req name) ()
-  Clear ::
-    ( zs ~ ReqResult (NamedRequest TerminateRes name) (VWrap xs NamedTupleClr)
-    , '(rs,ex) ~ ListSplitterRes2 sp zs
-    ) => Named name -> STransData m sp xs rs ex (ClearAllFunc name) ()
-  NextEv' ::
-    ( zs ~ NextStates (TransWrap xs)
-    , '(rs,ex) ~ ListSplitterRes2 sp zs
-    ) => STransData m sp xs rs ex GetNextAllFunc ()
-  ClearResources' :: STransData m sp xs '[()] '[] ClearAllVarFunc ()
-  Try :: forall sp1 sp xs xs_sub ex_sub rs_sub ex ex1 m f_sub rs. 
-    ( '(xs_sub, ex_sub) ~ ListSplitterRes2 sp1 xs
-    , '(rs_sub,ex) ~ Eval (f_sub (sp :&& sp1) xs_sub)
-    , '(rs, ex1) ~ ListSplitterRes2 sp (UnionTuple (CaptureFam (ListSplitterRes2 sp1 xs) f_sub (sp :&& sp1) xs))
-    ) => STransData m (sp :&& sp1) xs_sub rs_sub ex f_sub () -> STransData m sp xs rs ex1 (EmbedFunc sp1 f_sub) ()
-  On :: forall sp1 sp xs xs_sub ex_sub rs_sub ex m f_sub rs1. 
-    ( '(xs_sub, ex_sub) ~ ListSplitterRes2 sp1 xs
-    , rs1 ~ Union rs_sub ex_sub  
-    , '(rs_sub,ex) ~ Eval (f_sub sp xs_sub)
-    ) => STransData m sp xs_sub rs_sub ex f_sub () -> STransData m sp xs rs1 ex (CaptureFunc sp1 f_sub) ()
-  OpRes :: Named name -> (x -> m a) -> STransData m sp xs xs ('[]) (OpResFunc name x) a
-  Op :: m a -> STransData m sp xs xs ('[]) OpFunc a
-  Noop :: STransData m sp xs xs ('[]) NoopFunc ()
-  LiftIO :: IO a -> STransData m sp xs xs ('[]) LiftIOFunc a
-  WhatNext :: STransData m sp xs xs ('[]) WhatNextFunc (Proxy xs)
-  NextSteps :: -- forall n sp xs rs ex m.
-    ( '(rs,ex) ~ Eval (NextStepsFunc n sp xs)
-    ) => Proxy n -> STransData m sp xs rs ex (NextStepsFunc n) ()
-  Forever :: 
-    ('(xs,ex) ~ Eval (f sp xs)
-    ) => STransData m sp xs xs ex f () -> STransData m sp xs ('[]) ex (ForeverFunc f) ()
+data STransData (m :: * -> *) (sp :: *) (sfunc :: * -> [*] -> ([*],[*]) -> *) (a :: *) where 
+  Return :: a -> STransData m sp (ReturnFunc a) a
+  Bind :: STransData m sp f1 a -> (a -> STransData m sp f2 b) -> STransData m sp (BindFunc f1 f2) b 
+  Compose :: STransData m sp f1 () -> STransData m sp f2 b -> STransData m sp (ComposeFunc f1 f2) b 
+  NewRes :: Named name -> resPars -> STransData m sp (NewResFunc resPars name m) ()
+  Invoke :: Named name -> req -> STransData m sp (InvokeAllFunc req name) ()
+  Clear :: Named name -> STransData m sp (ClearAllFunc name) ()
+  NextEv' :: STransData m sp GetNextAllFunc ()
+  ClearResources' :: STransData m sp ClearAllVarFunc ()
+  Try :: forall sp1 sp m f_sub. STransData m (sp :&& sp1) f_sub () -> STransData m sp (EmbedFunc sp1 f_sub) ()
+  On :: forall sp1 sp m f_sub. STransData m sp f_sub () -> STransData m sp (CaptureFunc sp1 f_sub) ()
+  OpRes :: Named name -> (x -> m a) -> STransData m sp (OpResFunc name x) a
+  Op :: m a -> STransData m sp OpFunc a
+  Noop :: STransData m sp NoopFunc ()
+  LiftIO :: IO a -> STransData m sp LiftIOFunc a
+  NextSteps :: Proxy n -> STransData m sp (NextStepsFunc n) ()
+  Forever :: STransData m sp f () -> STransData m sp (ForeverFunc f) ()
+  Skip :: STransData m sp SkipFunc ()
 
-(>:>) ::
-  ( '(rs1,ex1) ~ Eval (f1 sp xs)
-  , '(rs2,ex2) ~ Eval (f2 sp rs1)  
-  , Concat ex1 ex2 ~ ex
-  --, KnownNat (Length ex1)
-  ) => STransData m sp xs rs1 ex1 f1 () -> STransData m sp rs1 rs2 ex2 f2 b -> STransData m sp xs rs2 ex (ComposeFunc f1 f2) b 
-(>:>) = Compose
-infixr 1 >:>
+evalSTransData' :: STransData m sp f a -> Proxy xs -> Proxy (Eval (f sp xs))
+evalSTransData' sd _ = Proxy
 
-(>*>) :: 
-  ( '(rs1,ex1) ~ Eval (f1 sp xs)
-  , '(rs2,ex2) ~ Eval (f2 sp rs1)  
-  , Concat ex1 ex2 ~ ex
-  ) => STransData m sp xs rs1 ex1 f1 a -> (a -> STransData m sp rs1 rs2 ex2 f2 b) -> STransData m sp xs rs2 ex (BindFunc f1 f2) b 
-(>*>) = Bind
-infixr 1 >*>
+evalSTransData :: STransData m sp f a -> Proxy (Eval (f sp '[()]))
+evalSTransData sd  = evalSTransData' sd (Proxy @('[()])) 
 
-instance STransMonad (STransData m) where
-  type Cx (STransData m) sp xs rs ex f = (Eval (f sp xs) ~ '(rs,ex))
-  st_return = Return   
-  st_compose = Compose
-  st_bind = Bind
+(>>>) :: STransData m sp f1 () -> STransData m sp f2 b -> STransData m sp (ComposeFunc f1 f2) b 
+(>>>) = Compose
+infixr 1 >>>
+
+(>>>=) :: STransData m sp f1 a -> (a -> STransData m sp f2 b) -> STransData m sp (BindFunc f1 f2) b 
+(>>>=) = Bind
+infixr 1 >>>=
+

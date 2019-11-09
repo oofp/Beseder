@@ -135,6 +135,9 @@ bindT (STrans t1) f =
             Right v_rs2_b -> Right v_rs2_b
             Left ei_ex1_ex2 -> Left $ concatEither ei_ex1_ex2))    
 
+class Composable q m sp xs rs1 ex1 rs2 ex2 f1 f2 a where
+  compose :: STrans q m sp xs rs1 ex1 f1 () -> STrans q m sp rs1 rs2 ex2 f2 a -> STrans q m sp xs rs2 (Concat ex1 ex2) (ComposeFunc f1 f2) a            
+
 composeT :: 
   ( Monad (q m)
   , KnownNat (Length ex1)
@@ -379,7 +382,21 @@ opRes named f =
     (\_sp v_xs -> do
       op_res <- lift $ f (getTypeByNameVar named v_xs)
       return $ Right (v_xs, op_res))
-      
+
+opInter :: 
+  ( Monad m
+  , Monad (q m)
+  , MonadTrans q
+  , cx xs m
+  --) => Proxy cx -> (forall xs. cx xs m => V xs -> m a) -> STrans q m sp xs xs ('[]) (OpInterFunc cx) a
+  ) => (cx xs m => V xs -> m a) -> STrans q m sp xs xs ('[]) (OpInterFunc cx) a
+  --) => Proxy cx -> (cx xs m => V xs -> m a) -> STrans q m sp xs xs ('[]) (OpInterFunc cx) a
+opInter  f =
+  STrans 
+    (\_sp v_xs -> do
+      res <- lift $ f v_xs
+      return $ Right (v_xs, res))
+
 iff ::
   ( rs ~ Union rs1 xs
   , Liftable rs1 rs
@@ -450,8 +467,17 @@ liftIO ioa = refunc $ op (Protolude.liftIO ioa)
 whatNext :: Monad (q m) => STrans q m sp xs xs ('[]) WhatNextFunc (Proxy xs)
 whatNext = STrans (\_sp v_xs -> return $ Right (v_xs, proxyOfVar v_xs))
 
+whatSteps :: Monad (q m) => STrans q m sp xs xs ('[]) WhatStepsFunc (Proxy (TotalSteps sp xs GetNextAllFunc))
+whatSteps = STrans (\_sp v_xs -> return $ Right (v_xs, Proxy))
+
 noop :: Monad (q m) => STrans q m sp xs xs ('[]) NoopFunc ()
 noop = STrans (\_sp v_xs -> return $ Right (v_xs, ()))
+
+--appT :: (Eval (f sp xs) ~ '(rs,ex)) => STransApp q m sp xs rs ex () -> STrans q m sp xs rs ex f ()
+--appT (MkApp t) = coerce t
+
+query :: Monad (q m) => Proxy xs -> STrans q m sp xs xs ('[]) QueryStateFunc ()
+query _ = refunc noop
 
 --needed?
 order ::  
@@ -538,6 +564,13 @@ handleLoop hnd =
 refunc :: (Eval (f sp xs) ~ Eval (f1 sp xs)) => STrans q m sp xs rs ex f a -> STrans q m sp xs rs ex f1 a
 refunc = coerce
 
+pre :: 
+  ( cx xs m
+  , ConcatExs (Eval (f sp xs)) '[] ~ Eval (f sp xs)
+  , Monad (q m)
+  ) => STrans q m sp xs xs '[] (OpInterFunc cx) () -> STrans q m sp xs rs ex f () -> STrans q m sp xs rs ex f ()
+pre t1 t2 = refunc $ composeT t1 t2
+
 class ('(rs,ex) ~ Eval (f sp xs)) => NextSteps (steps :: NatOne) m sp xs rs ex f | steps sp xs -> rs ex f where
   nextSteps :: Proxy steps -> STrans (ContT Bool) m sp xs rs ex f ()
 
@@ -568,6 +601,8 @@ nextSteps' :: (_) => (NextSteps steps m sp xs rs ex f, Eval (f sp xs) ~ Eval (Ne
   Proxy steps -> STrans (ContT Bool) m sp xs rs ex (NextStepsFunc steps) ()
 nextSteps' = refuncNextSteps . nextSteps 
 
+skipT :: (steps ~ TotalSteps sp xs GetNextAllFunc, NextSteps steps m sp xs rs ex f_n, Eval (SkipFunc sp xs) ~ '(rs,ex)) => STrans (ContT Bool) m sp xs rs ex SkipFunc ()
+skipT = refunc (bindT whatSteps nextSteps)
 
 --
 execTrans' :: 

@@ -16,6 +16,7 @@ module Beseder.Base.Control
     , gets
     , opRes
     , op
+    , opInter
     , termAndClearAllResources 
     , clearAllResources
     , handleEvents
@@ -47,12 +48,15 @@ module Beseder.Base.Control
     , execTrans
     , execApp
     , interpret
+    , Interpretable
+    , STransData
     ) where
 
 
 import Beseder.Base.Internal.STransIxDo 
 import Beseder.Base.Internal.STransDef
 import Beseder.Base.Internal.STransMonad
+import Beseder.Base.Internal.STransData (STransData)
 import Beseder.Base.Internal.STransDataIntrp
 import Beseder.Base.Internal.SplitOps
 import Beseder.Base.Internal.NatOne

@@ -16,7 +16,7 @@ module Beseder.Misc.TaskPosterImpl.TaskQ where
 
 import Protolude    
 import Beseder.Base.Common
-import Beseder.Base.Control (interpret)
+import Beseder.Base.Control (interpret, Interpretable, NoSplitter, STransData)
 import Beseder.Misc.TaskPosterImpl.CallbackQueue
 import Control.Concurrent.STM.TChan
 import Control.Monad.Cont
@@ -61,5 +61,9 @@ runAsyncApp = runAsyncFlow . execApp
 runSyncApp :: ExecutableApp IdentityT TaskQ sfunc -> IO ()
 runSyncApp = runSyncFlow . execApp  
 
-runAsyncData :: (ExecutableFunc sfunc) => ExecutableData (ContT Bool) TaskQ sfunc  -> IO ()
-runAsyncData (MkExecData ed) = runAsyncFlow $ execTrans $ interpret ed
+runAsyncData :: 
+  ( ExecutableFunc sfunc
+  , Interpretable (ContT Bool) TaskQ NoSplitter '[()] '[()] '[] sfunc
+  ) => STransData TaskQ NoSplitter sfunc () -> IO ()
+runAsyncData sd = runAsyncFlow $ execTrans $ interpret sd
+

@@ -14,7 +14,6 @@ module Beseder.Base.Common
     , ExecutableFunc
     , ExecutableTrans
     , ExecutableApp
-    , ExecutableData (..)
     , AsyncTrans 
     , SyncTrans 
     , GetResByName

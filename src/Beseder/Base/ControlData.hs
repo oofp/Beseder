@@ -13,11 +13,13 @@ module Beseder.Base.ControlData
     , return
     , skipAll
     , skipTo
-    , whatNext
     , noop
     , liftIO
     , op
     , forever
+    , nextSteps
+    , clearAllResources
+    , termAndClearAllResources
     , All
     , By (..)
     , Not (..)
@@ -28,12 +30,18 @@ module Beseder.Base.ControlData
     , Statics
     , NoSplitter
     , STransData
+    , STrans
+    , interpret
+    , Interpretable
+    , module Beseder.Base.Internal.STransDef
+    , NatOne (..)
+    , NatConv 
 ) where
 
-
 import Beseder.Base.Internal.STransData
+import Beseder.Base.Internal.STransDataIntrp
 import Beseder.Base.Internal.STransDataDo
-import Beseder.Base.Internal.STransMonad
 import Beseder.Base.Internal.STransDef
 import Beseder.Base.Internal.SplitOps
 import Beseder.Base.Internal.NatOne
+import Beseder.Base.Internal.STransIx (STrans)
