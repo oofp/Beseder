@@ -29,18 +29,20 @@ import           Control.Monad.Cont (ContT)
 import           qualified Protolude 
 
 timerHello :: TaskPoster m  => Int -> STrans (ContT Bool) m NoSplitter '[()] '[()] '[] _ () 
-timerHello timeoutSec1 = do
+timerHello timeoutSec1 = do              -- [()]
   liftIO $ putStrLn ("Entered timerHello"::Text)
-  newRes #t1 TimerRes 
-  invoke #t1  (StartTimer timeoutSec1)  
-  nextEv 
-  clear #t1 
+  newRes #t1 TimerRes                    -- [TimerNotArmed "t1"]
+  invoke #t1  (StartTimer timeoutSec1)   -- [TimerArmed "t1"]
+  liftIO $ putStrLn ("TimerArmed"::Text)
+  nextEv                                 -- [TimerTriggered "t1"]
+  _t1 :: _ <- whatNext
+  clear #t1                              -- [()]
 
 timerHelloApp :: TaskPoster m  => Int -> STransApp (ContT Bool) m NoSplitter '[()] '[()] '[] () 
 timerHelloApp = MkApp . timerHello
 
-twoTimersOn :: TaskPoster m => Int -> Int -> STransApp (ContT Bool) m NoSplitter '[()] '[()] '[] ()
-twoTimersOn timeoutSec1 timeoutSec2 = MkApp $ do
+twoTimers :: TaskPoster m => Int -> Int -> STransApp (ContT Bool) m NoSplitter '[()] '[()] '[] ()
+twoTimers timeoutSec1 timeoutSec2 = MkApp $ do
   liftIO $ putStrLn ("Entered twoTimersOn" :: Text)
   newRes #t1 TimerRes 
   invoke #t1 (StartTimer timeoutSec1)  
@@ -119,7 +121,4 @@ timer4 timeoutSec1 = do
   clear #t2 
   clear #t3 
   clear #t4 
-
-
---
 

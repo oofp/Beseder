@@ -43,6 +43,7 @@ module Beseder.Base.Control
     , module Beseder.Base.Internal.STransDef
     , STrans (..)
     , STransApp (..)
+    , AsyncApp
     , Has 
     , NatOne (..)
     , execTrans

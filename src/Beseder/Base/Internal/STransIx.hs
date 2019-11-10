@@ -104,7 +104,7 @@ newtype STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs :: [*]) (ex :: [*]) (sf
 
 data STransApp q (m :: * -> *) (sp :: *) (xs :: [*]) (rs :: [*]) (ex :: [*])  (a :: *) where
   MkApp :: STrans q m sp xs rs ex func a -> STransApp  q m sp xs rs ex a 
-        
+
 --data STransFunc q (m :: * -> *) (sp :: *) (sfunc :: * -> [*] -> ([*],[*]) -> *) (a :: *) where
 --  MkFunc :: '(rs,ex) ~ Eval (sfunc sp xs) => STrans q m sp xs rs ex sfunc a -> STransFunc q m sp sfunc a 
 
@@ -629,6 +629,8 @@ type ExecutableApp q m sfunc = STransApp q m NoSplitter '[()] '[()]  ('[]) ()
 
 type AsyncTrans m sp xs rs ex func a = STrans (ContT Bool) m sp xs rs ex a  
 type SyncTrans m sp xs rs ex func a = STrans IdentityT m sp xs rs ex a  
+
+type AsyncApp m xs ys a = STransApp (ContT Bool) m NoSplitter xs ys ('[]) a
 
 execTrans :: forall sfunc q m.  
   ( MonadTrans q
