@@ -99,14 +99,11 @@ instance (ReplicateTrans n q m sp xs rs ex rs_n ex_n sfunc) => ReplcateTrans (Su
 -}
 
 --  
-newtype STrans q (m :: * -> *) (sp :: *) (xs :: [*]) (rs :: [*]) (ex :: [*]) (sfunc :: * -> [*] -> ([*],[*]) -> *) (a :: *) =
+newtype STrans (q :: (* -> *) -> * -> *) (m :: * -> *) (sp :: *) (xs :: [*]) (rs :: [*]) (ex :: [*]) (sfunc :: * -> [*] -> Exp ([*],[*])) (a :: *) =
         STrans {runTrans :: sp -> V xs -> q m (Either (V ex) (V rs,a))}
 
-data STransApp q (m :: * -> *) (sp :: *) (xs :: [*]) (rs :: [*]) (ex :: [*])  (a :: *) where
+data STransApp (q :: (* -> *) -> * -> *) (m :: * -> *) (sp :: *) (xs :: [*]) (rs :: [*]) (ex :: [*]) (a :: *) where
   MkApp :: STrans q m sp xs rs ex func a -> STransApp  q m sp xs rs ex a 
-
---data STransFunc q (m :: * -> *) (sp :: *) (sfunc :: * -> [*] -> ([*],[*]) -> *) (a :: *) where
---  MkFunc :: '(rs,ex) ~ Eval (sfunc sp xs) => STrans q m sp xs rs ex sfunc a -> STransFunc q m sp sfunc a 
 
 returnT :: Monad (q m) => a -> STrans q m sp xs xs '[] (ReturnFunc a) a
 returnT a = STrans (\_sp v_xs -> return (Right (v_xs,a)))

@@ -28,7 +28,7 @@ import           Beseder.Base.Internal.STransDef
 import           Beseder.Base.Internal.STransMonad
 import           Beseder.Base.Internal.NatOne
 
-data STransData (m :: * -> *) (sp :: *) (sfunc :: * -> [*] -> ([*],[*]) -> *) (a :: *) where 
+data STransData (m :: * -> *) (sp :: *) (sfunc :: * -> [*] -> Exp ([*],[*])) (a :: *) where 
   Return :: a -> STransData m sp (ReturnFunc a) a
   Bind :: STransData m sp f1 a -> (a -> STransData m sp f2 b) -> STransData m sp (BindFunc f1 f2) b 
   Compose :: STransData m sp f1 () -> STransData m sp f2 b -> STransData m sp (ComposeFunc f1 f2) b 
