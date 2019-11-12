@@ -45,7 +45,11 @@ data STransData (m :: * -> *) (sp :: *) (sfunc :: * -> [*] -> Exp ([*],[*])) (a 
   LiftIO :: IO a -> STransData m sp LiftIOFunc a
   NextSteps :: Proxy n -> STransData m sp (NextStepsFunc n) ()
   Forever :: STransData m sp f () -> STransData m sp (ForeverFunc f) ()
+  While :: STransData m sp f Bool -> STransData m sp (WhileFunc f) ()
+  NewState :: STransData m sp f () -> STransData m sp (GetNewStateFunc f) ()
   Skip :: STransData m sp SkipFunc ()
+  HandleLoop :: STransData m sp f () -> STransData m sp (HandleLoopFunc f) () 
+
 
 evalSTransData' :: STransData m sp f a -> Proxy xs -> Proxy (Eval (f sp xs))
 evalSTransData' sd _ = Proxy

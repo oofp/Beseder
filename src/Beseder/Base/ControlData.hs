@@ -20,6 +20,11 @@ module Beseder.Base.ControlData
     , nextSteps
     , clearAllResources
     , termAndClearAllResources
+    , while
+    , newState 
+    , handleEvents
+    , pumpEvents 
+    , evalSTransData
     , All
     , By (..)
     , Not (..)

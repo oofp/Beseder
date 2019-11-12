@@ -35,6 +35,7 @@ import           Beseder.Base.Internal.SplitOps
 import           Beseder.Base.Internal.STransDef
 import           Beseder.Base.Internal.STransData 
 import           Beseder.Utils.VariantHelper
+import           Beseder.Utils.ListHelper
 
 type NewResCon name resPars q m sp xs rs ex = NewResConFam name resPars (St (ResSt m resPars) name) m sp xs rs ex
 type family NewResConFam name resPars res m sp xs rs ex where
@@ -225,7 +226,34 @@ instance
   , ForeverCon f q m sp xs rs ex
   ) => Interpretable q m sp xs rs ex (ForeverFunc f) where
     interpret (Forever sd) = forever (interpret sd) 
-              
+
+instance  
+  ( Qm q m
+  , Interpretable q m sp xs xs ex f
+  ) => Interpretable q m sp xs xs ex (WhileFunc f) where
+    interpret (While sd) = while (interpret sd) 
+
+instance  
+  ( Qm q m
+  , Interpretable q m sp xs xs1 ex f
+  , Eval (f sp xs) ~ '(xs1,ex)
+  , xs2 ~ FilterList xs xs1
+  , xs3 ~ FilterList xs2 xs1
+  , VariantSplitter xs2 xs3 xs1
+  , Liftable xs3 xs
+  ) => Interpretable q m sp xs xs2 ex (GetNewStateFunc f) where
+    interpret (NewState sd) = newState (interpret sd) 
+
+instance  
+  ( Qm q m
+  , loopRes ~ First (TransformLoop sp xs f)
+  , Eval (f sp loopRes) ~ '(rs,ex)
+  , Interpretable q m sp loopRes rs ex f
+  , Liftable rs loopRes 
+  , Liftable xs loopRes
+  ) => Interpretable q m sp xs ('[]) ex (HandleLoopFunc f) where
+    interpret (HandleLoop sd) = handleLoop (interpret sd)
+      
 instance  
   ( Qm q m
   , TermState m (ClrVar xs)
@@ -234,7 +262,6 @@ instance
   ) => Interpretable q m sp xs rs ex ClearAllVarFunc where
     interpret ClearResources' = termAndClearAllResources 
                 
-
 instance  
   ( Qm q m
   , GetTypeByNameVar name x xs
@@ -252,31 +279,3 @@ instance
   ) => Interpretable q m sp xs xs '[] LiftIOFunc where
     interpret (LiftIO ioa) = liftIO ioa 
         
-        
-{-  
-instance 
-  ( MonadTrans q
-  , Monad (q m)
-  , Monad m
-  , '(rs,ex) ~ Eval (f sp xs) 
-  , Eval ((STransCon f) q m sp xs rs ex)
-  ) => Interpretable q m sp xs rs ex f where   
-    interpret (Return a) = returnT a
-    interpret (NewRes named resPars) = newRes named resPars
-    interpret (Invoke named req) = invoke named req
-    interpret (Clear named) = clear named
-    interpret (NextSteps px) = nextSteps' px 
-    interpret (Op ma) = op ma 
-    interpret (OpRes named getter) = opRes named getter 
-    interpret (Compose sd1 sd2) = composeData sd1 sd2 
-    interpret (Bind sd1 f_sd2) = bindData sd1 f_sd2 
-    interpret NextEv' = nextEv' 
-    interpret ClearResources' = termAndClearAllResources 
-    interpret Noop = noop
-    interpret (LiftIO ioa) = liftIO ioa
-    interpret (Forever sd) = forever (interpret sd) 
-    interpret (Try sd) = embedData getInstance sd 
-    interpret (On sd) = captureData getInstance sd 
-    interpret Skip = skipT
--}
-

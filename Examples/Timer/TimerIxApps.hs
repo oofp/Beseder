@@ -33,6 +33,7 @@ import           Protolude                    hiding (Product, handle, return, g
                                                (>>), (>>=), forever, until,try,on)
 import           qualified Beseder.Base.Control as C                                               
 import           Beseder.Base.Base
+import           Beseder.Base.Control
 import           Beseder.Base.Common (TaskPoster)
 import           Beseder.Misc.Misc
 import           Beseder.Resources.Timer
@@ -147,7 +148,6 @@ timer5Pump timeoutSec1 = do
   try @("t5" C.:? IsTimerArmed)  pumpEvents 
 -}
 
-{-
 timer5Handle :: TaskPoster m  => Int -> STrans (ContT Bool) m C.NoSplitter '[()] _ _ _ () -- '(('[()]),'[]) _ () -- AsyncTransApp m _ _ -- CompletedRes (TimerHelloFuncNicer m)
 timer5Handle timeoutSec1 = do
   --newRes #t1 TimerRes 
@@ -171,8 +171,7 @@ timer5Handle timeoutSec1 = do
   clear #t5 
 
 runTest :: IO ()
-runTest =  runSTrans $ timer5Handle 5   
--}
+runTest =  runAsyncTrans $ timer5Handle 5   
 
 {-
 timer5Skip :: TaskPoster m  => Int -> STrans (ContT Bool) m C.NoSplitter '[()] _ _ _ () -- '(('[()]),'[]) _ () -- AsyncTransApp m _ _ -- CompletedRes (TimerHelloFuncNicer m)

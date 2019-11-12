@@ -325,7 +325,7 @@ while ::
   ( Monad (q m)
   , MonadTrans q
   -- , Eval (f sp xs) ~ '(xs,ex)
-  ) => STrans q m sp xs xs ex f Bool -> STrans q m sp xs xs ex f ()
+  ) => STrans q m sp xs xs ex f Bool -> STrans q m sp xs xs ex (WhileFunc f) ()
 while (STrans t) =
   STrans 
     (\sp v_xs_init -> 
@@ -493,7 +493,7 @@ newState ::
   , VariantSplitter xs2 xs3 xs1
   , Liftable xs3 xs
   , Monad (q m)
-  ) => STrans q m sp xs xs1 ex f () -> STrans q m sp xs xs2 ex(GetNewStateFunc f) ()
+  ) => STrans q m sp xs xs1 ex f () -> STrans q m sp xs xs2 ex (GetNewStateFunc f) ()
 newState (STrans t) =
   STrans 
     (\sp v_xs_init ->  
@@ -540,11 +540,6 @@ alignWithHandler (STrans t) =
         Right (v_xs1,()) -> return $ Right (liftVariant v_xs1, ())
         Left v_ex -> return $ Left v_ex)
 
-type HandleLoopFunc f = 
-  ComposeFunc
-    (ExtendForLoopFunc f) 
-    (ForeverFunc (AlignFunc f))
-
 handleLoop ::
   ( loopRes ~ First (TransformLoop sp xs f)
   , Eval (f sp loopRes) ~ '(rs,ex)
@@ -554,9 +549,9 @@ handleLoop ::
   , Liftable xs loopRes
   ) => STrans q m sp loopRes rs ex f () -> STrans q m sp xs ('[]) ex (HandleLoopFunc f) () 
 handleLoop hnd = 
-  composeT 
-    (extendForHandlerLoop hnd) 
-    (forever (alignWithHandler hnd))
+  refunc $ composeT 
+            (extendForHandlerLoop hnd) 
+            (forever (alignWithHandler hnd))
 
 refunc :: (Eval (f sp xs) ~ Eval (f1 sp xs)) => STrans q m sp xs rs ex f a -> STrans q m sp xs rs ex f1 a
 refunc = coerce

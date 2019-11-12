@@ -182,6 +182,9 @@ type family ForeverFam (xs_ex :: ([*],[*])) (sp :: *) (xs :: [*]) :: ([*],[*]) w
 data ForeverFunc :: (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp  ([*],[*]) 
 type instance Eval (ForeverFunc f sp xs) = ForeverFam (Eval (f sp xs)) sp xs
 
+data WhileFunc :: (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp  ([*],[*]) 
+type instance Eval (WhileFunc f sp xs) = Eval (f sp xs)
+
 data AlignFunc :: (* -> [*] -> ([*],[*]) -> *) ->  * -> [*] -> Exp ([*],[*])
 type instance Eval (AlignFunc f sp xs) = '(xs, Second (Eval (f sp xs))) 
 
@@ -243,4 +246,11 @@ type instance Eval (ShowStateFunc sp xs) =
     ':<>: 'ShowType xs 
   )
 
-
+data HandleLoopFunc :: (* -> [*] -> Exp ([*],[*])) -> (* -> [*] -> Exp ([*],[*]))
+type instance Eval (HandleLoopFunc f sp xs) = 
+  Eval ( 
+    (ComposeFunc
+      (ExtendForLoopFunc f) 
+      (ForeverFunc (AlignFunc f))) sp xs)
+  
+  

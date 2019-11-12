@@ -85,3 +85,24 @@ op = Op
 
 forever :: STransData m sp f () -> STransData m sp (ForeverFunc f) ()
 forever = Forever
+
+while :: STransData m sp f Bool -> STransData m sp (WhileFunc f) ()
+while = While
+
+newState :: STransData m sp f () -> STransData m sp (GetNewStateFunc f) ()
+newState = NewState
+
+type HandleEventsFunc f =
+    EmbedFunc Dynamics
+        (HandleLoopFunc
+            (ComposeFunc (CaptureFunc Dynamics GetNextAllFunc) f))
+
+handleEvents :: STransData m (sp :&& Dynamics) f () -> STransData m sp (HandleEventsFunc f) () 
+handleEvents hnd = 
+    Try @Dynamics (HandleLoop (Compose nextEv hnd))
+
+
+type PumpEventsFunc =  EmbedFunc Dynamics (HandleLoopFunc GetNextAllFunc)   
+pumpEvents :: STransData m sp PumpEventsFunc () 
+pumpEvents = Try @Dynamics (HandleLoop NextEv')
+
