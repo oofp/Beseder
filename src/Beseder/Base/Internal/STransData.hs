@@ -49,6 +49,8 @@ data STransData (m :: * -> *) (sp :: *) (sfunc :: * -> [*] -> Exp ([*],[*])) (a 
   NewState :: STransData m sp f () -> STransData m sp (GetNewStateFunc f) ()
   Skip :: STransData m sp SkipFunc ()
   HandleLoop :: STransData m sp f () -> STransData m sp (HandleLoopFunc f) () 
+  IfElse :: Bool -> STransData m sp f1 () -> STransData m sp f2 () -> STransData m sp (IfElseFunc f1 f2) ()  
+  Iff :: Bool -> STransData m sp f1 () -> STransData m sp (IffFunc f1) ()  
 
 
 evalSTransData' :: STransData m sp f a -> Proxy xs -> Proxy (Eval (f sp xs))

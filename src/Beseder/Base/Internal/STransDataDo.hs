@@ -106,3 +106,9 @@ type PumpEventsFunc =  EmbedFunc Dynamics (HandleLoopFunc GetNextAllFunc)
 pumpEvents :: STransData m sp PumpEventsFunc () 
 pumpEvents = Try @Dynamics (HandleLoop NextEv')
 
+ifElse :: Bool -> STransData m sp f1 () -> STransData m sp f2 () -> STransData m sp (IfElseFunc f1 f2) ()  
+ifElse = IfElse
+
+iff :: Bool -> STransData m sp f1 () -> STransData m sp (IffFunc f1) ()  
+iff = Iff
+

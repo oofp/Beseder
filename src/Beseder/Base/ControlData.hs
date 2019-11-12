@@ -24,6 +24,8 @@ module Beseder.Base.ControlData
     , newState 
     , handleEvents
     , pumpEvents 
+    , ifElse
+    , iff
     , evalSTransData
     , All
     , By (..)

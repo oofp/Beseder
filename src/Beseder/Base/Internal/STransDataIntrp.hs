@@ -253,6 +253,29 @@ instance
   , Liftable xs loopRes
   ) => Interpretable q m sp xs ('[]) ex (HandleLoopFunc f) where
     interpret (HandleLoop sd) = handleLoop (interpret sd)
+
+
+instance  
+  ( Qm q m
+  , ex ~ Union ex1 ex2 
+  , Liftable ex1 ex
+  , Liftable ex2 ex
+  , rs ~ Union rs1 rs2
+  , Liftable rs1 rs
+  , Liftable rs2 rs
+  , Interpretable q m sp xs rs1 ex1 f1
+  , Interpretable q m sp xs rs2 ex2 f2
+  ) => Interpretable q m sp xs rs ex (IfElseFunc f1 f2) where
+    interpret (IfElse fl sd1 sd2) = ifElse fl (interpret sd1) (interpret sd2)
+
+instance  
+  ( Qm q m
+  , rs ~ Union rs1 xs
+  , Liftable rs1 rs
+  , Liftable xs rs  
+  , Interpretable q m sp xs rs1 ex f1
+  ) => Interpretable  q m sp xs rs ex (IffFunc f1 ) where
+    interpret (Iff fl sd1) = iff fl (interpret sd1) 
       
 instance  
   ( Qm q m
