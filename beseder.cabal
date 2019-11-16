@@ -28,7 +28,7 @@ library
   ghc-options:        -Wall 
                       -- -fwarn-redundant-constraints 
                       -fomit-interface-pragmas 
-                      -fprint-potential-instances  
+                      -- -fprint-potential-instances  
                       -fno-warn-unticked-promoted-constructors 
   exposed-modules:     Beseder.Base.Base
                      , Beseder.Base.Control
@@ -38,11 +38,14 @@ library
                      , Beseder.Resources.State.MonoStateRes
                      , Beseder.Resources.State.DataRes
                      , Beseder.Resources.State.PureRes
+                     , Beseder.Resources.State.ImpRes
                      , Beseder.Resources.State.StateLogger  
                      , Beseder.Resources.Timer
+                     , Beseder.Resources.Monitor
                      , Beseder.Resources.Comm
                      , Beseder.Resources.Composite
                      , Beseder.Misc.Misc
+                     , Beseder.Misc.Prosumers
   other-modules:       Beseder.Base.Internal.Classes
                      , Beseder.Base.Internal.Cont
                      , Beseder.Base.Internal.Core
@@ -62,11 +65,18 @@ library
                      , Beseder.Base.Internal.STransDataIntrp 
                      , Beseder.Base.Internal.STransMonad 
                      , Beseder.Base.Internal.STransIxDo 
+                     , Beseder.Base.Internal.STransDataCombo
+                     , Beseder.Base.Internal.STransFunc
                      , Beseder.Utils.ListHelper
+                     , Beseder.Utils.BoolHelper
                      , Beseder.Utils.Lst
                      , Beseder.Utils.VariantHelper 
                      , Beseder.Misc.TaskPosterImpl.CallbackQueue
                      , Beseder.Misc.TaskPosterImpl.TaskQ
+                     , Beseder.Misc.Prosumers.AsyncProducer
+                     , Beseder.Misc.Prosumers.TVarConsumer
+                     , Beseder.Misc.Prosumers.Consumer
+                     , Beseder.Misc.Prosumers.Producer
                      , Beseder.Resources.State.Impl.IORefStateProv
                      , Beseder.Resources.State.Impl.PureStateProv
                      , Beseder.Resources.State.Impl.STMStateProv
@@ -78,6 +88,8 @@ library
                      , Beseder.Resources.Comm.Impl.Console
                      , Beseder.Resources.Comm.Impl.WSClient
                      , Beseder.Resources.Composite.CompositeRes
+                     , Beseder.Resources.Composite.CompositeDataRes
+                     , Beseder.Resources.Monitor.BinaryMonitorRes
   build-depends:       base >= 4.7 && < 5
                      , protolude
                      , network

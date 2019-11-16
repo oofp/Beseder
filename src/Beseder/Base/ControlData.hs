@@ -5,15 +5,20 @@ module Beseder.Base.ControlData
     , nextEv
     , nextEv'
     , clear
+    , clearResources
     , try
     , on
+    , onOrElse
     , opRes
+    , gets
     , (>>)
     , (>>=)
     , return
     , skipAll
     , skipTo
     , noop
+    --, whatNext
+    --, whatNames
     , liftIO
     , op
     , forever
@@ -27,6 +32,8 @@ module Beseder.Base.ControlData
     , ifElse
     , iff
     , evalSTransData
+    , evalSTransData'
+    , scopeRes
     , All
     , By (..)
     , Not (..)
@@ -48,6 +55,7 @@ module Beseder.Base.ControlData
 import Beseder.Base.Internal.STransData
 import Beseder.Base.Internal.STransDataIntrp
 import Beseder.Base.Internal.STransDataDo
+import Beseder.Base.Internal.STransDataCombo
 import Beseder.Base.Internal.STransDef
 import Beseder.Base.Internal.SplitOps
 import Beseder.Base.Internal.NatOne

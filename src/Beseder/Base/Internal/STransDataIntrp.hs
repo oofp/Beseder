@@ -20,7 +20,7 @@ module Beseder.Base.Internal.STransDataIntrp
   , Interpretable 
   ) where
 
-import           Protolude                    hiding (Product, handle,TypeError,First,forever, on, liftIO)
+import           Protolude                    hiding (Product, handle,TypeError,First,forever, on, liftIO, gets)
 import           Control.Monad.Cont (ContT)
 import           Control.Monad.Trans (MonadTrans)
 import           Haskus.Utils.Types.List
@@ -33,6 +33,7 @@ import           Beseder.Base.Internal.TypeExp
 import           Beseder.Base.Internal.TupleHelper
 import           Beseder.Base.Internal.SplitOps
 import           Beseder.Base.Internal.STransDef
+import           Beseder.Base.Internal.STransFunc
 import           Beseder.Base.Internal.STransData 
 import           Beseder.Utils.VariantHelper
 import           Beseder.Utils.ListHelper
@@ -93,28 +94,6 @@ type family SkipConFam q m sp xs rs ex steps where
     , Eval (SkipFunc sp xs) ~ '(rs,ex)
     )
 
-{-    
-type instance STransCon OpFunc  = OpCon 
-data OpCon :: ((* -> *) -> * -> *) -> (* -> *) -> * -> [*] -> [*] -> [*] -> Exp Constraint 
-type instance Eval (OpCon q m sp xs rs1 ex1) = ()
-
-type instance STransCon LiftIOFunc  = LiftIOCon 
-data LiftIOCon :: ((* -> *) -> * -> *) -> (* -> *) -> * -> [*] -> [*] -> [*] -> Exp Constraint 
-type instance Eval (LiftIOCon q m sp xs rs1 ex1) = MonadIO m
-
-type instance STransCon NoopFunc  = NoopCon 
-data NoopCon :: ((* -> *) -> * -> *) -> (* -> *) -> * -> [*] -> [*] -> [*] -> Exp Constraint 
-type instance Eval (NoopCon q m sp xs rs1 ex1) = ()
-
-type instance STransCon WhatNextFunc  = WhatNextCon 
-data WhatNextCon :: ((* -> *) -> * -> *) -> (* -> *) -> * -> [*] -> [*] -> [*] -> Exp Constraint 
-type instance Eval (WhatNextCon q m sp xs rs1 ex1) = ()
-
-type instance STransCon QueryStateFunc  = QueryStateCon 
-data QueryStateCon :: ((* -> *) -> * -> *) -> (* -> *) -> * -> [*] -> [*] -> [*] -> Exp Constraint 
-type instance Eval (QueryStateCon q m sp xs rs1 ex1) = ()
--}
-
 --
 
 class Interpretable q m sp xs rs ex f  | f sp xs -> rs ex where
@@ -169,6 +148,18 @@ instance
   ) => Interpretable q m sp xs rs ex (ComposeFunc f1 f2) where
     interpret (Compose sd1 sd2) = composeT (interpret sd1) (interpret sd2) 
 
+instance 
+  ( Qm q m
+  , KnownNat (Length ex1)
+  , Interpretable q m sp xs rs1 ex1 f1 
+  , f2 ~ Eval (fd xs rs1)
+  , ReifyTrans m sp f2 () 
+  -- , Eval (f2 sp rs1) ~ '(rs,ex2)
+  , Interpretable q m sp rs1 rs ex2 f2 
+  , Concat ex1 ex2 ~ ex
+  ) => Interpretable q m sp xs rs ex (ScopeFunc f1 fd) where
+      interpret (Scope sd1 px) = scopeT (interpret sd1) (interpret (reifyTrans (Proxy @f2))) 
+
 instance   
   ( Qm q m
   , KnownNat (Length ex1)
@@ -193,7 +184,26 @@ instance
   ) => Interpretable q m sp xs rs1 ex (CaptureFunc sp1 f_sub) where
     interpret (On sd) = capture getInstance (interpret sd)
   
-
+instance  
+  ( Qm q m
+  , ListSplitter sp1 xs
+  , xs_sub ~ ListSplitterRes sp1 xs
+  , ex_sub ~ FilterList xs_sub xs 
+  , VariantSplitter xs_sub ex_sub xs
+  , rs ~ Union rs_sub1 rs_sub2  
+  , Liftable rs_sub1 rs
+  , Liftable rs_sub2 rs
+  , ex ~ Union ex1 ex2  
+  , Liftable ex1 ex
+  , Liftable ex2 ex
+  , Monad (q m)
+  , MonadTrans q
+  , GetInstance sp1
+  , Interpretable q m sp xs_sub rs_sub1 ex1 f_sub1 
+  , Interpretable q m sp ex_sub rs_sub2 ex2 f_sub2 
+  ) => Interpretable q m sp xs rs ex (CaptureOrElseFunc sp1 f_sub1 f_sub2) where
+    interpret (OnOrElse sd1 sd2) = captureOrElse getInstance (interpret sd1) (interpret sd2)
+  
 instance  
   ( Qm q m
   , SplicC sp1 xs_sub ex_sub xs
@@ -293,6 +303,13 @@ instance
 
 instance  
   ( Qm q m
+  , x ~ St st name
+  , GetTypeByNameVar name x xs
+  ) => Interpretable q m sp xs xs '[] (GetFunc name x) where
+    interpret (Gets named getter) = gets named getter 
+
+instance  
+  ( Qm q m
   ) => Interpretable q m sp xs xs '[] NoopFunc where
     interpret Noop = noop 
       
@@ -302,3 +319,18 @@ instance
   ) => Interpretable q m sp xs xs '[] LiftIOFunc where
     interpret (LiftIO ioa) = liftIO ioa 
         
+{-    
+instance  
+  ( Qm q m
+  , s ~ Proxy xs
+  ) => Interpretable q m sp xs xs '[] (WhatNextFunc s) where
+    interpret WhatNext = whatNext 
+        
+instance  
+  ( Qm q m
+  , pxNames ~ Proxy (GetAllNames xs)
+  ) => Interpretable q m sp xs xs '[] (WhatNamesFunc pxNames) where
+    interpret WhatNames = whatNames 
+-}
+
+

@@ -11,7 +11,7 @@
 {-# LANGUAGE UndecidableInstances  #-}
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE KindSignatures        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE AllowAmbiguousTypes   #-}
 
@@ -23,6 +23,7 @@ import           Protolude                    hiding (Product, handle,TypeError,
 import           Beseder.Base.Internal.Named
 import           Beseder.Base.Internal.SplitOps
 import           Beseder.Base.Internal.NatOne
+import           Beseder.Base.Common
 import           Beseder.Base.Internal.STransDef
 import           Beseder.Base.Internal.STransData
 
@@ -50,8 +51,20 @@ try = Try
 on :: forall sp1 sp m f_sub. STransData m sp f_sub () -> STransData m sp (CaptureFunc sp1 f_sub) ()
 on = On
 
+onOrElse :: forall sp1 sp m f_sub1 f_sub2. STransData m sp f_sub1 () -> STransData m sp f_sub2 () -> STransData m sp (CaptureOrElseFunc sp1 f_sub1 f_sub2) ()
+onOrElse = onOrElse
+
 opRes :: Named name -> (x -> m a) -> STransData m sp (OpResFunc name x) a
 opRes = OpRes
+
+gets :: Named name -> (St x name -> a) -> STransData m sp (GetFunc name (St x name)) a
+gets = Gets
+
+--whatNext :: STransData m sp (WhatNextFunc s) s
+--whatNext = WhatNext
+
+--whatNames :: STransData m sp (WhatNamesFunc names) names
+--whatNames = WhatNames
 
 return :: a -> STransData m sp (ReturnFunc a) a
 return = Return
@@ -111,4 +124,5 @@ ifElse = IfElse
 
 iff :: Bool -> STransData m sp f1 () -> STransData m sp (IffFunc f1) ()  
 iff = Iff
-
+    
+  

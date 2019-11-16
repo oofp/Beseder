@@ -39,6 +39,8 @@ data STransData (m :: * -> *) (sp :: *) (sfunc :: * -> [*] -> Exp ([*],[*])) (a 
   ClearResources' :: STransData m sp ClearAllVarFunc ()
   Try :: forall sp1 sp m f_sub. STransData m (sp :&& sp1) f_sub () -> STransData m sp (EmbedFunc sp1 f_sub) ()
   On :: forall sp1 sp m f_sub. STransData m sp f_sub () -> STransData m sp (CaptureFunc sp1 f_sub) ()
+  OnOrElse :: forall sp1 sp m f_sub1 f_sub2. STransData m sp f_sub1 () -> STransData m sp f_sub2 () -> STransData m sp (CaptureOrElseFunc sp1 f_sub1 f_sub2) ()
+  Gets :: Named name -> (St x name -> a) -> STransData m sp (GetFunc name (St x name)) a
   OpRes :: Named name -> (x -> m a) -> STransData m sp (OpResFunc name x) a
   Op :: m a -> STransData m sp OpFunc a
   Noop :: STransData m sp NoopFunc ()
@@ -51,12 +53,14 @@ data STransData (m :: * -> *) (sp :: *) (sfunc :: * -> [*] -> Exp ([*],[*])) (a 
   HandleLoop :: STransData m sp f () -> STransData m sp (HandleLoopFunc f) () 
   IfElse :: Bool -> STransData m sp f1 () -> STransData m sp f2 () -> STransData m sp (IfElseFunc f1 f2) ()  
   Iff :: Bool -> STransData m sp f1 () -> STransData m sp (IffFunc f1) ()  
+  Scope :: STransData m sp f () -> Proxy df -> STransData m sp (ScopeFunc f df) ()
+  --WhatNext :: STransData m sp (WhatNextFunc s) s
+  --WhatNames :: STransData m sp (WhatNamesFunc names) names
 
-
-evalSTransData' :: STransData m sp f a -> Proxy xs -> Proxy (Eval (f sp xs))
+evalSTransData' :: forall sp m f xs a. STransData m sp f a -> Proxy xs -> Proxy (Eval (f sp xs))
 evalSTransData' sd _ = Proxy
 
-evalSTransData :: STransData m sp f a -> Proxy (Eval (f sp '[()]))
+evalSTransData :: STransData m NoSplitter f a -> Proxy (Eval (f NoSplitter '[()]))
 evalSTransData sd  = evalSTransData' sd (Proxy @('[()])) 
 
 (>>>) :: STransData m sp f1 () -> STransData m sp f2 b -> STransData m sp (ComposeFunc f1 f2) b 

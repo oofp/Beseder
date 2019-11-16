@@ -49,7 +49,7 @@ type family ListEmpty ((l :: [*])) :: Constraint where
 type family ListNotEmpty ((l :: [*])) :: Constraint where
   ListNotEmpty l = IsListEmpty l ~ 'False  
  
-type family IsMemberOfList (a :: *) (lst :: [*]) :: Bool where
+type family IsMemberOfList (a :: k) (lst :: [k]) :: Bool where
   IsMemberOfList a '[] = 'False
   IsMemberOfList a (a ': xs) = 'True
   IsMemberOfList a (b ': xs) = IsMemberOfList a xs
@@ -81,3 +81,18 @@ type family ListElem (n :: Nat) (xs :: [*]) :: * where
   ListElem 0 (x ': xs) = x
   ListElem n (x ': xs) = ListElem (n-1) xs
     
+
+--Subtract '["1","2"] '["1"] :: [Symbol]
+-- = '["2"]
+-- Subtract '["1","2","5","3"] '["1","3"] :: [Symbol]
+-- = '["2", "5"] 
+type family Subtract (xs :: [k]) (ys :: [k]) :: [k] where
+  Subtract '[] ys = '[]
+  Subtract (x ': xs) ys = (Subtract' x (IsMemberOfList x ys) xs ys) 
+ 
+type family Subtract' (x :: k) (isMember :: Bool) (xs :: [k]) (ys :: [k]) :: [k] where
+  Subtract' x False xs ys = x ': (Subtract xs ys)
+  Subtract' x True xs ys = Subtract xs ys
+
+subtractLists :: Proxy xs -> Proxy ys -> Proxy (Subtract xs ys)
+subtractLists _ _ = Proxy  

@@ -11,6 +11,7 @@ module Beseder.Base.Control
     , try
     , reach
     , on
+    , onOrElse
     , iff
     , ifElse
     , gets

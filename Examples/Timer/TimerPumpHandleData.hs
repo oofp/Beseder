@@ -38,35 +38,27 @@ import           Beseder.Misc.Misc
 import           Beseder.Resources.Timer
 import           Data.String 
 
-{- type application fot type level string??
 startTimer :: TaskPoster m  => Named timerName -> Int ->
-    STransData m NoSplitter 
+    STransData m sp 
       (ComposeFunc
         (NewResFunc TimerRes timerName m)
-        (InvokeAllFunc StartTimer "t1")) ()
+        (InvokeAllFunc StartTimer timerName)) ()
 startTimer timer timeoutSec  = do
   newRes timer TimerRes
   invoke timer (StartTimer timeoutSec)  
--}
-
 
 timer5Pump :: TaskPoster m  => Int -> STransData m NoSplitter _ () -- '(('[()]),'[]) _ () -- AsyncTransApp m _ _ -- CompletedRes (TimerHelloFuncNicer m)
 timer5Pump timeoutSec1 = do
-  newRes #t1 TimerRes 
-  invoke #t1  (StartTimer timeoutSec1)  
-  newRes #t2 TimerRes 
-  invoke #t2  (StartTimer timeoutSec1)  
-  newRes #t3 TimerRes 
-  invoke #t3  (StartTimer timeoutSec1)  
-  newRes #t4 TimerRes 
-  invoke #t4  (StartTimer timeoutSec1)  
-  newRes #t5 TimerRes 
-  invoke #t5  (StartTimer timeoutSec1)
+  startTimer #t1 timeoutSec1 
+  startTimer #t2 timeoutSec1 
+  startTimer #t3 timeoutSec1 
+  startTimer #t4 timeoutSec1 
+  startTimer #t5 timeoutSec1 
   pumpEvents
   clearAllResources 
 
---runHandle :: IO ()
---runHandle =  runAsyncData $ timer5Pump 5   
+runPump :: IO ()
+runPump =  runAsyncData $ timer5Pump 5   
 
 -- :t evalSTransData (timer5Pump 1)
 
@@ -82,16 +74,11 @@ Result size of Desugar (before optimization)
 
 timer5Handle :: TaskPoster m  => Int -> STransData m NoSplitter _ () -- '(('[()]),'[]) _ () -- AsyncTransApp m _ _ -- CompletedRes (TimerHelloFuncNicer m)
 timer5Handle timeoutSec1 = do
-  newRes #t1 TimerRes 
-  invoke #t1  (StartTimer timeoutSec1)  
-  newRes #t2 TimerRes 
-  invoke #t2  (StartTimer timeoutSec1)  
-  newRes #t3 TimerRes 
-  invoke #t3  (StartTimer timeoutSec1)  
-  newRes #t4 TimerRes 
-  invoke #t4  (StartTimer timeoutSec1)  
-  newRes #t5 TimerRes 
-  invoke #t5  (StartTimer timeoutSec1)
+  startTimer #t1 timeoutSec1 
+  startTimer #t2 timeoutSec1 
+  startTimer #t3 timeoutSec1 
+  startTimer #t4 timeoutSec1 
+  startTimer #t5 timeoutSec1 
   handleEvents $ do
     on @("t3" :? IsTimerTriggered :&& "t4" :? IsTimerArmed) (invoke #t4 StopTimer)
     on @("t5" :? IsTimerTriggered :&& "t2" :? IsTimerArmed) (invoke #t2 StopTimer)
@@ -102,8 +89,8 @@ timer5Handle timeoutSec1 = do
   clear #t4 
   clear #t5 
 
---runHandle :: IO ()
---runHandle =  runAsyncData $ timer5Handle 5   
+runHandle :: IO ()
+runHandle =  runAsyncData $ timer5Handle 5   
 
 -- :t evalSTransData (timer5Handle 1)
 

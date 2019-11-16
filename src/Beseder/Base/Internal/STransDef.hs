@@ -37,6 +37,9 @@ type instance Eval (ReturnFunc res sp xs) = '(xs, '[])
 data OpResFunc :: name -> * -> * -> [*] -> Exp ([*],[*])
 type instance Eval (OpResFunc name x sp xs) = '(xs, '[])
 
+data GetFunc :: name -> * -> * -> [*] -> Exp ([*],[*])
+type instance Eval (GetFunc name x sp xs) = '(xs, '[])
+
 data OpFunc :: * -> [*] -> Exp ([*],[*])
 type instance Eval (OpFunc sp xs) = '(xs, '[])
 
@@ -56,7 +59,7 @@ type instance Eval (NewResFunc resPars name m sp xs) = ListSplitterRes2 sp (Appe
 data InvokeAllFunc :: (req :: *) -> name -> * -> [*] -> Exp ([*],[*])
 type instance Eval (InvokeAllFunc req name sp xs) = ListSplitterRes2 sp (ReqResult (NamedRequest req name) (VWrap xs NamedTuple))
 
-data ClearAllFunc :: name -> * -> [*] -> Exp ([*],[*])
+data ClearAllFunc :: Symbol -> * -> [*] -> Exp ([*],[*])
 type instance Eval (ClearAllFunc name sp xs) = ListSplitterRes2 sp (ReqResult (NamedRequest TerminateRes name) (VWrap xs NamedTupleClr))
 
 data GetNextFunc :: * -> [*] -> Exp ([*],[*])
@@ -138,8 +141,11 @@ type family GetNewStateFam (rs_ex :: ([*],[*])) (xs :: [*]) :: ([*],[*]) where
 data IDFunc :: * -> [*] -> Exp ([*],[*])
 type instance Eval (IDFunc sp xs) = '(xs,'[])
 
-data WhatNextFunc :: * -> [*] -> Exp ([*],[*])
-type instance Eval (WhatNextFunc sp xs) = '(xs,'[])
+data WhatNextFunc :: * -> * -> [*] -> Exp ([*],[*])
+type instance Eval (WhatNextFunc s sp xs) = '(xs,'[])
+
+data WhatNamesFunc :: * -> * -> [*] -> Exp ([*],[*])
+type instance Eval (WhatNamesFunc names sp xs) = '(xs,'[])
 
 data WhatStepsFunc :: * -> [*] -> Exp ([*],[*])
 type instance Eval (WhatStepsFunc sp xs) = '(xs,'[])
@@ -253,4 +259,9 @@ type instance Eval (HandleLoopFunc f sp xs) =
       (ExtendForLoopFunc f) 
       (ForeverFunc (AlignFunc f))) sp xs)
   
-  
+
+data ScopeFunc ::  (* -> [*] -> Exp ([*],[*])) ->  ([*] -> [*] -> Exp (* -> [*] -> Exp ([*],[*]))) ->  * -> [*] -> Exp  ([*],[*]) 
+type instance Eval (ScopeFunc f df sp xs) = 
+    Eval ((ComposeFunc f (Eval (df xs (First (Eval (f sp xs)))))) sp xs)    
+
+

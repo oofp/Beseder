@@ -17,7 +17,8 @@ executable TimerApps
   hs-source-dirs:      Timer
   main-is:             Main.hs
   other-modules:       TimerApps
-  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-T -dshow-passes -fomit-interface-pragmas -fprint-potential-instances
+--  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-T -fomit-interface-pragmas -dshow-passes -fprint-potential-instances
+  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-T -fomit-interface-pragmas 
   build-depends:       base
                     , beseder
                     , text

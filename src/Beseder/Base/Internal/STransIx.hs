@@ -158,6 +158,13 @@ composeT (STrans t1) (STrans t2) =
             Right v_rs2_b -> Right v_rs2_b
             Left ei_ex1_ex2 -> Left $ concatEither ei_ex1_ex2))    
 
+scopeT ::              
+  ( Monad (q m)
+  , KnownNat (Length ex1)
+  --, rs1 ~ First (Eval (f1 sp xs))
+  ) => STrans q m sp xs rs1 ex1 f1 () -> STrans q m sp rs1 rs2 ex2 (Eval (fd xs rs1)) () -> STrans q m sp xs rs2 (Concat ex1 ex2) (ScopeFunc f1 fd) ()
+scopeT t1 t2 = unsafeRefunc $ composeT t1 t2 
+          
 newRes ::
   ( MkRes m resPars
   , res ~ St (ResSt m resPars) name
@@ -303,7 +310,51 @@ on :: forall sp1 xs xs_sub q m ex_sub ex rs1 f_sub rs_sub sp.
   ) => STrans q m sp xs_sub rs_sub ex f_sub () -> STrans q m sp xs rs1 ex (CaptureFunc sp1 f_sub) ()
 on t = capture (getInstance @sp1) t
 
+captureOrElse ::
+  ( ListSplitter sp1 xs
+  , xs_sub ~ ListSplitterRes sp1 xs
+  , ex_sub ~ FilterList xs_sub xs 
+  , VariantSplitter xs_sub ex_sub xs
+  , rs ~ Union rs_sub1 rs_sub2  
+  , Liftable rs_sub1 rs
+  , Liftable rs_sub2 rs
+  , ex ~ Union ex1 ex2  
+  , Liftable ex1 ex
+  , Liftable ex2 ex
+  , Monad (q m)
+  , MonadTrans q
+  , GetInstance sp1
+  ) => sp1 -> STrans q m sp xs_sub rs_sub1 ex1 f_sub1 () -> STrans q m sp ex_sub rs_sub2 ex2 f_sub2 () -> STrans q m sp xs rs ex (CaptureOrElseFunc sp1 f_sub1 f_sub2) ()
+captureOrElse sp1 (STrans t1) (STrans t2) = do
+  STrans 
+    (\sp v_xs -> 
+        case splitV sp1 v_xs of
+          Right v_xs1 -> 
+            fmap liftRes (t1 sp v_xs1)
+          Left v_ex -> 
+            fmap liftRes (t2 sp v_ex))
 
+onOrElse :: forall sp1 sp xs xs_sub ex_sub rs rs_sub1 rs_sub2 ex1 ex2 ex q m f_sub1 f_sub2. 
+  ( ListSplitter sp1 xs
+  , xs_sub ~ ListSplitterRes sp1 xs
+  , ex_sub ~ FilterList xs_sub xs 
+  , VariantSplitter xs_sub ex_sub xs
+  , rs ~ Union rs_sub1 rs_sub2  
+  , Liftable rs_sub1 rs
+  , Liftable rs_sub2 rs
+  , ex ~ Union ex1 ex2  
+  , Liftable ex1 ex
+  , Liftable ex2 ex
+  , Monad (q m)
+  , MonadTrans q
+  , GetInstance sp1
+  ) => STrans q m sp xs_sub rs_sub1 ex1 f_sub1 () -> STrans q m sp ex_sub rs_sub2 ex2 f_sub2 () -> STrans q m sp xs rs ex (CaptureOrElseFunc sp1 f_sub1 f_sub2) ()
+onOrElse t1 t2 = captureOrElse (getInstance @sp1) t1 t2
+                      
+liftRes :: (Liftable rs1 rs, Liftable ex1 ex) => Either (V ex1) (V rs1,()) -> Either (V ex) (V rs,())
+liftRes (Right (v_rs1, ())) = Right $ (liftVariant v_rs1, ())        
+liftRes (Left v_ex1) = Left $ liftVariant v_ex1
+        
 forever :: 
   ( Monad (q m)
   , MonadTrans q
@@ -357,7 +408,7 @@ gets :: -- forall x name xs st sp q m a.
   ( GetTypeByNameVar name x xs
   , x ~ St st name
   , Monad (q m)
-  ) => Named name -> (x -> a) -> STrans q m sp xs xs ('[]) IDFunc a 
+  ) => Named name -> (x -> a) -> STrans q m sp xs xs ('[]) (GetFunc name x) a 
 gets named f = STrans (\_sp v_xs -> return $ Right (v_xs , (f (getTypeByNameVar named v_xs)))) 
   
 op :: 
@@ -461,8 +512,11 @@ liftIO ::
   ) => IO a -> STrans q m sp xs xs ('[]) LiftIOFunc a
 liftIO ioa = refunc $ op (Protolude.liftIO ioa)
 
-whatNext :: Monad (q m) => STrans q m sp xs xs ('[]) WhatNextFunc (Proxy xs)
+whatNext :: (s ~ Proxy xs, Monad (q m)) => STrans q m sp xs xs ('[]) (WhatNextFunc s) (Proxy xs)
 whatNext = STrans (\_sp v_xs -> return $ Right (v_xs, proxyOfVar v_xs))
+
+whatNames :: (pxNames ~ Proxy (GetAllNames xs), Monad (q m)) => STrans q m sp xs xs ('[]) (WhatNamesFunc names) pxNames
+whatNames = STrans (\_sp v_xs -> return $ Right (v_xs, proxyOfNames v_xs))
 
 whatSteps :: Monad (q m) => STrans q m sp xs xs ('[]) WhatStepsFunc (Proxy (TotalSteps sp xs GetNextAllFunc))
 whatSteps = STrans (\_sp v_xs -> return $ Right (v_xs, Proxy))
@@ -555,6 +609,9 @@ handleLoop hnd =
 
 refunc :: (Eval (f sp xs) ~ Eval (f1 sp xs)) => STrans q m sp xs rs ex f a -> STrans q m sp xs rs ex f1 a
 refunc = coerce
+
+unsafeRefunc :: STrans q m sp xs rs ex f a -> STrans q m sp xs rs ex f1 a
+unsafeRefunc = coerce
 
 pre :: 
   ( cx xs m
