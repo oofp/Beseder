@@ -69,6 +69,25 @@ timerScopePump timeoutSec1 = do
     invoke #t3  (StartTimer timeoutSec1)   
     invoke #t4  (StartTimer timeoutSec1)
     pumpEvents
+  clearAllBut (Proxy @'["t2"])  
 
 interpretTimerScopePump :: STrans (ContT Bool) TaskQ NoSplitter '[()] _ _ _ ()    
 interpretTimerScopePump = interpret (timerScopePump 1)  
+
+
+timerClearBut :: Int -> STransData m NoSplitter  _ () 
+timerClearBut timeoutSec1 = do              
+  newRes #t1 TimerRes                    
+  newRes #t2 TimerRes                    
+  invoke #t1  (StartTimer timeoutSec1)   
+  invoke #t2  (StartTimer timeoutSec1)
+  newRes #t3 TimerRes                    
+  newRes #t4 TimerRes                    
+  invoke #t3  (StartTimer timeoutSec1)   
+  invoke #t4  (StartTimer timeoutSec1)
+  pumpEvents
+  clearAllBut (Proxy @'["t2","t3"])  
+
+
+interpretTimerClearBut :: STrans (ContT Bool) TaskQ NoSplitter '[()] _ _ _ ()    
+interpretTimerClearBut = interpret (timerClearBut 1)    

@@ -164,7 +164,12 @@ scopeT ::
   --, rs1 ~ First (Eval (f1 sp xs))
   ) => STrans q m sp xs rs1 ex1 f1 () -> STrans q m sp rs1 rs2 ex2 (Eval (fd xs rs1)) () -> STrans q m sp xs rs2 (Concat ex1 ex2) (ScopeFunc f1 fd) ()
 scopeT t1 t2 = unsafeRefunc $ composeT t1 t2 
-          
+
+funcT ::              
+  ( Monad (q m)
+  ) => STrans q m sp xs rs ex (Eval (ff xs)) () -> STrans q m sp xs rs ex (FuncFunc ff) ()
+funcT t = unsafeRefunc $ t 
+
 newRes ::
   ( MkRes m resPars
   , res ~ St (ResSt m resPars) name

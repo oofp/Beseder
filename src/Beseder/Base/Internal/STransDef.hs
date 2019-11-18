@@ -265,3 +265,5 @@ type instance Eval (ScopeFunc f df sp xs) =
     Eval ((ComposeFunc f (Eval (df xs (First (Eval (f sp xs)))))) sp xs)    
 
 
+data FuncFunc :: ([*] -> Exp (* -> [*] -> Exp ([*],[*]))) ->  * -> [*] -> Exp  ([*],[*]) 
+type instance Eval (FuncFunc f sp xs) = Eval ((Eval (f xs)) sp xs)

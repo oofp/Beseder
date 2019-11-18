@@ -54,6 +54,7 @@ data STransData (m :: * -> *) (sp :: *) (sfunc :: * -> [*] -> Exp ([*],[*])) (a 
   IfElse :: Bool -> STransData m sp f1 () -> STransData m sp f2 () -> STransData m sp (IfElseFunc f1 f2) ()  
   Iff :: Bool -> STransData m sp f1 () -> STransData m sp (IffFunc f1) ()  
   Scope :: STransData m sp f () -> Proxy df -> STransData m sp (ScopeFunc f df) ()
+  Func :: Proxy ff -> STransData m sp (FuncFunc ff) ()
   --WhatNext :: STransData m sp (WhatNextFunc s) s
   --WhatNames :: STransData m sp (WhatNamesFunc names) names
 

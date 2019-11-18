@@ -158,8 +158,17 @@ instance
   , Interpretable q m sp rs1 rs ex2 f2 
   , Concat ex1 ex2 ~ ex
   ) => Interpretable q m sp xs rs ex (ScopeFunc f1 fd) where
-      interpret (Scope sd1 px) = scopeT (interpret sd1) (interpret (reifyTrans (Proxy @f2))) 
+    interpret (Scope sd1 px) = scopeT (interpret sd1) (interpret (reifyTrans (Proxy @f2))) 
 
+instance 
+  ( Qm q m
+  , Interpretable q m sp xs rs ex f 
+  , f ~ Eval (ff xs)
+  , ReifyTrans m sp f () 
+  ) => Interpretable q m sp xs rs ex (FuncFunc ff) where
+    interpret (Func px) = funcT (interpret (reifyTrans (Proxy @f))) 
+    
+    
 instance   
   ( Qm q m
   , KnownNat (Length ex1)

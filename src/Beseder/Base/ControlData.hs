@@ -34,6 +34,7 @@ module Beseder.Base.ControlData
     , evalSTransData
     , evalSTransData'
     , scopeRes
+    , clearAllBut
     , All
     , By (..)
     , Not (..)

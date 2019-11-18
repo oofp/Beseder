@@ -55,3 +55,10 @@ clearResources _ =
 
 scopeRes :: STransData m sp f () -> STransData m sp (ScopeFunc f ClearScopedComp) () 
 scopeRes st = Scope st (Proxy @ClearScopedComp)
+
+data ClearAllButComp :: [Symbol] -> [*] -> Exp (* -> [*] -> Exp ([*],[*]))
+type instance Eval (ClearAllButComp names xs) =
+    ClearResourcesFam (Subtract (GetAllNames xs) names) 
+
+clearAllBut :: Proxy (names :: [Symbol]) -> STransData m sp (FuncFunc (ClearAllButComp names)) () 
+clearAllBut px = Func Proxy   
