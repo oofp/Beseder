@@ -9,11 +9,11 @@ _The Hebrew word for “okay” and for “alright” is “beseder” (be-se-de
 * Provide a way of capturing protocols, APIs, business data model and business rules  in an uniformed manner that covers all aspects of resource lifecycle: resource creation resource disposal, invoking requests, external changes at resources states
 * Strong type safety and compile time guarantees: 
   * all allocated resources are released, even in most messy cases of interleaved resource usage
-  * only requests that are supported for given resource state are allowed
+  * only operations that are supported for given resource state are allowed
  * all possible resource state changes are observed
 * Effortless parallelism 
 * Structured concurrency done naturally and seamlessly 
-* Informal notion Linear types: no access to a stale resource states, no state can be left unhandled
+* Informal notion of linear types: no access to a stale resource states, no state can be left unhandled
 * Allows describing properties of the system as constraints, reducing the number of required tests.
 * Leverage the powerful type system, type inference and type level computation to enable interactive and entertaining domain exploration and development process.
 
