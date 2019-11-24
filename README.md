@@ -9,11 +9,11 @@ _The Hebrew word for “okay” and for “alright” is “beseder” (be-se-de
 * Provide a way of capturing protocols, APIs, business data model and business rules  in an uniformed manner that covers all aspects of resource lifecycle: resource creation resource disposal, invoking requests, external changes at resources states
 * Strong type safety and compile time guarantees: 
   * all allocated resources are released, even in most messy cases of interleaved resource usage
-  * only requests that are supported for given resource state are allowed
+  * only operations that are supported for given resource state are allowed
  * all possible resource state changes are observed
 * Effortless parallelism 
 * Structured concurrency done naturally and seamlessly 
-* Informal notion Linear types: no access to a stale resource states, no state can be left unhandled
+* Informal notion of linear types: no access to a stale resource states, no state can be left unhandled
 * Allows describing properties of the system as constraints, reducing the number of required tests.
 * Leverage the powerful type system, type inference and type level computation to enable interactive and entertaining domain exploration and development process.
 
@@ -26,19 +26,31 @@ _The Hebrew word for “okay” and for “alright” is “beseder” (be-se-de
 * [Thinking with types by Sandy Maguire] (https://leanpub.com/thinking-with-types) 
 * [Introducing ST: Working with State] (http://docs.idris-lang.org/en/latest/st/state.html)
 
-## Beseder milestones and Aha moments:
+## Beseder core concepts:
 
-* The system is represented by a list of possible system states. Each entry of the list is the product of the resources states. Program is a sequence of  steps that fold and unfold the list by creating resources, clearing resources, invoking operations on the resources and observing unsolicted changes of resources states. To be executable , program should start and end with empty state.
-* The app developer can enquire list content and use it to decide about the next step of the program. 
-* The program is represented by AST implemented by GADT parameterized  by splitter that determines to what part of the list the operation is applied
-* Defunctionalization trick (that enabled partial type family applications) allows representing splitter as type level predicate. 
+* The basic entity at Beseder is a resource. The system state at any given moment is represented by the states of the resources. In other words state of the system is a product of the system's resources states.
 
-* GADT representing AST step is also parameterized by type level function (again using defunctionalization trick) that transforms input list of system states to output list of the states.  It is used at type level computation for example to compute all possible states within event handling loop.
+* Resources are created, going through a series of state transitions and eventually deleted. 
+The state transition is caused by request (operation) invoked on the resource or change in resource state that happened outside of the system (unsolicited state change). Every resource state is represented by a specific distinctive Haskell type. The following type classes capture all supported resource related operations:
 
-* There is also alternative (and probably preferable) way of writing program by defining program as type (approach that is somewhat similar to Servant). The required term (value)  level computations are indicated by named placeholder (patches) which are resolved   when reifying the application type  to application AST. The correctness of the type can be quickly tested by using type level computation applied to input list of states. It helps to overcome slow compilation time , since time consuming reifying can be infrequently while type level computation on app type (invoked using :kind! from ghci) is very quick.
+```
+--create resource
+class MkRes ctx res  where
+    type ResSt ctx res  :: *
+    mkRes :: res -> ctx (ResSt ctx res)
 
-* AST can be transformed (for example, instrumented for logging or presentation possible). It seems to open very interesting and powerful possibilities (may be even UI generation) that still needs to be explored further.    
+--clear resource    
+class TermState ctx state where
+    terminate :: state -> ctx ()
+  
+--unsolicted resource state transition    
+class Transition ctx state1 where
+    type NextStates state1 :: [*]
+    next :: state1 -> (V (NextStates state1) -> ctx Bool) -> ctx Bool
+  
+-- request invocation    
+class Request ctx req state1 where
+    type ReqResult (req :: *) (st :: *) :: [*]
+    request :: req -> state1 -> ctx (V (ReqResult req state1))
  
-* Implementing "resources as type". Resource consists of other (internal resources). Resource creating, internal resources state change and requests can be described as types. Important "aha" moment was the realization that request invocation can be done with no breaking the soundness.
-
-
+```
