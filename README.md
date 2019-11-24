@@ -55,7 +55,7 @@ class Request ctx req state1 where
  
 ```
 
-#h3 Example of simple door control application:
+### Example of Beseder application (inspired by my condo door behavior):
 Door (*door resource*) gets open when either the fob is read (*fobReader*) or internal proximity sensor (*inDet*) was triggered. The door should stay open for predefined time interval (*doorTimeoutSec*). The door should stay open as long as at least one of proximity sensors (*inDet* or *outDet*) are on  
 
 ```
