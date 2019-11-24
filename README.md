@@ -54,3 +54,39 @@ class Request ctx req state1 where
     request :: req -> state1 -> ctx (V (ReqResult req state1))
  
 ```
+
+#h3 Example of simple door control application:
+Door (*door resource*) gets open when either the fob is read (*fobReader*) or internal proximity sensor (*inDet*) was triggered. The door should stay open for predefined time interval (*doorTimeoutSec*). The door should stay open as long as at least one of proximity sensors (*inDet* or *outDet*) are on  
+
+```
+doorHandler doorTimeoutSec = 
+  handleEvents $ do
+    on @("fobReader" :? IsMessageReceived) $ do 
+      invoke #fobReader GetNextMsg
+      openDoorIfClosed doorTimeoutSec       
+    on @("inDet" :? IsBinMonitorOn) $ do 
+      openDoorIfClosed doorTimeoutSec    
+    on @("doorTimer" :? IsTimerTriggered) $ do 
+      onOrElse @("inDet" :? IsBinMonitorOn :|| "outDet" :? IsBinMonitorOn)
+        (restartTimer doorTimeoutSec)
+        closeDoor        
+
+openDoorIfClosed :: Int -> STransData m sp _ ()     
+openDoorIfClosed doorTimeoutSec = do
+  on @("door" :? IsBinSwitchOff) $ do
+    invoke #door TurnOn
+    newRes #doorTimer TimerRes
+    invoke #doorTimer (StartTimer doorTimeoutSec)
+
+closeDoor :: STransData m sp _ () 
+closeDoor = do
+  clear #doorTimer   
+  invoke #door TurnOff
+
+restartTimer :: Int -> STransData m sp _ () 
+restartTimer doorTimeoutSec = do
+  clear #doorTimer
+  newRes #doorTimer TimerRes
+  invoke #doorTimer (StartTimer doorTimeoutSec)
+
+```
