@@ -52,7 +52,7 @@ on :: forall sp1 sp m f_sub. STransData m sp f_sub () -> STransData m sp (Captur
 on = On
 
 onOrElse :: forall sp1 sp m f_sub1 f_sub2. STransData m sp f_sub1 () -> STransData m sp f_sub2 () -> STransData m sp (CaptureOrElseFunc sp1 f_sub1 f_sub2) ()
-onOrElse = onOrElse
+onOrElse = OnOrElse
 
 opRes :: Named name -> (x -> m a) -> STransData m sp (OpResFunc name x) a
 opRes = OpRes
@@ -93,7 +93,7 @@ skipAll = Try @Dynamics Skip
 skipTo ::  forall sp1 sp m. STransData m sp (EmbedFunc (Not sp1) SkipFunc) () 
 skipTo = Try @(Not sp1) Skip
 
-op :: m a -> STransData m sp OpFunc a
+op :: m a -> STransData m sp (OpFunc a) a
 op = Op
 
 forever :: STransData m sp f () -> STransData m sp (ForeverFunc f) ()

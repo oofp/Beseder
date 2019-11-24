@@ -40,6 +40,7 @@ import           Beseder.Misc.Misc
 import           Beseder.Resources.Timer
 import           Beseder.Resources.Monitor.BinaryMonitorRes
 import           Beseder.Resources.State.ImpRes 
+import           Beseder.Resources.State.BinarySwitch 
 import           Beseder.Resources.State.DataRes 
 import           Beseder.Resources.Comm 
 import           Data.String 
@@ -48,7 +49,7 @@ import           qualified Protolude
 data FobReader = FobReader 
 
 type InitState m 
-    = '[  ( BinSwitchOff "door",
+    = '[  ( BinSwitchOff m "door",
           ( BinMonitorOff m "inDet", 
           ( BinMonitorOff m "outDet",  
           ( CommWaitForMsg "fobReader" FobReader () () () m )))) 

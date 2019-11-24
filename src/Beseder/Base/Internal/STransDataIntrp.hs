@@ -211,7 +211,7 @@ instance
   , Interpretable q m sp xs_sub rs_sub1 ex1 f_sub1 
   , Interpretable q m sp ex_sub rs_sub2 ex2 f_sub2 
   ) => Interpretable q m sp xs rs ex (CaptureOrElseFunc sp1 f_sub1 f_sub2) where
-    interpret (OnOrElse sd1 sd2) = captureOrElse getInstance (interpret sd1) (interpret sd2)
+    interpret (OnOrElse sd1 sd2) = captureOrElse (getInstance @sp1) (interpret sd1) (interpret sd2)
   
 instance  
   ( Qm q m
@@ -310,6 +310,12 @@ instance
   ) => Interpretable q m sp xs xs '[] (OpResFunc name x) where
     interpret (OpRes named getter) = opRes named getter 
 
+instance  
+  ( Qm q m
+  ) => Interpretable q m sp xs xs '[] (OpFunc a) where
+    interpret (Op ma) = op ma 
+  
+  
 instance  
   ( Qm q m
   , x ~ St st name

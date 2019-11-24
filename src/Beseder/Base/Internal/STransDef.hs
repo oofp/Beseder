@@ -40,8 +40,8 @@ type instance Eval (OpResFunc name x sp xs) = '(xs, '[])
 data GetFunc :: name -> * -> * -> [*] -> Exp ([*],[*])
 type instance Eval (GetFunc name x sp xs) = '(xs, '[])
 
-data OpFunc :: * -> [*] -> Exp ([*],[*])
-type instance Eval (OpFunc sp xs) = '(xs, '[])
+data OpFunc :: * -> * -> [*] -> Exp ([*],[*])
+type instance Eval (OpFunc a sp xs) = '(xs, '[])
 
 -- transformation defunc data and their evaluators
 data WithResFunc :: res -> * -> [*] -> Exp ([*],[*])

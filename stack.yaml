@@ -15,7 +15,7 @@ extra-deps:
   - haskus-utils-variant
   git: https://github.com/oofp/haskus-utlls_1.0_forked.git
   commit: f96c5adbd2bc410fb994b5031728ff720734831f
-- stm-containers-1.1.0.2
+- stm-containers-1.1.0.4
 - stm-hamt-1.2.0.2
 - primitive-extras-0.7.1
 - ekg-0.4.0.15@sha256:f52d7c00654d72d2ab988255f30adba95a52484ac310bab9c136c64732e69f4b

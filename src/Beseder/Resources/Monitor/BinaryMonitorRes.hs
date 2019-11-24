@@ -68,6 +68,7 @@ instance (MonadIO m, KnownBool flag) => Transition m (St (BinaryMonitorRes flag 
     return True  
 
 data StopMonitor = StopMonitor deriving Show
+instance GetInstance StopMonitor where getInstance = StopMonitor
 data BinaryMonitorStopped = BinaryMonitorStopped
 
 instance (MonadIO m) => Request m StopMonitor (St (BinaryMonitorRes flag m) name) where

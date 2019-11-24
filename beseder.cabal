@@ -39,7 +39,9 @@ library
                      , Beseder.Resources.State.DataRes
                      , Beseder.Resources.State.PureRes
                      , Beseder.Resources.State.ImpRes
+                     , Beseder.Resources.State.BinarySwitch
                      , Beseder.Resources.State.StateLogger  
+                     , Beseder.Resources.Monitor.BinaryMonitorRes
                      , Beseder.Resources.Timer
                      , Beseder.Resources.Monitor
                      , Beseder.Resources.Comm
@@ -77,6 +79,8 @@ library
                      , Beseder.Misc.Prosumers.TVarConsumer
                      , Beseder.Misc.Prosumers.Consumer
                      , Beseder.Misc.Prosumers.Producer
+                     , Beseder.Misc.Prosumers.STMConsumer
+                     , Beseder.Misc.Prosumers.STMProducer
                      , Beseder.Resources.State.Impl.IORefStateProv
                      , Beseder.Resources.State.Impl.PureStateProv
                      , Beseder.Resources.State.Impl.STMStateProv
@@ -87,9 +91,9 @@ library
                      , Beseder.Resources.Comm.CommProvImpl
                      , Beseder.Resources.Comm.Impl.Console
                      , Beseder.Resources.Comm.Impl.WSClient
+                     , Beseder.Resources.Comm.Impl.STMComm
                      , Beseder.Resources.Composite.CompositeRes
                      , Beseder.Resources.Composite.CompositeDataRes
-                     , Beseder.Resources.Monitor.BinaryMonitorRes
   build-depends:       base >= 4.7 && < 5
                      , protolude
                      , network

@@ -420,7 +420,7 @@ op ::
   ( Monad m
   , Monad (q m)
   , MonadTrans q
-  ) => m a -> STrans q m sp xs xs  ('[]) OpFunc a
+  ) => m a -> STrans q m sp xs xs  ('[]) (OpFunc a) a
 op ma = 
   STrans (\_sp v_xs -> lift ma >>= (\a -> return $ Right (v_xs,a))) 
 

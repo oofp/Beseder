@@ -19,12 +19,6 @@ module Beseder.Resources.State.ImpRes
   , ImpRes (..)
   , ImpSt (..)
   , ImpureSt
-  , BinSwitchOn
-  , BinSwitchOff
-  , IsBinSwitchOff
-  , IsBinSwitchOn
-  , TurnOn (..)
-  , TurnOff (..)
   ) where
 
 import           Protolude  
@@ -87,44 +81,3 @@ type instance StateTrans (St (ImpSt st) name) = 'Static
 instance (Monad m) => TermState m (St (ImpSt st) name) where
   terminate _ = return ()
 
-  
---
-
-data BoolSwitchRes = BoolSwitchRes deriving Show
-data BoolSwitch (fl :: Bool) = BoolSwitch deriving Show
-data TurnOn = TurnOn deriving Show
-data TurnOff = TurnOff deriving Show
-
-instance Monad m => MkImpRes m BoolSwitchRes where
-  type ImpResInitState m BoolSwitchRes = BoolSwitch 'False
-  mkImpRes _ = return  BoolSwitch  
-
-
-toggleSwitch :: Monad m => BoolSwitch fl -> m (V '[BoolSwitch (NotBool fl)])
-toggleSwitch _  = return $ variantFromValue BoolSwitch
-
-instance Monad m => ImpOp m TurnOn (BoolSwitch 'False) where
-  type OpImpResults TurnOn (BoolSwitch 'False) = '[BoolSwitch 'True]
-  opImpReq :: TurnOn -> BoolSwitch 'False -> m (V '[BoolSwitch 'True])
-  opImpReq TurnOn = toggleSwitch
-  
-instance Monad m => ImpOp m TurnOff (BoolSwitch 'True) where
-  type OpImpResults TurnOff (BoolSwitch 'True) = '[BoolSwitch 'False]
-  opImpReq TurnOff = toggleSwitch 
-    
-type BinSwitchOn name = St (ImpSt (BoolSwitch 'True)) name 
-type BinSwitchOff name = St (ImpSt (BoolSwitch 'False)) name 
-  
-data IsBinSwitchOn :: Type -> Exp Bool 
-type instance Eval (IsBinSwitchOn a) = IsBinSwitchOnFam a
-data IsBinSwitchOff :: Type -> Exp Bool 
-type instance Eval (IsBinSwitchOff a) = IsBinSwitchOffFam a
-
-type family IsBinSwitchOnFam a :: Bool where
-  IsBinSwitchOnFam (BinSwitchOn _) = 'True
-  IsBinSwitchOnFam _ = 'False
-
-type family IsBinSwitchOffFam a :: Bool where
-  IsBinSwitchOffFam (BinSwitchOff _) = 'True
-  IsBinSwitchOffFam _ = 'False
-  
