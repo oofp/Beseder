@@ -32,7 +32,9 @@ module Beseder.Base.ControlData
     , ifElse
     , iff
     , evalSTransData
+    , evalSTransDataApp
     , evalSTransData'
+    , evalSTransDataApp'
     , scopeRes
     , clearAllBut
     , All
@@ -49,6 +51,7 @@ module Beseder.Base.ControlData
     , interpret
     , Interpretable
     , module Beseder.Base.Internal.STransDef
+    , module Beseder.Base.Internal.STransProc
     , NatOne (..)
     , NatConv 
 ) where
@@ -58,6 +61,7 @@ import Beseder.Base.Internal.STransDataIntrp
 import Beseder.Base.Internal.STransDataDo
 import Beseder.Base.Internal.STransDataCombo
 import Beseder.Base.Internal.STransDef
+import Beseder.Base.Internal.STransProc
 import Beseder.Base.Internal.SplitOps
 import Beseder.Base.Internal.NatOne
 import Beseder.Base.Internal.STransIx (STrans)

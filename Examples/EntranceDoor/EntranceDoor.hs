@@ -70,7 +70,7 @@ doorHandler doorTimeoutSec =
         (restartTimer doorTimeoutSec)
         closeDoor        
     --assertion    
-    assertCheck @InvalidConditions
+    -- assertCheck @InvalidConditions
     {-
     on @(Not (By "failure")) $ do  
       on @InvalidConditions $
@@ -103,6 +103,7 @@ assertDoorHandler doorTimeoutSec =
     doorHandler doorTimeoutSec
 
 evalDoorHandler = evalSTransData' (normalDoorHandler 5) (Proxy @(InitState IO))
+evalDoorHandlerApp = evalSTransDataApp' (normalDoorHandler 5) (Proxy @(InitState IO))
 
 type InvalidConditions =
   ("doorTimer" :? IsTimerTriggered 

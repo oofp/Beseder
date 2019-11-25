@@ -25,6 +25,7 @@ import           Beseder.Base.Internal.TypeExp
 import           Beseder.Base.Internal.TupleHelper
 import           Beseder.Base.Internal.SplitOps
 import           Beseder.Base.Internal.STransDef
+import           Beseder.Base.Internal.STransProc
 import           Beseder.Base.Internal.STransMonad
 import           Beseder.Base.Internal.NatOne
 
@@ -63,6 +64,12 @@ evalSTransData' sd _ = Proxy
 
 evalSTransData :: STransData m NoSplitter f a -> Proxy (Eval (f NoSplitter '[()]))
 evalSTransData sd  = evalSTransData' sd (Proxy @('[()])) 
+
+evalSTransDataApp' :: STransData m sp f a -> Proxy xs -> Proxy (ApplyFunc f sp xs)
+evalSTransDataApp' sd_ _ = Proxy 
+
+evalSTransDataApp :: STransData m NoSplitter f a -> Proxy (ApplyFunc f NoSplitter '[()])
+evalSTransDataApp sd  = Proxy 
 
 (>>>) :: STransData m sp f1 () -> STransData m sp f2 b -> STransData m sp (ComposeFunc f1 f2) b 
 (>>>) = Compose

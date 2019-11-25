@@ -62,6 +62,7 @@ library
                      , Beseder.Base.Internal.NatOne
                      , Beseder.Base.Internal.STransIx 
                      , Beseder.Base.Internal.STransDef 
+                     , Beseder.Base.Internal.STransProc
                      , Beseder.Base.Internal.STransData 
                      , Beseder.Base.Internal.STransDataDo 
                      , Beseder.Base.Internal.STransDataIntrp 
@@ -81,6 +82,7 @@ library
                      , Beseder.Misc.Prosumers.Producer
                      , Beseder.Misc.Prosumers.STMConsumer
                      , Beseder.Misc.Prosumers.STMProducer
+                     , Beseder.Misc.Prosumers.IntervalProducer
                      , Beseder.Resources.State.Impl.IORefStateProv
                      , Beseder.Resources.State.Impl.PureStateProv
                      , Beseder.Resources.State.Impl.STMStateProv
