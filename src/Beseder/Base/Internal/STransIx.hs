@@ -529,6 +529,9 @@ whatSteps = STrans (\_sp v_xs -> return $ Right (v_xs, Proxy))
 noop :: Monad (q m) => STrans q m sp xs xs ('[]) NoopFunc ()
 noop = STrans (\_sp v_xs -> return $ Right (v_xs, ()))
 
+label :: Monad (q m) => Named label -> STrans q m sp xs xs ('[]) (LabelFunc label) ()
+label _ = STrans (\_sp v_xs -> return $ Right (v_xs, ()))
+
 --appT :: (Eval (f sp xs) ~ '(rs,ex)) => STransApp q m sp xs rs ex () -> STrans q m sp xs rs ex f ()
 --appT (MkApp t) = coerce t
 

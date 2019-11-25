@@ -17,6 +17,7 @@ module Beseder.Base.ControlData
     , skipAll
     , skipTo
     , noop
+    , label
     --, whatNext
     --, whatNames
     , liftIO
@@ -33,8 +34,12 @@ module Beseder.Base.ControlData
     , iff
     , evalSTransData
     , evalSTransDataApp
+    , evalSTransDataLabels
+    , evalSTransDataNamedLabels 
     , evalSTransData'
     , evalSTransDataApp'
+    , evalSTransDataLabels'
+    , evalSTransDataNamedLabels' 
     , scopeRes
     , clearAllBut
     , All

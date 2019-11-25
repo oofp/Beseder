@@ -45,6 +45,7 @@ data STransData (m :: * -> *) (sp :: *) (sfunc :: * -> [*] -> Exp ([*],[*])) (a 
   OpRes :: Named name -> (x -> m a) -> STransData m sp (OpResFunc name x) a
   Op :: m a -> STransData m sp (OpFunc a) a
   Noop :: STransData m sp NoopFunc ()
+  Label :: Named label -> STransData m sp (LabelFunc label) ()
   LiftIO :: IO a -> STransData m sp LiftIOFunc a
   NextSteps :: Proxy n -> STransData m sp (NextStepsFunc n) ()
   Forever :: STransData m sp f () -> STransData m sp (ForeverFunc f) ()
@@ -69,7 +70,19 @@ evalSTransDataApp' :: STransData m sp f a -> Proxy xs -> Proxy (ApplyFunc f sp x
 evalSTransDataApp' sd_ _ = Proxy 
 
 evalSTransDataApp :: STransData m NoSplitter f a -> Proxy (ApplyFunc f NoSplitter '[()])
-evalSTransDataApp sd  = Proxy 
+evalSTransDataApp sd_  = Proxy 
+
+evalSTransDataLabels' :: STransData m sp f a -> Proxy xs -> Proxy (ApplyWithFilter LabelsOnly f sp xs)
+evalSTransDataLabels' sd_ _ = Proxy 
+
+evalSTransDataLabels :: STransData m sp f a -> Proxy (ApplyWithFilter LabelsOnly f NoSplitter '[()])
+evalSTransDataLabels sd_ = Proxy 
+
+evalSTransDataNamedLabels' :: Named label -> STransData m sp f a -> Proxy xs -> Proxy (ApplyWithFilter (LabelsName label) f sp xs)
+evalSTransDataNamedLabels' _ sd_ _ = Proxy 
+
+evalSTransDataNamedLabels :: Named label -> STransData m sp f a -> Proxy (ApplyWithFilter (LabelsName label) f NoSplitter '[()])
+evalSTransDataNamedLabels _ sd_ = Proxy 
 
 (>>>) :: STransData m sp f1 () -> STransData m sp f2 b -> STransData m sp (ComposeFunc f1 f2) b 
 (>>>) = Compose

@@ -156,6 +156,9 @@ type instance Eval (QueryStateFunc sp xs) = '(xs,'[])
 data NoopFunc :: * -> [*] -> Exp ([*],[*])
 type instance Eval (NoopFunc sp xs) = '(xs,'[])
 
+data LabelFunc :: Symbol -> * -> [*] -> Exp ([*],[*])
+type instance Eval (LabelFunc name sp xs) = '(xs,'[])
+
 data LiftIOFunc :: * -> [*] -> Exp ([*],[*])
 type instance Eval (LiftIOFunc sp xs) = '(xs,'[])
 

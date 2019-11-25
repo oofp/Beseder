@@ -38,6 +38,7 @@ data OnOrStep (sp1 :: *) (stepsOn :: [*]) (stepsElse :: [*])
 data TryStep (sp1 :: *) (steps :: [*])  
 data ForeverStep (steps :: [*])  
 data LoopStep (steps :: [*])  
+data LabelStep (label :: Symbol) (sp :: *) (xs :: [*])  
 
 type family ApplyFunc (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [*] where
   ApplyFunc (ComposeFunc f1 f2) sp xs = Concat (ApplyFunc f1 sp xs) (ApplyFunc f2 sp (First (Eval (f1 sp xs))))
@@ -52,5 +53,42 @@ type family ApplyFunc (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) 
                   (ComposeFunc
                     (ExtendForLoopFunc f) 
                     (ForeverFunc (AlignFunc f))) sp xs)]
+  ApplyFunc (LabelFunc label) sp xs = '[LabelStep label sp xs]
   ApplyFunc func sp xs = '[Step func sp xs]
     
+
+type family ApplyWithFilter (fltr :: (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp Bool) (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [*] where
+  ApplyWithFilter fltr (ComposeFunc f1 f2) sp xs = Concat (ApplyWithFilter fltr f1 sp xs) (ApplyWithFilter fltr f2 sp (First (Eval (f1 sp xs))))
+  ApplyWithFilter fltr (CaptureFunc sp1 f1) sp xs = '[OnStep sp1 (ApplyWithFilter fltr f1 sp (ListSplitterRes sp1 xs))] 
+  ApplyWithFilter fltr (CaptureOrElseFunc sp1 f1 f2) sp xs = '[OnOrStep sp1 (ApplyWithFilter fltr f1 sp (ListSplitterRes sp1 xs)) (ApplyWithFilter fltr f2 sp (ListSplitterReminder sp1 xs))] 
+  ApplyWithFilter fltr (EmbedFunc sp1 f1) sp xs = '[TryStep sp1 (ApplyWithFilter fltr f1 (sp :&& sp1) (ListSplitterRes sp1 xs))] 
+  ApplyWithFilter fltr (ForeverFunc f) sp xs = '[ForeverStep (ApplyWithFilter fltr f sp xs)]
+  ApplyWithFilter fltr (ExtendForLoopFunc f) sp xs = '[]
+  ApplyWithFilter fltr (AlignFunc f) sp xs = ApplyWithFilter fltr f sp xs
+  ApplyWithFilter fltr (HandleLoopFunc f) sp xs = 
+    '[LoopStep (ApplyWithFilter fltr 
+                  (ComposeFunc
+                    (ExtendForLoopFunc f) 
+                    (ForeverFunc (AlignFunc f))) sp xs)]
+  ApplyWithFilter fltr (LabelFunc label) sp xs = '[LabelStep label sp xs]
+  ApplyWithFilter fltr func sp xs = ApplyFuncIfTrue (Eval (fltr func sp xs)) func sp xs 
+    
+type family ApplyFuncIfTrue (fl :: Bool) (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [*] where
+  ApplyFuncIfTrue 'True func sp xs = '[Step func sp xs]
+  ApplyFuncIfTrue 'False func sp xs = '[]
+  
+data LabelsOnly :: (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp Bool
+type instance Eval (LabelsOnly func sp xs) = IsLabelFam func  
+type family IsLabelFam (func :: * -> [*] -> Exp ([*],[*])) :: Bool where
+  IsLabelFam (LabelFunc _) = 'True  
+  IsLabelFam _ = 'False
+
+data LabelsName :: Symbol -> (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp Bool
+type instance Eval (LabelsName name func sp xs) = IsLabelNameFam name func  
+type family IsLabelNameFam (name :: Symbol) (func :: * -> [*] -> Exp ([*],[*])) :: Bool where
+  IsLabelNameFam name1 (LabelFunc name) = IsEq (CmpSymbol name1 name)  
+  IsLabelNameFam _ _ = 'False
+  
+type family IsEq (c :: Ordering) where
+  IsEq EQ = 'True
+  IsEq _ = 'False   

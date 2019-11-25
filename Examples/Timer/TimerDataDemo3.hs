@@ -31,10 +31,12 @@ helloFlow3 = do
   invoke #t (StartTimer 36)
   newRes #t1 TimerRes
   invoke #t1 (StartTimer 3)
-  try @("t" :? IsTimerArmed) $ do
-    handleEvents $ do
+  --try @("t" :? IsTimerArmed) $ do
+  handleEvents $ do
+      label #handleEvents 
       liftIO $ putStrLn ("handleEvents ...." :: Text)
       on @("t1" :? IsTimerTriggered) $ do 
+        label #atOn 
         clear #t1
         newRes #t1 TimerRes
         invoke #t1 (StartTimer 3)
@@ -46,5 +48,3 @@ runFlow :: IO ()
 runFlow = runAsyncData helloFlow3
 
 
-    
-  

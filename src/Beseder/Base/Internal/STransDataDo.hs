@@ -81,6 +81,9 @@ liftIO = LiftIO
 noop :: STransData m sp NoopFunc ()
 noop = Noop
 
+label :: Named label -> STransData m sp (LabelFunc label) ()
+label  = Label
+
 nextEv :: STransData m sp (CaptureFunc Dynamics GetNextAllFunc) ()
 nextEv = On @Dynamics nextEv'
 

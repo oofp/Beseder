@@ -327,6 +327,12 @@ instance
   ( Qm q m
   ) => Interpretable q m sp xs xs '[] NoopFunc where
     interpret Noop = noop 
+
+instance  
+  ( Qm q m
+  ) => Interpretable q m sp xs xs '[] (LabelFunc named) where
+    interpret (Label named) = label named 
+        
       
 instance  
   ( Qm q m
