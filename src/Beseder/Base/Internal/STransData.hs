@@ -84,6 +84,13 @@ evalSTransDataNamedLabels' _ sd_ _ = Proxy
 evalSTransDataNamedLabels :: Named label -> STransData m sp f a -> Proxy (ApplyWithFilter (LabelsName label) f NoSplitter '[()])
 evalSTransDataNamedLabels _ sd_ = Proxy 
 
+evalSTransDataAppFiltered' :: Proxy (withFilter ::  (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp Bool) -> STransData m sp f a -> Proxy xs -> Proxy (ApplyWithFilter withFilter f sp xs)
+evalSTransDataAppFiltered' _ sd_ _ = Proxy 
+
+evalSTransDataAppFiltered :: Proxy (withFilter ::  (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp Bool) -> STransData m sp f a -> Proxy (ApplyWithFilter withFilter f NoSplitter '[()])
+evalSTransDataAppFiltered _ sd_ = Proxy 
+
+
 (>>>) :: STransData m sp f1 () -> STransData m sp f2 b -> STransData m sp (ComposeFunc f1 f2) b 
 (>>>) = Compose
 infixr 1 >>>

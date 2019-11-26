@@ -36,10 +36,12 @@ module Beseder.Base.ControlData
     , evalSTransDataApp
     , evalSTransDataLabels
     , evalSTransDataNamedLabels 
+    , evalSTransDataAppFiltered 
     , evalSTransData'
     , evalSTransDataApp'
     , evalSTransDataLabels'
-    , evalSTransDataNamedLabels' 
+    , evalSTransDataNamedLabels'
+    , evalSTransDataAppFiltered'
     , scopeRes
     , clearAllBut
     , All
@@ -59,6 +61,7 @@ module Beseder.Base.ControlData
     , module Beseder.Base.Internal.STransProc
     , NatOne (..)
     , NatConv 
+    , MatchFunc (..)
 ) where
 
 import Beseder.Base.Internal.STransData

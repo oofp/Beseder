@@ -47,4 +47,5 @@ helloFlow3 = do
 runFlow :: IO ()  
 runFlow = runAsyncData helloFlow3
 
-
+-- :t evalSTransDataNamedLabels #atOn helloFlow3
+-- :t evalSTransDataAppFiltered (Proxy @(MatchFunc LiftIOFunc))  helloFlow3

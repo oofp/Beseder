@@ -70,10 +70,10 @@ type family ApplyWithFilter (fltr :: (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> 
                   (ComposeFunc
                     (ExtendForLoopFunc f) 
                     (ForeverFunc (AlignFunc f))) sp xs)]
-  ApplyWithFilter fltr (LabelFunc label) sp xs = '[LabelStep label sp xs]
   ApplyWithFilter fltr func sp xs = ApplyFuncIfTrue (Eval (fltr func sp xs)) func sp xs 
     
 type family ApplyFuncIfTrue (fl :: Bool) (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [*] where
+  ApplyFuncIfTrue 'True (LabelFunc name) sp xs = '[LabelStep name sp xs]
   ApplyFuncIfTrue 'True func sp xs = '[Step func sp xs]
   ApplyFuncIfTrue 'False func sp xs = '[]
   
@@ -86,9 +86,12 @@ type family IsLabelFam (func :: * -> [*] -> Exp ([*],[*])) :: Bool where
 data LabelsName :: Symbol -> (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp Bool
 type instance Eval (LabelsName name func sp xs) = IsLabelNameFam name func  
 type family IsLabelNameFam (name :: Symbol) (func :: * -> [*] -> Exp ([*],[*])) :: Bool where
-  IsLabelNameFam name1 (LabelFunc name) = IsEq (CmpSymbol name1 name)  
+  IsLabelNameFam name (LabelFunc name) = 'True   
   IsLabelNameFam _ _ = 'False
   
-type family IsEq (c :: Ordering) where
-  IsEq EQ = 'True
-  IsEq _ = 'False   
+data MatchFunc :: (* -> [*] -> Exp ([*],[*])) -> (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp Bool
+type instance Eval (MatchFunc func1 func sp xs) = AreFuncMatchingFam func1 func  
+type family AreFuncMatchingFam (func1 :: * -> [*] -> Exp ([*],[*])) (func :: * -> [*] -> Exp ([*],[*])) :: Bool where
+  AreFuncMatchingFam f f = 'True  
+  AreFuncMatchingFam f f1 = 'False  
+  
