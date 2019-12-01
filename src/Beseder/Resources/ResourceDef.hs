@@ -104,28 +104,6 @@ parseDec _ dec = do
 ***************** Cannot recognize entry: SigD Beseder.Resources.ResourceDefSample.term2 (ForallT [KindedTV k_6989586621679263184 StarT,KindedTV m_6989586621679263154 (AppT (AppT ArrowT StarT) StarT),KindedTV res_6989586621679263155 (VarT k_6989586621679263184)] [AppT (AppT (ConT Beseder.Resources.ResourceDefSample.MyResDef) (VarT m_6989586621679263154)) (VarT res_6989586621679263155)] (AppT (AppT (ConT Beseder.Resources.ResourceDef.TermDef) (VarT m_6989586621679263154)) (AppT (AppT (ConT Beseder.Resources.ResourceDefSample.State2) (VarT m_6989586621679263154)) (VarT res_6989586621679263155))))
 -}
 
-{-
-SigD Beseder.Resources.ResourceDefSample.trans1 
-  (ForallT 
-    [KindedTV k_6989586621679263184 StarT,KindedTV m_6989586621679263154 (AppT (AppT ArrowT StarT) StarT),KindedTV res_6989586621679263155 (VarT k_6989586621679263184)] 
-    [AppT (AppT (ConT Beseder.Resources.ResourceDefSample.MyResDef) (VarT m_6989586621679263154)) (VarT res_6989586621679263155)] 
-    (AppT (AppT (AppT (ConT Beseder.Resources.ResourceDef.TransitionDef) (VarT m_6989586621679263154)) (AppT (AppT (ConT Beseder.Resources.ResourceDefSample.State1) (VarT m_6989586621679263154)) (VarT res_6989586621679263155))) (AppT (AppT PromotedConsT (AppT (AppT (ConT Beseder.Resources.ResourceDefSample.State2) (VarT m_6989586621679263154)) (VarT res_6989586621679263155)))
-     (AppT (AppT PromotedConsT (AppT (AppT (ConT Beseder.Resources.ResourceDefSample.State1) (VarT m_6989586621679263154)) (VarT res_6989586621679263155))) (SigT PromotedNilT (AppT ListT StarT))))))
-
-SigD funcName 
-(ForallT 
-  _ -- [KindedTV k_6989586621679263184 StarT,KindedTV m_6989586621679263154 (AppT (AppT ArrowT StarT) StarT),KindedTV res_6989586621679263155 (VarT k_6989586621679263184)] 
-  _ -- [AppT (AppT (ConT Beseder.Resources.ResourceDefSample.MyResDef) (VarT m_6989586621679263154)) (VarT res_6989586621679263155)] 
-  (AppT (AppT (AppT (ConT _transitionDef) _) (AppT (AppT (ConT fromState) _) _)) 
-  (AppT (AppT PromotedConsT (AppT (AppT (ConT nextState) _) _))
-        (AppT (AppT PromotedConsT (AppT (AppT (ConT nextStat1) _) _)) (SigT PromotedNilT _)))))
-
-SigD funcName 
-  (ForallT _  
-    (AppT (AppT (ConT _termDef) _) (AppT (AppT (ConT _fromState) _) _)))
-
--}
-
 buildState :: Name -> TypeQ
 buildState stateName = 
     return $
@@ -143,29 +121,73 @@ buildState stateName =
     resPar = mkName "res"
 
 parseDataFam :: Name -> Q [Dec]
-parseDataFam stateName = return $ 
-  if stStrName == "ResPar" -- no need to create entry for ResPar
-    then []
-    else 
-      [ TySynD aliasName
-        [ PlainTV mPar
-        , PlainTV resPar
-        , PlainTV namePar
-        ]
-        ( AppT
-            ( AppT ( ConT $ mkName "St")
-                ( AppT
-                    ( AppT ( ConT stateName ) ( VarT mPar ) ) ( VarT resPar )
-                )
-            ) ( VarT namePar )
+parseDataFam stateName =  
+    if stStrName == "ResPar" -- no need to create entry for ResPar
+      then return $ []
+      else return $
+            (buildStateTypeSyn stateName) : (buildStatePred stateName)
+  where
+    stStrName = nameBase stateName
+  
+buildStateTypeSyn :: Name -> Dec    
+buildStateTypeSyn stateName =
+    TySynD aliasName 
+          [ PlainTV mPar
+          , PlainTV resPar
+          , PlainTV namePar
+          ]
+          ( AppT
+              ( AppT ( ConT $ mkName "St")
+                  ( AppT
+                      ( AppT ( ConT stateName ) ( VarT mPar ) ) ( VarT resPar )
+                  )
+              ) ( VarT namePar )
+          )
+  where
+    stStrName = nameBase stateName
+    mPar = mkName "m"
+    namePar = mkName "name"
+    resPar = mkName "res"
+    aliasName = mkName $ "St" <> stStrName    
+
+
+buildStatePred :: Name -> [Dec]
+buildStatePred stateName = 
+      [ DataD [] isStateName []
+        ( Just
+            ( AppT ( AppT ArrowT StarT )
+                ( AppT (ConT (mkName "Exp")) (ConT boolName))
+            )
+        ) [] []
+    , TySynInstD (mkName "Eval")
+        ( TySynEqn
+            [ AppT ( ConT isStateName ) ( VarT stPar ) ]
+            ( AppT ( ConT isStateFamName ) ( VarT stPar ) )
         )
-      ]
-    where
-      stStrName = nameBase stateName
-      mPar = mkName "m"
-      namePar = mkName "name"
-      resPar = mkName "res"
-      aliasName = mkName $ "St" <> stStrName    
+    , ClosedTypeFamilyD
+        ( TypeFamilyHead isStateFamName [ PlainTV stPar ]
+            ( KindSig (ConT boolName)) Nothing
+        )
+        [ TySynEqn
+            [ AppT
+                ( AppT ( ConT (mkName "St") )
+                    ( AppT
+                        ( AppT ( ConT stateName ) ( VarT mPar ) ) ( VarT resPar )
+                    )
+                ) ( VarT namePar )
+            ] ( PromotedT (mkName "True") )
+        , TySynEqn [ WildCardT ] ( PromotedT (mkName "False"))
+        ]
+    ]  
+  where
+    stStrName = nameBase stateName
+    isStateName = mkName $ "Is" <> stStrName    
+    isStateFamName = mkName $ "Is" <> stStrName <> "Fam"    
+    mPar = mkName "m"
+    namePar = mkName "name"
+    resPar = mkName "res"
+    stPar = mkName "st"
+    boolName = mkName "Bool"
 
 parseMkRes :: Name -> Name -> Name -> Q [Dec]
 parseMkRes className funcName initStateName = do
@@ -206,9 +228,6 @@ parseMkRes className funcName initStateName = do
           ]
       ]
     ]  
--- [d|type $(conT stTypeName) m res name = St ( Language.Haskell.TH.Type$(conT stateName) m res) name|]  
---[d| type $(conT stTypeName) m res name = StLanguage.Haskell.TH.Type ($(ConT stDateName) m res) name |]
-
 
 parseTransition :: Name -> Name -> Name -> Language.Haskell.TH.Type -> Q [Dec]
 parseTransition className funcName fromStateName statesListType = 
@@ -278,7 +297,4 @@ buildStateList (stateName : moreStates) resName monadName =
     ) 
     (buildStateList moreStates resName monadName)
 
---(AppT (AppT PromotedConsT (AppT (AppT (ConT Beseder.Resources.ResourceDef.State2) (VarT m_6989586621691543984)) (VarT res_6989586621691543985)))
---(AppT (AppT PromotedConsT (AppT (AppT (ConT Beseder.Resources.ResourceDef.State1) (VarT m_6989586621691543984)) (VarT res_6989586621691543985))) (SigT PromotedNilT (AppT ListT StarT)))
---)
 

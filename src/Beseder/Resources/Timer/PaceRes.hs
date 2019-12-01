@@ -44,3 +44,5 @@ class Monad m => PaceProv m res where
   termStopped :: TermDef m (PaceStopped m res)
   
 buildRes ''PaceProv
+
+type instance TermRequest (PaceActive m name) = StopPace

@@ -38,13 +38,13 @@ initAsyncProducer2 action = do
   let 
     go aMaybe = do
       a <- action aMaybe
-      putStrLn ("initAsyncProducer: going to post event" :: Text) 
+      -- putStrLn ("initAsyncProducer: going to post event" :: Text) 
       taskPoster $ do
         cbMaybe <- liftIO $ atomically $ readTVar cbTvar 
         case cbMaybe of
           Nothing -> putStrLn ("initAsyncProducer: callback not found" :: Text) 
           Just cbFunc -> do 
-            putStrLn ("initAsyncProducer: invoking callback" :: Text) 
+            -- putStrLn ("initAsyncProducer: invoking callback" :: Text) 
             cbFunc a  
         return True 
       go (Just a)

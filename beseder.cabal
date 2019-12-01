@@ -90,6 +90,7 @@ library
                      , Beseder.Resources.State.MonoStateProv  
                      , Beseder.Resources.Timer.TimerResImpl
                      , Beseder.Resources.Timer.TimerRes
+                     , Beseder.Resources.Timer.PaceResImpl
                      , Beseder.Resources.Timer.PaceRes
                      , Beseder.Resources.Comm.CommProv
                      , Beseder.Resources.Comm.CommProvImpl

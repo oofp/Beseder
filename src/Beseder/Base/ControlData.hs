@@ -61,7 +61,6 @@ module Beseder.Base.ControlData
     , module Beseder.Base.Internal.STransProc
     , NatOne (..)
     , NatConv 
-    , MatchFunc (..)
 ) where
 
 import Beseder.Base.Internal.STransData
