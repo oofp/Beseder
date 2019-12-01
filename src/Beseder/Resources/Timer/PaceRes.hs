@@ -45,4 +45,4 @@ class Monad m => PaceProv m res where
   
 buildRes ''PaceProv
 
-type instance TermRequest (PaceActive m name) = StopPace
+type instance TermRequest (StPaceActive m res name) = StopPace
