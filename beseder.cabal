@@ -46,6 +46,7 @@ library
                      , Beseder.Resources.Monitor
                      , Beseder.Resources.Comm
                      , Beseder.Resources.Composite
+                     , Beseder.Resources.ResourceDef
                      , Beseder.Misc.Misc
                      , Beseder.Misc.Prosumers
   other-modules:       Beseder.Base.Internal.Classes
@@ -89,6 +90,7 @@ library
                      , Beseder.Resources.State.MonoStateProv  
                      , Beseder.Resources.Timer.TimerResImpl
                      , Beseder.Resources.Timer.TimerRes
+                     , Beseder.Resources.Timer.PaceRes
                      , Beseder.Resources.Comm.CommProv
                      , Beseder.Resources.Comm.CommProvImpl
                      , Beseder.Resources.Comm.Impl.Console
