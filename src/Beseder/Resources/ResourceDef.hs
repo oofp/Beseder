@@ -32,10 +32,11 @@ type MkResDef m resPars initSt = resPars -> m (initSt)
 type RequestDef m req st results = req -> st -> m (V results)
 type TransitionDef m st nextStates = st -> ((V nextStates) -> m ()) -> m ()
 type TermDef m st = st -> m ()
+type OpDef m st a = st -> m a 
 
 mkResDefName :: Name
 mkResDefName = ''MkResDef
-
+ 
 --
 buildRes :: Name -> Q [Dec]
 buildRes className = do

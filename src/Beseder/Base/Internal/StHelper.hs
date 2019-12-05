@@ -25,6 +25,7 @@ module Beseder.Base.Internal.StHelper
   , UnwrapContent
   , AreEq
   , IsContentEq
+  , stFunc
   ) where
 
 import            Protolude hiding (First)
@@ -33,10 +34,14 @@ import            Beseder.Base.Internal.Core
 import            Beseder.Base.Internal.Named
 import            Beseder.Base.Internal.TypeExp
 import            Beseder.Base.Internal.TupleHelper
+import            Data.Coerce
 
 stWithName :: stData -> Named name -> St stData name
 stWithName stData _named = St stData
   
+stFunc :: (a -> b) -> (St a name -> b)
+stFunc f = f . coerce
+
 type family StList name (dataList :: [*]) where
   StList name '[] = '[]
   StList name (stData ': dataLst) = (St stData name) ': (StList name dataLst)

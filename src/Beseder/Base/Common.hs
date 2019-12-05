@@ -26,6 +26,7 @@ module Beseder.Base.Common
     , ListOfNamed
     , ToVarOfNamed 
     , nameFromSt
+    , stFunc
     , UnwrapContent
     , AreEq
     , IsContentEq
