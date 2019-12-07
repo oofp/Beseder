@@ -54,6 +54,33 @@ on = On
 onOrElse :: forall sp1 sp m f_sub1 f_sub2. STransData m sp f_sub1 () -> STransData m sp f_sub2 () -> STransData m sp (CaptureOrElseFunc sp1 f_sub1 f_sub2) ()
 onOrElse = OnOrElse
 
+class CaseOf f_sub2 where
+  type CaseOfFunc f_sub2 :: * -> [*] -> Exp ([*],[*])
+  caseOf :: forall sp1 sp m f_sub1. STransData m sp (ComposeFunc (CaptureFunc sp1 f_sub1) f_sub2) () -> 
+    STransData m sp (CaptureOrElseFunc sp1 f_sub1 (CaseOfFunc f_sub2)) ()
+
+instance CaseOf NoopFunc where
+  type CaseOfFunc NoopFunc = NoopFunc
+  caseOf (Compose (On sd1) sd2) = onOrElse sd1 sd2
+
+instance CaseOf (AssertFunc sp) where
+  type CaseOfFunc (AssertFunc sp) = AssertFunc sp
+  caseOf (Compose (On sd1) sd2) = onOrElse sd1 sd2
+
+instance CaseOf (BlockFunc f) where
+  type CaseOfFunc (BlockFunc f) = BlockFunc f
+  caseOf (Compose (On sd1) sd2) = onOrElse sd1 sd2
+    
+instance CaseOf f_sub3 => CaseOf (ComposeFunc (CaptureFunc sp2 f_sub2) f_sub3) where
+  type CaseOfFunc (ComposeFunc (CaptureFunc sp2 f_sub2) f_sub3) = CaptureOrElseFunc sp2 f_sub2 (CaseOfFunc f_sub3) 
+  caseOf (Compose (On sd1) sd2) = onOrElse sd1 (caseOf sd2)
+
+endCase :: STransData m sp (AssertFunc EmptyList) ()  
+endCase = Assert @EmptyList
+
+defCase :: STransData m sp f () -> STransData m sp (BlockFunc f) ()  
+defCase = Block
+
 opRes :: Named name -> (x -> m a) -> STransData m sp (OpResFunc name x) a
 opRes = OpRes
 

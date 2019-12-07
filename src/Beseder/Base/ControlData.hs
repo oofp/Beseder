@@ -44,6 +44,9 @@ module Beseder.Base.ControlData
     , evalSTransDataAppFiltered'
     , scopeRes
     , clearAllBut
+    , caseOf
+    , endCase
+    , defCase
     , All
     , By (..)
     , Not (..)

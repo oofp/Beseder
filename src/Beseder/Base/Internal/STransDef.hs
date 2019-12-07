@@ -43,6 +43,16 @@ type instance Eval (GetFunc name x sp xs) = '(xs, '[])
 data OpFunc :: * -> * -> [*] -> Exp ([*],[*])
 type instance Eval (OpFunc a sp xs) = '(xs, '[])
 
+data BlockFunc :: (* -> [*] -> Exp ([*],[*])) -> (* -> [*] -> Exp ([*],[*]))
+type instance Eval (BlockFunc f sp xs) = Eval (f sp xs)
+
+data AssertFunc :: * -> * -> [*] -> Exp ([*],[*])
+type instance Eval (AssertFunc sp1 sp xs) = AssertFam (ListSplitterRes2 sp1 xs)
+
+type family AssertFam (t :: ([*],[*])) :: ([*],[*]) where
+  AssertFam '(xs, '[]) = '(xs, '[])
+  AssertFam '(xs, ex) =  '(xs, ex) -- Should generate error
+
 -- transformation defunc data and their evaluators
 data WithResFunc :: res -> * -> [*] -> Exp ([*],[*])
 type instance Eval (WithResFunc res sp (x ': ys)) = ListSplitterRes2 sp (Union '[AppendToTupleResult x res] ys)

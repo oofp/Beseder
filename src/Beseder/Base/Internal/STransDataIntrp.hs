@@ -239,7 +239,13 @@ instance
   , Eval (SkipFunc sp xs) ~ '(rs,ex)
   ) => Interpretable q m sp xs rs ex SkipFunc where
     interpret Skip = skipT 
-            
+
+instance  
+  ( Qm q m
+  , Interpretable q m sp xs rs ex f 
+  ) => Interpretable q m sp xs rs ex (BlockFunc f) where
+    interpret (Block sd) = block (interpret sd) 
+      
 instance  
   ( Qm q m
   , ForeverCon f q m sp xs rs ex
@@ -328,6 +334,13 @@ instance
   ) => Interpretable q m sp xs xs '[] NoopFunc where
     interpret Noop = noop 
 
+instance  
+  ( Qm q m
+  , '(xs, '[]) ~ ListSplitterRes2 sp1 xs 
+  ) => Interpretable q m sp xs xs '[] (AssertFunc sp1) where
+    interpret Assert = assert 
+  
+  
 instance  
   ( Qm q m
   ) => Interpretable q m sp xs xs '[] (LabelFunc named) where

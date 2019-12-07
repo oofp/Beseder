@@ -44,6 +44,7 @@ instance GetInstance NoSplitter where
   getInstance = NoSplitter
 
 type All = NoSplitter
+type EmptyList = Not NoSplitter 
 
 type family SelectBy (par :: k) (xs :: [*]) :: [*] where
   SelectBy (n :: Symbol) xs = FilterByNestedName n xs

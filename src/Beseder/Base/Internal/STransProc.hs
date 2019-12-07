@@ -20,16 +20,9 @@
 module Beseder.Base.Internal.STransProc where
 
 import           Protolude                    hiding (Product, handle,TypeError,First,forever, on)
-import           GHC.TypeLits
 import           Haskus.Utils.Types.List
-import           Beseder.Base.Internal.Core
-import           Beseder.Base.Internal.Flow
 import           Beseder.Base.Internal.TypeExp
-import           Beseder.Base.Internal.TupleHelper
 import           Beseder.Base.Internal.SplitOps
-import           Beseder.Utils.ListHelper
-import           Beseder.Base.Internal.NatOne
-import           Haskus.Utils.Variant
 import           Beseder.Base.Internal.STransDef
 
 data Step (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*])
@@ -37,6 +30,7 @@ data OnStep (sp1 :: *) (steps :: [*])
 data OnOrStep (sp1 :: *) (stepsOn :: [*]) (stepsElse :: [*])  
 data TryStep (sp1 :: *) (steps :: [*])  
 data ForeverStep (steps :: [*])  
+data BlockStep (steps :: [*])  
 data LoopStep (steps :: [*])  
 data LabelStep (label :: Symbol) (sp :: *) (xs :: [*])  
 
@@ -47,6 +41,7 @@ type family ApplyFunc (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) 
   ApplyFunc (CaptureOrElseFunc sp1 f1 f2) sp xs = '[OnOrStep sp1 (ApplyFunc f1 sp (ListSplitterRes sp1 xs)) (ApplyFunc f2 sp (ListSplitterReminder sp1 xs))] 
   ApplyFunc (EmbedFunc sp1 f1) sp xs = '[TryStep sp1 (ApplyFunc f1 (sp :&& sp1) (ListSplitterRes sp1 xs))] 
   ApplyFunc (ForeverFunc f) sp xs = '[ForeverStep (ApplyFunc f sp xs)]
+  ApplyFunc (BlockFunc f) sp xs = '[BlockStep (ApplyFunc f sp xs)]
   ApplyFunc (ExtendForLoopFunc f) sp xs = '[]
   ApplyFunc (AlignFunc f) sp xs = ApplyFunc f sp xs
   ApplyFunc (ScopeFunc f _) sp xs = ApplyFunc f sp xs
@@ -65,6 +60,7 @@ type family ApplyWithFilter (fltr :: (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> 
   ApplyWithFilter fltr (CaptureFunc sp1 f1) sp xs = '[OnStep sp1 (ApplyWithFilter fltr f1 sp (ListSplitterRes sp1 xs))] 
   ApplyWithFilter fltr (CaptureOrElseFunc sp1 f1 f2) sp xs = '[OnOrStep sp1 (ApplyWithFilter fltr f1 sp (ListSplitterRes sp1 xs)) (ApplyWithFilter fltr f2 sp (ListSplitterReminder sp1 xs))] 
   ApplyWithFilter fltr (EmbedFunc sp1 f1) sp xs = '[TryStep sp1 (ApplyWithFilter fltr f1 (sp :&& sp1) (ListSplitterRes sp1 xs))] 
+  ApplyWithFilter fltr (BlockFunc f) sp xs = '[BlockStep (ApplyWithFilter fltr f sp xs)]
   ApplyWithFilter fltr (ForeverFunc f) sp xs = '[ForeverStep (ApplyWithFilter fltr f sp xs)]
   ApplyWithFilter fltr (ExtendForLoopFunc f) sp xs = '[]
   ApplyWithFilter fltr (AlignFunc f) sp xs = ApplyWithFilter fltr f sp xs

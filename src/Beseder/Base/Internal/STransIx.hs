@@ -359,7 +359,20 @@ onOrElse t1 t2 = captureOrElse (getInstance @sp1) t1 t2
 liftRes :: (Liftable rs1 rs, Liftable ex1 ex) => Either (V ex1) (V rs1,()) -> Either (V ex) (V rs,())
 liftRes (Right (v_rs1, ())) = Right $ (liftVariant v_rs1, ())        
 liftRes (Left v_ex1) = Left $ liftVariant v_ex1
-        
+
+block :: 
+  ( Monad (q m)
+  , MonadTrans q
+  ) => STrans q m sp xs ys ex f () -> STrans q m sp xs ys ex (BlockFunc f) ()
+block = coerce 
+
+assert :: forall sp1 q m sp xs. 
+  ( Monad (q m)
+  , MonadTrans q
+  , '(xs, '[]) ~ ListSplitterRes2 sp1 xs 
+  ) => STrans q m sp xs xs '[] (AssertFunc sp1) ()
+assert = STrans (\_sp v_xs -> return $ Right (v_xs, ()))
+
 forever :: 
   ( Monad (q m)
   , MonadTrans q
