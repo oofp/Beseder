@@ -47,6 +47,7 @@ module Beseder.Base.ControlData
     , caseOf
     , endCase
     , defCase
+    , assert
     , All
     , By (..)
     , Not (..)
