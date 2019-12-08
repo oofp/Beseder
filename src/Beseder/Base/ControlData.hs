@@ -42,6 +42,8 @@ module Beseder.Base.ControlData
     , evalSTransDataLabels'
     , evalSTransDataNamedLabels'
     , evalSTransDataAppFiltered'
+    , getLabel
+    , getLabel'
     , flattenSteps
     , scopeRes
     , clearAllBut

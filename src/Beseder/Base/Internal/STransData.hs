@@ -95,6 +95,12 @@ evalSTransDataAppFiltered _ sd_ = Proxy
 flattenSteps :: Proxy (stepsTree :: [*])  -> Proxy (FlattenSteps stepsTree)
 flattenSteps _ = Proxy
 
+getLabel' :: Named label -> STransData m sp f a -> Proxy xs -> Proxy (FlattenSteps (ApplyWithFilter (LabelsName label) f sp xs))
+getLabel' _ _ _ = Proxy
+
+getLabel :: Named label -> STransData m sp f a -> Proxy (FlattenSteps (ApplyWithFilter (LabelsName label) f NoSplitter '[()]))
+getLabel _ _ = Proxy
+
 (>>>) :: STransData m sp f1 () -> STransData m sp f2 b -> STransData m sp (ComposeFunc f1 f2) b 
 (>>>) = Compose
 infixr 1 >>>

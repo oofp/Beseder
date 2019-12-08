@@ -50,3 +50,4 @@ runFlow = runAsyncData helloFlow3
 -- :t evalSTransDataNamedLabels #atOn helloFlow3
 -- :t evalSTransDataAppFiltered (Proxy @(MatchFunc LiftIOFunc))  helloFlow3
 -- :t flattenSteps $ evalSTransDataLabels'  helloFlow3 (Proxy :: Proxy '[()])
+-- :t flattenSteps $ evalSTransDataNamedLabels #atOn helloFlow3
