@@ -94,4 +94,16 @@ type instance Eval (MatchFunc func1 func sp xs) = AreFuncMatchingFam func1 func
 type family AreFuncMatchingFam (func1 :: * -> [*] -> Exp ([*],[*])) (func :: * -> [*] -> Exp ([*],[*])) :: Bool where
   AreFuncMatchingFam f f = 'True  
   AreFuncMatchingFam f f1 = 'False  
+
+type family GetSteps (d :: *) :: [*] where
+  GetSteps (OnStep sp1 steps) = FlattenSteps steps
+  GetSteps (OnOrStep sp1 steps1 steps2) = Concat (FlattenSteps steps1) (FlattenSteps steps2)
+  GetSteps (TryStep sp1 steps) = FlattenSteps steps  
+  GetSteps (ForeverStep steps) = FlattenSteps steps  
+  GetSteps (BlockStep steps) = FlattenSteps steps  
+  GetSteps (LoopStep steps) = FlattenSteps steps  
+  GetSteps step = '[step]
   
+type family FlattenSteps (steps :: [*]) :: [*] where
+  FlattenSteps '[] = '[]
+  FlattenSteps (s ': steps) = Concat (GetSteps s) (FlattenSteps steps)

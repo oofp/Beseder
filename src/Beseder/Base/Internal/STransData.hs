@@ -92,6 +92,8 @@ evalSTransDataAppFiltered' _ sd_ _ = Proxy
 evalSTransDataAppFiltered :: Proxy (withFilter ::  (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp Bool) -> STransData m sp f a -> Proxy (ApplyWithFilter withFilter f NoSplitter '[()])
 evalSTransDataAppFiltered _ sd_ = Proxy 
 
+flattenSteps :: Proxy (stepsTree :: [*])  -> Proxy (FlattenSteps stepsTree)
+flattenSteps _ = Proxy
 
 (>>>) :: STransData m sp f1 () -> STransData m sp f2 b -> STransData m sp (ComposeFunc f1 f2) b 
 (>>>) = Compose

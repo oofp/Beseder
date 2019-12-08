@@ -42,6 +42,7 @@ module Beseder.Base.ControlData
     , evalSTransDataLabels'
     , evalSTransDataNamedLabels'
     , evalSTransDataAppFiltered'
+    , flattenSteps
     , scopeRes
     , clearAllBut
     , caseOf
