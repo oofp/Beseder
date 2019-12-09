@@ -121,4 +121,27 @@ instance (MonadIO m, TimerProv m) => Transition m (TimerArmed m name) where
   type instance NextStates (TimerArmed m name) = '[TimerTriggered m name]
   next (St evData) cbFunc = timerTransition evData (\nextEvData -> cbFunc (variantFromValue (St nextEvData)))
   
+{-  
+  @startuml
+
+  title Timer State Model
+  [*] --> TimerNotArmed
+  TimerNotArmed --> [*]
+  
+  
+  TimerNotArmed --> TimerArmed : StartTimer
+  
+  TimerArmed --> TimerStopped : StopTimer
+  
+  TimerArmed --> TimerTriggered : trans
+  
+  TimerStopped --> [*]
+  TimerTriggered --> [*]
+  
+  note right
+  terminated
+  end note
+  
+  @enduml
+-}
   

@@ -27,12 +27,51 @@ import           Beseder.Base.Common
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Quote
 import           Beseder.Base.Internal.StHelper
+import           Data.Text (pack)
 
 type MkResDef m resPars initSt = resPars -> m (initSt)
 type RequestDef m req st results = req -> st -> m (V results)
 type TransitionDef m st nextStates = st -> ((V nextStates) -> m ()) -> m ()
 type TermDef m st = st -> m ()
 type OpDef m st a = st -> m a 
+
+data ResDsc = ResDsc 
+  { resStates :: [Text]
+  , initStates :: [Text]
+  , transitions :: [(Text,[Text])]
+  , requests :: [(Text,Text,[Text])]
+  , termStates :: [Text]
+  } deriving (Show)
+
+instance Semigroup ResDsc where
+  r1 <> r2 = 
+    ResDsc 
+      (resStates r1 <> resStates r2)   
+      (initStates r1 <> initStates r2)   
+      (transitions r1 <> transitions r2)   
+      (requests r1 <> requests r2)   
+      (termStates r1 <> termStates r2)   
+
+instance Monoid ResDsc where
+  mempty = emptyResDsc
+
+emptyResDsc :: ResDsc
+emptyResDsc = ResDsc [] [] [] [] []
+
+addState :: Text -> ResDsc -> ResDsc 
+addState stateName resDsc = resDsc {resStates = stateName : resStates resDsc}
+
+addInitState :: Text -> ResDsc -> ResDsc 
+addInitState stateName resDsc = resDsc {initStates = stateName : initStates resDsc}
+
+addTrans :: (Text,[Text]) -> ResDsc -> ResDsc 
+addTrans transEntry resDsc = resDsc {transitions = transEntry : transitions resDsc}
+
+addReq :: (Text,Text,[Text]) -> ResDsc -> ResDsc 
+addReq reqEntry resDsc = resDsc {requests = reqEntry : requests resDsc}
+
+addTerm :: Text -> ResDsc -> ResDsc 
+addTerm termState resDsc = resDsc {termStates = termState : termStates resDsc}
 
 mkResDefName :: Name
 mkResDefName = ''MkResDef
@@ -46,11 +85,38 @@ buildRes className = do
     _ -> error "Should be class declaration"
 
 parseDecs :: Name -> [Dec] -> Q [Dec]
-parseDecs className decs = concat <$> mapM (parseDec className) decs
+parseDecs className decs = 
+  evalStateT (parseDecsState className decs) emptyResDsc
 
+printAsUml :: Text -> ResDsc -> IO ()
+printAsUml classText resDsc = do
+  putStrLn ("@startuml" :: Text)
+  putStrLn ("hide empty description"::Text)
+  putStrLn ("title " <> classText)
 
+  forM_ (initStates resDsc) 
+    (\st -> putStrLn ("[*] --> " <> st))
+  forM_ (transitions resDsc) 
+    (\(fromState, toStates) -> 
+        forM toStates (\toState -> putStrLn (fromState <> " --> " <> toState <> " : trans")))
+  forM_ (requests resDsc) 
+    (\(req, fromState, toStates) -> 
+        forM toStates (\toState -> putStrLn (fromState <> " --> " <> toState <> " : " <> req)))
+  forM_ (termStates resDsc) 
+    (\st -> putStrLn (st <> "--> [*]"))
+  putStrLn ("@enduml" :: Text)
+        
+
+parseDecsState :: Name -> [Dec] -> StateT ResDsc Q [Dec]
+parseDecsState className decs = do
+  decs <- concat <$> mapM (parseDec className) decs
+  resDsc <- get
+  liftIO $ putStrLn (("***************** ResDsc: " :: Text) <> show resDsc)
+  liftIO $ printAsUml (pack $ nameBase className) resDsc
+  return decs
+  
 -- 
-parseDec :: Name -> Dec -> Q [Dec]
+parseDec :: Name -> Dec -> StateT ResDsc Q [Dec]
 parseDec _className (DataFamilyD stateName _ _) = parseDataFam stateName
 parseDec className -- (SigD sigName sigType) = 
           (SigD funcName
@@ -121,11 +187,13 @@ buildState stateName =
     namePar = mkName "name"
     resPar = mkName "res"
 
-parseDataFam :: Name -> Q [Dec]
+parseDataFam :: Name -> StateT ResDsc Q [Dec]
 parseDataFam stateName =  
     if stStrName == "ResPar" -- no need to create entry for ResPar
       then return $ []
-      else return $
+      else do
+        modify (addState $ pack stStrName)
+        return $
             (buildStateTypeSyn stateName) : (buildStatePred stateName)
   where
     stStrName = nameBase stateName
@@ -190,7 +258,7 @@ buildStatePred stateName =
     stPar = mkName "st"
     boolName = mkName "Bool"
 
-parseMkRes :: Name -> Name -> Name -> Q [Dec]
+parseMkRes :: Name -> Name -> Name -> StateT ResDsc Q [Dec]
 parseMkRes className funcName initStateName = do
   let mName = mkName "m"
       nameName = mkName "name"
@@ -200,6 +268,7 @@ parseMkRes className funcName initStateName = do
       resStName = mkName "ResSt"
       resParFuncArgName = mkName "resPar"
   liftIO $ putStrLn ("***************** parseMkRes" :: Text)
+  modify (addInitState $ pack (nameBase initStateName))
   return $  
     [ InstanceD Nothing
       [ AppT
@@ -228,56 +297,70 @@ parseMkRes className funcName initStateName = do
               ) []
           ]
       ]
-    ]  
+    ]
 
-parseTransition :: Name -> Name -> Name -> Language.Haskell.TH.Type -> Q [Dec]
-parseTransition className funcName fromStateName statesListType = 
+
+parseTransition :: Name -> Name -> Name -> Language.Haskell.TH.Type -> StateT ResDsc Q [Dec]
+parseTransition className funcName fromStateName statesListType = do
     --liftIO $ putStrLn (("***************** parseTransition states" :: Text) <> show stateNames)
     --liftIO $ putStrLn ("***************** parseTransition" :: Text)
-    [d|
-        type instance StateTrans (St ($(conT fromStateName) m res) name) = 'Dynamic    
-        instance 
-          ( $(conT className) m res
-          -- , StVar $(statesListTypeNew) name -- '[State2 m res, State1 m res] name
-          , MonadIO m
-          ) => Transition m (St ($(conT fromStateName) m res) name) where
-          type NextStates (St ($(conT fromStateName) m res) name) = StList name $(statesListTypeNew) 
-          next st@(St fromState) cb = $(varE funcName) fromState (\nextStates -> void $ cb (asStVar (nameFromSt st) nextStates)) >> return True
-    |]    
+    modify (addTrans transEntry)
+    lift $   
+      [d|
+          type instance StateTrans (St ($(conT fromStateName) m res) name) = 'Dynamic    
+          instance 
+            ( $(conT className) m res
+            -- , StVar $(statesListTypeNew) name -- '[State2 m res, State1 m res] name
+            , MonadIO m
+            ) => Transition m (St ($(conT fromStateName) m res) name) where
+            type NextStates (St ($(conT fromStateName) m res) name) = StList name $(statesListTypeNew) 
+            next st@(St fromState) cb = $(varE funcName) fromState (\nextStates -> void $ cb (asStVar (nameFromSt st) nextStates)) >> return True
+      |]    
   where
     mName = mkName "m"
     nameName = mkName "name"
     resName = mkName "res"
     stateNames = parseStatesList statesListType
+    stateTexts = fmap (pack . nameBase) stateNames
+    fromStateText = pack $ nameBase fromStateName
+    transEntry = (fromStateText,stateTexts)    
     statesListTypeNew = return $ buildStateList stateNames resName mName 
 
-parseRequest :: Name -> Name -> Name -> Name -> Language.Haskell.TH.Type -> Q [Dec]
-parseRequest className funcName reqName fromStateName statesListType = -- do
+parseRequest :: Name -> Name -> Name -> Name -> Language.Haskell.TH.Type -> StateT ResDsc Q [Dec] 
+parseRequest className funcName reqName fromStateName statesListType = do
     -- liftIO $ putStrLn ("***************** parseRequest" :: Text)
-    [d|
-      instance 
-        ( $(conT className) m res
-        ) => Request m $(conT reqName) (St ($(conT fromStateName) m res) name) where
-          type ReqResult $(conT reqName) (St ($(conT fromStateName) m res) name) = StList name $(statesListTypeNew) 
-          request reqData st@(St fromState) = fmap (asStVar (nameFromSt st)) ($(varE funcName) reqData fromState) 
-    |]    
+    modify (addReq reqEntry)
+    lift $   
+      [d|
+        instance 
+          ( $(conT className) m res
+          ) => Request m $(conT reqName) (St ($(conT fromStateName) m res) name) where
+            type ReqResult $(conT reqName) (St ($(conT fromStateName) m res) name) = StList name $(statesListTypeNew) 
+            request reqData st@(St fromState) = fmap (asStVar (nameFromSt st)) ($(varE funcName) reqData fromState) 
+      |]    
   where
       mName = mkName "m"
       nameName = mkName "name"
       resName = mkName "res"
       stateNames = parseStatesList statesListType
       statesListTypeNew = return $ buildStateList stateNames resName mName 
-  
-parseTerminate :: Name -> Name -> Name -> Q [Dec]
-parseTerminate className funcName fromStateName = -- do
+      stateTexts = fmap (pack . nameBase) stateNames
+      fromStateText = pack $ nameBase fromStateName
+      reqText = pack $ nameBase reqName
+      reqEntry = (reqText, fromStateText, stateTexts)
+    
+parseTerminate :: Name -> Name -> Name -> StateT ResDsc Q [Dec]
+parseTerminate className funcName fromStateName = do
     -- liftIO $ putStrLn ("***************** parseRequest" :: Text)
-    [d|
-      type instance StateTrans (St ($(conT fromStateName) m res) name) = 'Static    
-      instance 
-        ( $(conT className) m res
-        ) => TermState m (St ($(conT fromStateName) m res) name) where
-          terminate (St fromState) = $(varE funcName) fromState
-    |]    
+    modify (addTerm (pack $ nameBase fromStateName))
+    lift $
+      [d|
+        type instance StateTrans (St ($(conT fromStateName) m res) name) = 'Static    
+        instance 
+          ( $(conT className) m res
+          ) => TermState m (St ($(conT fromStateName) m res) name) where
+            terminate (St fromState) = $(varE funcName) fromState
+      |]    
       
 parseStatesList :: Language.Haskell.TH.Type -> [Name]
 parseStatesList 
