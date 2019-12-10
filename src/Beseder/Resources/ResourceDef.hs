@@ -27,7 +27,8 @@ import           Beseder.Base.Common
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Quote
 import           Beseder.Base.Internal.StHelper
-import           Data.Text (pack)
+import           Data.Text (pack, unpack)
+import           Data.List ((\\))
 
 type MkResDef m resPars initSt = resPars -> m (initSt)
 type RequestDef m req st results = req -> st -> m (V results)
@@ -113,8 +114,20 @@ parseDecsState className decs = do
   resDsc <- get
   liftIO $ putStrLn (("***************** ResDsc: " :: Text) <> show resDsc)
   liftIO $ printAsUml (pack $ nameBase className) resDsc
-  return decs
-  
+  let defStates = (termStates resDsc) <> (fst <$> (transitions resDsc))
+      undefStates = (resStates resDsc) \\ defStates
+  liftIO $ putStrLn (("Identified static states: " :: Text) <> show undefStates)
+  undefStateDecs <- lift $ concat <$> mapM mkStaticStateTrans undefStates
+  return $ decs <> undefStateDecs
+
+mkStaticStateTrans :: Text -> Q [Dec]
+mkStaticStateTrans stateTxt = 
+    [d|
+      type instance StateTrans (St ($(conT stateName) m res) name) = 'Static    
+    |]  
+  where
+    stateName = mkName (unpack stateTxt)  
+
 -- 
 parseDec :: Name -> Dec -> StateT ResDsc Q [Dec]
 parseDec _className (DataFamilyD stateName _ _) = parseDataFam stateName
