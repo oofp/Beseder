@@ -57,7 +57,7 @@ class Request ctx req state1 where
 ### Resource definition
 The simplest way to create new resource is to use type class that defines resource initial and terminated states, as well as supported requests and state transitions for every state. Then we call _buildRes_ that uses Template Haskell to generate all required declarations. As a bonus buildRes also generates resource state diagram 
 
-* Here is an example of *[CardReader](https://github.com/oofp/beseder-demo-apps/blob/master/atm-demo/src/Beseder/Atm/Resources/CardReaderRes.hs)* resource definition from *[ATM demo program](https://github.com/oofp/beseder-demo-apps)* 
+* Here is an example of *[CardReader](https://github.com/oofp/beseder-demo-apps/blob/master/atm-demo/src/Beseder/Atm/Resources/CardReaderRes.hs)* resource definition from *[ATM demo program](https://github.com/oofp/beseder-demo-apps)*: 
 
 ![CardReader](https://user-images.githubusercontent.com/25211514/70853186-9dc40700-1e78-11ea-8bdf-1ac5ccd80b52.png)
 
