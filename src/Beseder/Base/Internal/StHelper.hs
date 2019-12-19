@@ -26,15 +26,20 @@ module Beseder.Base.Internal.StHelper
   , AreEq
   , IsContentEq
   , stFunc
+  , SupportedRequests (..)
+  , StReqs
   ) where
 
 import            Protolude hiding (First)
 import            Haskus.Utils.Variant 
 import            Beseder.Base.Internal.Core
 import            Beseder.Base.Internal.Named
+import            Beseder.Base.Internal.Flow
 import            Beseder.Base.Internal.TypeExp
 import            Beseder.Base.Internal.TupleHelper
+import            Beseder.Utils.ListHelper
 import            Data.Coerce
+import            Haskus.Utils.Types.List
 
 stWithName :: stData -> Named name -> St stData name
 stWithName stData _named = St stData
@@ -94,3 +99,18 @@ type family IsContentEq a b :: Bool where
 type family GetResState st :: * where
   GetResState (St st name) = st
 
+data SupportedRequests :: * -> (Exp [*]) 
+
+type family NameRequests (reqs :: [*]) (name :: Symbol) :: [*] where
+  NameRequests '[] name = '[]
+  NameRequests (req ': rs) name = (NamedRequest req name) ': (NameRequests rs name)
+
+type family StReqs (s :: *) :: [*] where
+  StReqs () = '[]
+  StReqs (St a name) = NameRequests (Eval (SupportedRequests (St a name))) name
+  StReqs (a,b) = Union (StReqs a) (StReqs b)
+  StReqs (V '[]) = '[]
+  StReqs (V '[x]) = StReqs x
+  StReqs (V (x ': xs)) = ListsIntersect (StReqs x) (StReqs (V xs))
+
+  

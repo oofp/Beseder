@@ -61,8 +61,13 @@ type family IfEmpty  (lst :: [*]) (subs :: [*]) :: [*] where
 type family UnitIfEmpty (lst :: [*]) :: [*] where 
   UnitIfEmpty lst = IfEmpty lst '[()]    
 
-type family ListsIntersect  (lst1 :: [k]) (lst2 :: [k]) :: Bool where   
-  ListsIntersect lst1 lst2 = 'False  
+type family ListsIntersect  (lst1 :: [k]) (lst2 :: [k]) :: [k] where   
+  ListsIntersect '[] lst2 = '[]
+  ListsIntersect (x ': xs) lst2 =  ListsIntersect' (ListContains x lst2) x xs lst2
+
+type family ListsIntersect' (fl :: Bool) (x :: k) (lst1 :: [k]) (lst2 :: [k]) :: [k] where   
+  ListsIntersect 'False x lst1 lst2 = ListsIntersect lst1 lst2
+  ListsIntersect 'True x lst1 lst2 = x ': (ListsIntersect lst1 lst2)
 
 type family IsSublist (bigList :: [k]) (smallList :: [k]) :: Bool where
   IsSublist bigList '[] = True

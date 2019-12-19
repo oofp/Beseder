@@ -76,7 +76,44 @@ type family ApplyFuncIfTrue (fl :: Bool) (func :: * -> [*] -> Exp ([*],[*])) (sp
   ApplyFuncIfTrue 'True (LabelFunc name) sp xs = '[LabelStep name sp xs]
   ApplyFuncIfTrue 'True func sp xs = '[Step func sp xs]
   ApplyFuncIfTrue 'False func sp xs = '[]
-  
+
+type family ValidateFunc (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: (Bool, [*]) where
+  ValidateFunc (ComposeFunc f1 f2) sp xs = ValidateCompose (ValidateFunc f1 sp xs) f1 f2 sp xs
+  ValidateFunc (BindFunc f1 f2) sp xs = ValidateFunc (ComposeFunc f1 f2) sp xs
+  ValidateFunc (CaptureFunc sp1 f1) sp xs = PropValRes (OnStep sp1) (ValidateFunc f1 sp (ListSplitterRes sp1 xs)) 
+  ValidateFunc (CaptureOrElseFunc sp1 f1 f2) sp xs = ValidateOnOrElse (ValidateFunc f1 sp (ListSplitterRes sp1 xs)) sp1 f1 f2 sp xs 
+  ValidateFunc (EmbedFunc sp1 f1) sp xs = PropValRes (TryStep sp1) (ValidateFunc f1 (sp :&& sp1) (ListSplitterRes sp1 xs)) 
+  ValidateFunc (ForeverFunc f) sp xs = PropValRes ForeverStep (ValidateFunc f sp xs)
+  ValidateFunc (BlockFunc f) sp xs = PropValRes BlockStep (ValidateFunc f sp xs)
+  ValidateFunc (ExtendForLoopFunc f) sp xs = '( 'True, '[])
+  ValidateFunc (AlignFunc f) sp xs = ValidateFunc f sp xs
+  ValidateFunc (ScopeFunc f _) sp xs = ValidateFunc f sp xs
+  ValidateFunc (HandleLoopFunc f) sp xs = 
+    PropValRes BlockStep 
+      (ValidateFunc 
+        (ComposeFunc
+          (ExtendForLoopFunc f) 
+          (ForeverFunc (AlignFunc f))) sp xs)
+  ValidateFunc (LabelFunc label) sp xs = '( 'True, '[LabelStep label sp xs])
+  ValidateFunc func sp xs = '( 'True, '[Step func sp xs])
+
+type family PropValRes (wr :: [*] -> *) (res :: (Bool, [*])) :: (Bool, [*]) where
+  PropValRes wr '(fl, steps) = '(fl, '[wr steps])
+
+type family ValidateCompose (res1 :: (Bool, [*])) (func1 :: * -> [*] -> Exp ([*],[*])) (func2 :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: (Bool, [*]) where
+  ValidateCompose '( 'False, steps1) f1 f2 sp xs = '( 'False, steps1)
+  ValidateCompose '( 'True, steps1) f1 f2 sp xs = ValidateCompose' steps1 (ValidateFunc f2 sp (First (Eval (f1 sp xs)))) 
+
+type family ValidateCompose' (steps1 :: [*]) (res2 :: (Bool, [*])) :: (Bool, [*]) where
+  ValidateCompose steps1 '(fl, steps2) = '(fl, Concat steps1 steps2)
+
+type family ValidateOnOrElse (res1 :: (Bool, [*])) (sp1 :: *) (func1 :: * -> [*] -> Exp ([*],[*])) (func2 :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: (Bool, [*]) where
+  ValidateOnOrElse '( 'False, steps1) sp1 f1 f2 sp xs = '( 'False, '[OnOrStep sp1 steps1 '[]])
+  ValidateOnOrElse '( 'True, steps1) sp1 f1 f2 sp xs = ValidateOnOrElse' sp1 steps1 (ValidateFunc f2 sp (ListSplitterReminder sp1 xs))
+
+type family ValidateOnOrElse' (sp1 :: *) (steps1 :: [*]) (res2 :: (Bool, [*])) :: (Bool, [*]) where
+  ValidateOnOrElse' sp1 steps1 '(fl, steps2) = '(fl, '[OnOrStep sp1 steps1 steps2])
+
 data LabelsOnly :: (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp Bool
 type instance Eval (LabelsOnly func sp xs) = IsLabelFam func  
 type family IsLabelFam (func :: * -> [*] -> Exp ([*],[*])) :: Bool where
@@ -107,3 +144,37 @@ type family GetSteps (d :: *) :: [*] where
 type family FlattenSteps (steps :: [*]) :: [*] where
   FlattenSteps '[] = '[]
   FlattenSteps (s ': steps) = Concat (GetSteps s) (FlattenSteps steps)
+
+
+--
+data Edge (func :: * -> [*] -> Exp ([*],[*])) (fromState :: *) (toState :: *)
+
+type family Edges (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [*] where
+  Edges (ComposeFunc f1 f2) sp xs = Concat (Edges f1 sp xs) (Edges f2 sp (First (Eval (f1 sp xs))))
+  Edges (BindFunc f1 f2) sp xs = Edges (ComposeFunc f1 f2) sp xs
+  Edges (CaptureFunc sp1 f1) sp xs = Edges f1 sp (ListSplitterRes sp1 xs) 
+  Edges (CaptureOrElseFunc sp1 f1 f2) sp xs = Concat (Edges f1 sp (ListSplitterRes sp1 xs)) (Edges f2 sp (ListSplitterReminder sp1 xs)) 
+  Edges (EmbedFunc sp1 f1) sp xs = Edges f1 (sp :&& sp1) (ListSplitterRes sp1 xs) 
+  Edges (ForeverFunc f) sp xs = Edges f sp xs
+  Edges (BlockFunc f) sp xs = Edges f sp xs
+  Edges (ExtendForLoopFunc f) sp xs = '[]
+  Edges (AlignFunc f) sp xs = Edges f sp xs
+  Edges (ScopeFunc f _) sp xs = Edges f sp xs
+  Edges (HandleLoopFunc f) sp xs = 
+    Edges 
+      (ComposeFunc
+        (ExtendForLoopFunc f) 
+          (ForeverFunc (AlignFunc f))) sp xs
+  Edges (LabelFunc label) sp xs = '[]
+  Edges func sp xs = Edges' func xs
+
+type family Edges' (func :: * -> [*] -> Exp ([*],[*])) (xs :: [*]) :: [*] where  
+  Edges' func '[] = '[]  
+  Edges' func  (x ': xs) = Concat (Edges'' func x (First (Eval (func NoSplitter '[x])))) (Edges' func xs)
+
+type family Edges'' (func :: * -> [*] -> Exp ([*],[*])) x (xs :: [*]) :: [*] where
+  Edges'' func x '[] = '[]
+  Edges'' func x (x ': xs) = Edges'' func x xs
+  Edges'' func x (y ': xs) = (Edge func x y) ': (Edges'' func x xs)
+
+--

@@ -45,6 +45,8 @@ module Beseder.Base.ControlData
     , getLabel
     , getLabel'
     , flattenSteps
+    , edgesSTransData
+    , edgesSTransData'
     , scopeRes
     , clearAllBut
     , caseOf

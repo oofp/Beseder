@@ -68,6 +68,12 @@ evalSTransData' sd _ = Proxy
 evalSTransData :: STransData m NoSplitter f a -> Proxy (Eval (f NoSplitter '[()]))
 evalSTransData sd  = evalSTransData' sd (Proxy @('[()])) 
 
+edgesSTransData' :: forall sp m f xs a. STransData m sp f a -> Proxy xs -> Proxy (Edges f sp xs)
+edgesSTransData' sd _ = Proxy
+
+edgesSTransData :: STransData m NoSplitter f a -> Proxy (Edges f NoSplitter '[()])
+edgesSTransData sd  = edgesSTransData' sd (Proxy @('[()])) 
+
 evalSTransDataApp' :: STransData m sp f a -> Proxy xs -> Proxy (ApplyFunc f sp xs)
 evalSTransDataApp' sd_ _ = Proxy 
 

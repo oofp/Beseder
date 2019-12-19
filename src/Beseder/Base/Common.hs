@@ -30,6 +30,8 @@ module Beseder.Base.Common
     , UnwrapContent
     , AreEq
     , IsContentEq
+    , SupportedRequests (..)
+    , StReqs
     ) where
 
 import Beseder.Base.Internal.Core 
