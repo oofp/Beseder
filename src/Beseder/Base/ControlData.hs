@@ -47,6 +47,16 @@ module Beseder.Base.ControlData
     , flattenSteps
     , edgesSTransData
     , edgesSTransData'
+    , getSTransDiagram
+    , getSTransDiagram'
+    , getSTransDiagramSymbol
+    , getSTransDiagramSymbol'
+    , vedgesSTransData
+    , vedgesSTransData'
+    , statesAndLabels
+    , statesAndLabels'
+    , validateSTransData
+    , validateSTransData'
     , scopeRes
     , clearAllBut
     , caseOf

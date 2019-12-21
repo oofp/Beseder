@@ -58,8 +58,8 @@ timerForever = do
   invoke #t1 StopTimer
   clearAllResources    
   
--- :t evalSTransData (timer1 1)
-
+-- :t evalSTransData timer1 1)
+-- :t validateSTransData timerForever
 
 --runTimer1 :: IO ()  
 --runTimer1 = runAsyncData $ (timer1 2)

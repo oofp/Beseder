@@ -21,9 +21,15 @@ module Beseder.Base.Internal.STransProc where
 
 import           Protolude                    hiding (Product, handle,TypeError,First,forever, on)
 import           Haskus.Utils.Types.List
+import           Haskus.Utils.Variant
+import           Beseder.Base.Internal.Flow
 import           Beseder.Base.Internal.TypeExp
 import           Beseder.Base.Internal.SplitOps
 import           Beseder.Base.Internal.STransDef
+import           Beseder.Base.Internal.StHelper
+import           Beseder.Utils.ListHelper
+import           GHC.TypeLits
+import           Data.Text
 
 data Step (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*])
 data OnStep (sp1 :: *) (steps :: [*])  
@@ -33,6 +39,7 @@ data ForeverStep (steps :: [*])
 data BlockStep (steps :: [*])  
 data LoopStep (steps :: [*])  
 data LabelStep (label :: Symbol) (sp :: *) (xs :: [*])  
+data ErrorStep (func :: * -> [*] -> Exp ([*],[*])) (errState :: *) (errText :: Symbol) 
 
 type family ApplyFunc (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [*] where
   ApplyFunc (ComposeFunc f1 f2) sp xs = Concat (ApplyFunc f1 sp xs) (ApplyFunc f2 sp (First (Eval (f1 sp xs))))
@@ -95,6 +102,7 @@ type family ValidateFunc (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*
           (ExtendForLoopFunc f) 
           (ForeverFunc (AlignFunc f))) sp xs)
   ValidateFunc (LabelFunc label) sp xs = '( 'True, '[LabelStep label sp xs])
+  ValidateFunc (InvokeAllFunc req name) sp xs = ValidateInvoke req name sp xs (ListContains (NamedRequest req name) (StReqs (V xs))) 
   ValidateFunc func sp xs = '( 'True, '[Step func sp xs])
 
 type family PropValRes (wr :: [*] -> *) (res :: (Bool, [*])) :: (Bool, [*]) where
@@ -113,6 +121,12 @@ type family ValidateOnOrElse (res1 :: (Bool, [*])) (sp1 :: *) (func1 :: * -> [*]
 
 type family ValidateOnOrElse' (sp1 :: *) (steps1 :: [*]) (res2 :: (Bool, [*])) :: (Bool, [*]) where
   ValidateOnOrElse' sp1 steps1 '(fl, steps2) = '(fl, '[OnOrStep sp1 steps1 steps2])
+
+type family ValidateInvoke (req :: *) (name :: Symbol) (sp :: *) (xs :: [*]) (fl :: Bool) :: (Bool, [*]) where
+  ValidateInvoke req name sp xs 'True = '( 'True, '[Step (InvokeAllFunc req name) sp xs])
+  ValidateInvoke req name sp xs 'False = '( 'False, '[ErrorStep (InvokeAllFunc req name) (V xs) "Request not supported"])
+
+--
 
 data LabelsOnly :: (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp Bool
 type instance Eval (LabelsOnly func sp xs) = IsLabelFam func  
@@ -165,7 +179,6 @@ type family Edges (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [
       (ComposeFunc
         (ExtendForLoopFunc f) 
           (ForeverFunc (AlignFunc f))) sp xs
-  Edges (LabelFunc label) sp xs = '[]
   Edges func sp xs = Edges' func xs
 
 type family Edges' (func :: * -> [*] -> Exp ([*],[*])) (xs :: [*]) :: [*] where  
@@ -174,7 +187,130 @@ type family Edges' (func :: * -> [*] -> Exp ([*],[*])) (xs :: [*]) :: [*] where
 
 type family Edges'' (func :: * -> [*] -> Exp ([*],[*])) x (xs :: [*]) :: [*] where
   Edges'' func x '[] = '[]
+  Edges'' (LabelFunc name) x '[x] = '[Edge (LabelFunc name) x x] 
   Edges'' func x (x ': xs) = Edges'' func x xs
   Edges'' func x (y ': xs) = (Edge func x y) ': (Edges'' func x xs)
 
+data StatesAndLabels (sts :: [*]) (labels :: [(*,Symbol)])  
+type family GetStatesAndLabels (edges :: [*]) :: * where
+  GetStatesAndLabels edges = PostProcessStatesLabels (GetStatesAndLabels' edges)
+
+type family GetStatesAndLabels' (edges :: [*]) :: * where
+  GetStatesAndLabels' '[] = StatesAndLabels '[] '[]  
+  GetStatesAndLabels' ((Edge (LabelFunc name) from to) ': moreEdges) = AddLabel name from (GetStatesAndLabels' moreEdges) 
+  GetStatesAndLabels' ((Edge otherFunc () ()) ': moreEdges) = GetStatesAndLabels' moreEdges
+  GetStatesAndLabels' ((Edge otherFunc from ()) ': moreEdges) = AddState from (GetStatesAndLabels' moreEdges)
+  GetStatesAndLabels' ((Edge otherFunc () to) ': moreEdges) = AddState to (GetStatesAndLabels' moreEdges)
+  GetStatesAndLabels' ((Edge otherFunc from to) ': moreEdges) = AddState from (AddState to (GetStatesAndLabels' moreEdges))
+
+type family AddLabel (name :: Symbol) (s :: *) (stsLabels :: *) :: * where  
+  AddLabel name s (StatesAndLabels sts lbls) = StatesAndLabels sts ( '(s, name) ': lbls) 
+
+type family AddState (s :: *) (stsLabels :: *) :: * where  
+  AddState s (StatesAndLabels sts lbls) = StatesAndLabels (s ': sts) lbls
+    
+type family PostProcessStatesLabels (stsLabels :: *) :: * where
+  PostProcessStatesLabels (StatesAndLabels sts lbls) = StatesAndLabels (Nub sts) lbls
+
+data VBegin
+data VEnd
+data VLabel (name :: Symbol)
+data VIndex (i :: Nat)
+data (-->) (from :: *) (to :: *)
+
+class ShowV a where
+  showV :: Proxy a -> Text
+
+instance ShowV VBegin where
+  showV _ = "[*]"
+instance ShowV VEnd where
+  showV _ = "[*]"
+instance KnownSymbol name => ShowV (VLabel name) where
+  showV _ = pack $ symbolVal (Proxy @name)
+instance KnownNat ix => ShowV (VIndex ix) where
+  showV _ = show $ natVal (Proxy @ix)
+instance ShowV ( '[]) where
+  showV _ = ""
+instance (ShowV v, ShowV vs) => ShowV (v ': vs) where
+  showV _ = (showV (Proxy @v)) <> "\n" <> (showV (Proxy @vs))
+instance (ShowV v, ShowV v1) => ShowV ((-->) v v1) where
+  showV _ = (showV (Proxy @v)) <> " --> " <> (showV (Proxy @v1))
+        
+type family TransformEdges (edges :: [*]) :: [*] where
+  TransformEdges edges = TransformEdges' edges (GetStatesAndLabels edges) 
+
+type family TransformEdges' (edges :: [*]) (stsLabels :: *) :: [*] where
+  TransformEdges' '[] stsLables = '[]
+  TransformEdges' ((Edge (LabelFunc name) x x) ': edges) stsLabels = TransformEdges' edges stsLabels
+  TransformEdges' ((Edge f from to) ': edges) stsLabels = 
+      ((-->) (GetVertex 'False from stsLabels)  (GetVertex 'True to stsLabels)) ': (TransformEdges' edges stsLabels)
+
+type family GetVertex (flEnd :: Bool) (s :: *) (stsLabels :: *) where
+  GetVertex 'False () stsLabels = VBegin
+  GetVertex 'True () stsLabels = VEnd
+  GetVertex fl s (StatesAndLabels sts labels) = GetVertex' s sts (FindLabel s labels)      
+
+type family GetVertex' (s :: *) (sts :: [*]) (findLabelRes :: *) where
+  GetVertex' s sts (VLabel name) = VLabel name
+  GetVertex' s sts () = VIndex (FindState 0 s sts)
+
+type family FindLabel (s :: *) (lbls :: [(*,Symbol)]) :: * where
+  FindLabel s '[] = ()
+  FindLabel s ( '(s, name) ': moreLabels) = VLabel name
+  FindLabel s ( '(s1, name) ': moreLabels) = FindLabel s moreLabels
+
+type family FindState (ix :: Nat) (s :: *) (sts :: [*]) :: Nat where
+  FindState ix s '[] = 0
+  FindState ix s (s ': moreStates) = (ix+1)
+  FindState ix s (s1 ': moreStates) = FindState (ix+1) s moreStates
+
+type family NatToSymbol (n :: Nat) :: Symbol where 
+  NatToSymbol 0 = "0"
+  NatToSymbol 1 = "1"
+  NatToSymbol 2 = "2"
+  NatToSymbol 3 = "3"
+  NatToSymbol 4 = "4"
+  NatToSymbol 5 = "5"
+  NatToSymbol 6 = "6"
+  NatToSymbol 7 = "7"
+  NatToSymbol 8 = "8"
+  NatToSymbol 9 = "9"
+  NatToSymbol n = AppendSymbol (NatToSymbol (Div n 10)) (NatToSymbol (Mod n 10))
+  
+type family EdgesToText (edges :: [*]) :: Symbol where
+  EdgesToText '[] = ""
+  EdgesToText '[e] = EdgeToText e
+  EdgesToText (e ': moreEdges) = AppendSymbol (EdgeToText e) (AppendSymbol "\n" (EdgesToText moreEdges)) 
+
+type family EdgeToText (edge :: *) :: Symbol where
+  EdgesToText (v1 --> v2) = AppendSymbol (VertexToText v1) (AppendSymbol " --> " (VertexToText v2))
+
+type family VertexToText (v :: *) :: Symbol where
+  VertexToText VBegin = "[*]"
+  VertexToText VEnd = "[*]"
+  VertexToText (VIndex ix) = (NatToSymbol ix)
+  VertexToText (VLabel l) = l
+   
+{-
+type family StateCollector newState (curIndex :: Nat) (curStates :: [(Nat, *)]) :: (Nat, [(Nat, *)]) where
+  StateCollector st curIndex '[] = '(curIndex, '[ '(curIndex, st)]) 
+  StateCollector st curIndex ( '(theIndex, st) ': moreEntries) = '(theIndex, ( '(theIndex, st) ': moreEntries)) 
+  StateCollector st curIndex ( '(theIndex, st1) ': moreEntries) = StateCollector' theIndex st1  (StateCollector st (theIndex+1) moreEntries) 
+
+type family StateCollector' (prevIndex :: Nat)  prevState (res :: (Nat, [(Nat, *)])) :: (Nat, [(Nat, *)]) where
+  StateCollector' prevIndex prevState '(newIndex, states) = '(newIndex, ( '(prevIndex,prevState) ': states))
+-}
+
 --
+{-
+type family ConsolidateEdges (edges :: [*]) :: ([(Nat, *)], [*]) where
+  ConsolidateEdges edges = ConsolidateEdges' edges '( '[ '(0,())], '[])
+
+type family ConsolidateEdges2 (edges :: [*]) (acc :: ([(Nat, *)], [*])):: ([(Nat, *)], [*]) where
+  ConsolidateEdges2 '[] acc = acc 
+  ConsolidateEdges2  ((Edge f fromState toState) ': moreEdges) '( indices, curEdges) =  
+    ConsolidateEdges3 (StateCollector fromState 0 indices) toState curEdges
+-}
+
+    
+  

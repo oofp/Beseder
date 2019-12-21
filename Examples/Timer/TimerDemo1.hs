@@ -13,6 +13,7 @@
 {-# LANGUAGE UndecidableInstances   #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TemplateHaskell        #-} 
 {-# OPTIONS_GHC -fomit-interface-pragmas #-}
 
 module  TimerDemo1 where

@@ -121,6 +121,11 @@ instance (MonadIO m, TimerProv m) => Transition m (TimerArmed m name) where
   type instance NextStates (TimerArmed m name) = '[TimerTriggered m name]
   next (St evData) cbFunc = timerTransition evData (\nextEvData -> cbFunc (variantFromValue (St nextEvData)))
   
+type instance Eval (SupportedRequests (TimerNotArmed m name)) = '[StartTimer]
+type instance Eval (SupportedRequests (TimerArmed m name)) = '[StopTimer]
+type instance Eval (SupportedRequests (TimerTriggered m name)) = '[]
+type instance Eval (SupportedRequests (TimerStopped m name)) = '[]
+
 {-  
   @startuml
 

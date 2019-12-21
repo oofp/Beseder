@@ -43,11 +43,17 @@ helloFlow3 = do
   liftIO $ putStrLn ("loop is completed" :: Text)
   termAndClearAllResources  
 
-  
-runFlow :: IO ()  
-runFlow = runAsyncData helloFlow3
+
+helloEmpty :: STransData TaskQ NoSplitter _ _
+helloEmpty = do  
+  newRes #t0 TimerRes
+  invoke #t1 (StartTimer 3)
+
+--runFlow :: IO ()  
+--runFlow = runAsyncData helloFlow3
 
 -- :t evalSTransDataNamedLabels #atOn helloFlow3
 -- :t evalSTransDataAppFiltered (Proxy @(MatchFunc LiftIOFunc))  helloFlow3
 -- :t flattenSteps $ evalSTransDataLabels'  helloFlow3 (Proxy :: Proxy '[()])
 -- :t flattenSteps $ evalSTransDataNamedLabels #atOn helloFlow3
+-- :t getLabel #atOn helloFlow3

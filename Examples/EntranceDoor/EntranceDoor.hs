@@ -80,6 +80,7 @@ openDoorIfClosed :: Int -> STransData m sp _ ()
 openDoorIfClosed doorTimeoutSec = do
   on @("door" :? IsBinSwitchOff) $ do
     invoke #door TurnOn
+    label #doorOpen
     newRes #doorTimer TimerRes
     invoke #doorTimer (StartTimer doorTimeoutSec)
 
@@ -87,6 +88,7 @@ closeDoor :: STransData m sp _ ()
 closeDoor = do
   clear #doorTimer   
   invoke #door TurnOff
+  label #doorClosed
 
 restartTimer :: Int -> STransData m sp _ () 
 restartTimer doorTimeoutSec = do
@@ -119,3 +121,5 @@ assertCheck = do
       newRes #failure (InitData ())
   
 evalAssertDoorHandler = evalSTransData' (assertDoorHandler 5) (Proxy @(InitState IO))
+
+vedges = vedgesSTransData' (assertDoorHandler 5) (Proxy @(InitState IO))

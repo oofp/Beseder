@@ -74,6 +74,30 @@ edgesSTransData' sd _ = Proxy
 edgesSTransData :: STransData m NoSplitter f a -> Proxy (Edges f NoSplitter '[()])
 edgesSTransData sd  = edgesSTransData' sd (Proxy @('[()])) 
 
+statesAndLabels' :: forall sp m f xs a. STransData m sp f a -> Proxy xs -> Proxy (GetStatesAndLabels (Edges f sp xs))
+statesAndLabels' sd _ = Proxy
+
+statesAndLabels :: STransData m NoSplitter f a -> Proxy (GetStatesAndLabels (Edges f NoSplitter '[()]))
+statesAndLabels sd  = statesAndLabels' sd (Proxy @('[()])) 
+
+vedgesSTransData' :: forall sp m f xs a. STransData m sp f a -> Proxy xs -> Proxy (TransformEdges (Edges f sp xs))
+vedgesSTransData' sd _ = Proxy
+
+vedgesSTransData :: STransData m NoSplitter f a -> Proxy (TransformEdges (Edges f NoSplitter '[()]))
+vedgesSTransData sd  = vedgesSTransData' sd (Proxy @('[()])) 
+
+getSTransDiagram' ::  forall sp m f xs a edges. (TransformEdges (Edges f sp xs) ~ edges, ShowV edges) => STransData m sp f a -> Proxy xs -> Text
+getSTransDiagram' sd _ = showV (Proxy @(TransformEdges (Edges f sp xs)))
+
+getSTransDiagram :: (TransformEdges (Edges f NoSplitter '[()]) ~ edges, ShowV edges) => STransData m NoSplitter f a -> Text
+getSTransDiagram sd  = getSTransDiagram' sd (Proxy @('[()])) 
+
+getSTransDiagramSymbol' ::  forall sp m f xs a edges. STransData m sp f a -> Proxy xs -> Proxy (EdgesToText (TransformEdges (Edges f sp xs)))
+getSTransDiagramSymbol' sd _ = Proxy @(EdgesToText (TransformEdges (Edges f sp xs)))
+
+getSTransDiagramSymbol :: STransData m NoSplitter f a -> Proxy (EdgesToText (TransformEdges (Edges f NoSplitter '[()])))
+getSTransDiagramSymbol sd  = getSTransDiagramSymbol' sd (Proxy @('[()])) 
+
 evalSTransDataApp' :: STransData m sp f a -> Proxy xs -> Proxy (ApplyFunc f sp xs)
 evalSTransDataApp' sd_ _ = Proxy 
 
@@ -85,6 +109,12 @@ evalSTransDataLabels' sd_ _ = Proxy
 
 evalSTransDataLabels :: STransData m sp f a -> Proxy (ApplyWithFilter LabelsOnly f NoSplitter '[()])
 evalSTransDataLabels sd_ = Proxy 
+
+validateSTransData' :: STransData m sp f a -> Proxy xs -> Proxy (ValidateFunc f sp xs)
+validateSTransData' sd_ _ = Proxy 
+
+validateSTransData :: STransData m sp f a -> Proxy (ValidateFunc f NoSplitter '[()])
+validateSTransData sd_ = Proxy 
 
 evalSTransDataNamedLabels' :: Named label -> STransData m sp f a -> Proxy xs -> Proxy (ApplyWithFilter (LabelsName label) f sp xs)
 evalSTransDataNamedLabels' _ sd_ _ = Proxy 
