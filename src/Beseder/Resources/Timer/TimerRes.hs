@@ -126,6 +126,11 @@ type instance Eval (SupportedRequests (TimerArmed m name)) = '[StopTimer]
 type instance Eval (SupportedRequests (TimerTriggered m name)) = '[]
 type instance Eval (SupportedRequests (TimerStopped m name)) = '[]
 
+type instance StateTitle (TimerNotArmedEvData m) = "TimerNotArmed"
+type instance StateTitle (TimerArmedEvData m) = "TimerArmed"
+type instance StateTitle (TimerTriggeredEvData m) = "TimerTriggered"
+type instance StateTitle (TimerStoppedEvData m) = "TimerStopped"
+
 {-  
   @startuml
 

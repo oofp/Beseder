@@ -81,9 +81,11 @@ endCase = Assert @EmptyList
 defCase :: STransData m sp f () -> STransData m sp (BlockFunc f) ()  
 defCase = Block
 
+block :: STransData m sp f () -> STransData m sp (BlockFunc f) ()  
+block = Block
+
 assert :: forall sp1 sp m. STransData m sp (AssertFunc sp1) ()
 assert = Assert
-
 
 opRes :: Named name -> (x -> m a) -> STransData m sp (OpResFunc name x) a
 opRes = OpRes

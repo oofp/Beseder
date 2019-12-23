@@ -32,6 +32,7 @@ module Beseder.Base.ControlData
     , pumpEvents 
     , ifElse
     , iff
+    , block
     , evalSTransData
     , evalSTransDataApp
     , evalSTransDataLabels
@@ -42,6 +43,8 @@ module Beseder.Base.ControlData
     , evalSTransDataLabels'
     , evalSTransDataNamedLabels'
     , evalSTransDataAppFiltered'
+    , getSTransDiagramStates
+    , getSTransDiagramStates'
     , getLabel
     , getLabel'
     , flattenSteps

@@ -22,6 +22,7 @@ module Beseder.Base.Internal.STransProc where
 import           Protolude                    hiding (Product, handle,TypeError,First,forever, on)
 import           Haskus.Utils.Types.List
 import           Haskus.Utils.Variant
+import           Beseder.Base.Internal.Core
 import           Beseder.Base.Internal.Flow
 import           Beseder.Base.Internal.TypeExp
 import           Beseder.Base.Internal.SplitOps
@@ -170,27 +171,33 @@ type family Edges (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [
   Edges (CaptureOrElseFunc sp1 f1 f2) sp xs = Concat (Edges f1 sp (ListSplitterRes sp1 xs)) (Edges f2 sp (ListSplitterReminder sp1 xs)) 
   Edges (EmbedFunc sp1 f1) sp xs = Edges f1 (sp :&& sp1) (ListSplitterRes sp1 xs) 
   Edges (ForeverFunc f) sp xs = Edges f sp xs
-  Edges (BlockFunc f) sp xs = Edges f sp xs
+  Edges (BlockFunc f) sp xs = Edges' f sp xs
   Edges (ExtendForLoopFunc f) sp xs = '[]
   Edges (AlignFunc f) sp xs = Edges f sp xs
   Edges (ScopeFunc f _) sp xs = Edges f sp xs
   Edges (HandleLoopFunc f) sp xs = 
+    Edges' f sp (First (TransformLoop sp xs f))
+  {-  
     Edges 
       (ComposeFunc
         (ExtendForLoopFunc f) 
           (ForeverFunc (AlignFunc f))) sp xs
-  Edges func sp xs = Edges' func xs
+  -}        
+  Edges func sp xs = Edges' func sp xs
 
-type family Edges' (func :: * -> [*] -> Exp ([*],[*])) (xs :: [*]) :: [*] where  
-  Edges' func '[] = '[]  
-  Edges' func  (x ': xs) = Concat (Edges'' func x (First (Eval (func NoSplitter '[x])))) (Edges' func xs)
+type family Edges' (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [*] where  
+  Edges' func sp '[] = '[]  
+  Edges' func sp (x ': xs) = Concat (Edges2 func x (Eval (func sp '[x]))) (Edges' func sp xs)
 
-type family Edges'' (func :: * -> [*] -> Exp ([*],[*])) x (xs :: [*]) :: [*] where
-  Edges'' func x '[] = '[]
-  Edges'' (LabelFunc name) x '[x] = '[Edge (LabelFunc name) x x] 
-  Edges'' func x (x ': xs) = Edges'' func x xs
-  Edges'' func x (y ': xs) = (Edge func x y) ': (Edges'' func x xs)
+type family Edges2 (func :: * -> [*] -> Exp ([*],[*])) x (xs_ex :: ([*],[*])) :: [*] where
+  Edges2 func x '(xs, ex) = Edges3 func x (Concat xs ex)
 
+type family Edges3 (func :: * -> [*] -> Exp ([*],[*])) x (xs_ex :: [*]) :: [*] where
+  Edges3 func x '[] = '[]
+  Edges3 (LabelFunc name) x '[x] = '[Edge (LabelFunc name) x x] 
+  Edges3 func x (x ': xs) = Edges3 func x xs
+  Edges3 func x (y ': xs) = (Edge func x y) ': (Edges3 func x xs)
+  
 data StatesAndLabels (sts :: [*]) (labels :: [(*,Symbol)])  
 type family GetStatesAndLabels (edges :: [*]) :: * where
   GetStatesAndLabels edges = PostProcessStatesLabels (GetStatesAndLabels' edges)
@@ -235,7 +242,22 @@ instance (ShowV v, ShowV vs) => ShowV (v ': vs) where
   showV _ = (showV (Proxy @v)) <> "\n" <> (showV (Proxy @vs))
 instance (ShowV v, ShowV v1) => ShowV ((-->) v v1) where
   showV _ = (showV (Proxy @v)) <> " --> " <> (showV (Proxy @v1))
-        
+      
+type family StatesToSymbol (edges :: [*]) :: Symbol where
+  StatesToSymbol edges = StatesToSymbol' (GetStatesAndLabels edges)
+
+type family StatesToSymbol' (stsLabels :: *) :: Symbol where
+  StatesToSymbol' (StatesAndLabels sts lbls) = StatesListToSymbol 0 sts
+  
+type family StatesListToSymbol (ix :: Nat) (sts :: [*]) :: Symbol where
+  StatesListToSymbol ix '[] = ""
+  StatesListToSymbol ix (st ': moreStates) = AppendSymbol (StateToSymbol (NatToSymbol (ix+1)) st) (StatesListToSymbol (ix+1) moreStates)
+
+type family StateToSymbol (ixSym :: Symbol) (st :: *) :: Symbol where
+  StateToSymbol ix () = ""
+  StateToSymbol ix (St s name) = AppendSymbol (AppendSymbol ix (AppendSymbol " : " (ShowState (St s name)))) "\n"
+  StateToSymbol ix (s, smore) = AppendSymbol (StateToSymbol ix s) (StateToSymbol ix smore)
+
 type family TransformEdges (edges :: [*]) :: [*] where
   TransformEdges edges = TransformEdges' edges (GetStatesAndLabels edges) 
 
@@ -277,6 +299,7 @@ type family NatToSymbol (n :: Nat) :: Symbol where
   NatToSymbol 9 = "9"
   NatToSymbol n = AppendSymbol (NatToSymbol (Div n 10)) (NatToSymbol (Mod n 10))
   
+
 type family EdgesToText (edges :: [*]) :: Symbol where
   EdgesToText '[] = ""
   EdgesToText '[e] = EdgeToText e
@@ -291,26 +314,3 @@ type family VertexToText (v :: *) :: Symbol where
   VertexToText (VIndex ix) = (NatToSymbol ix)
   VertexToText (VLabel l) = l
    
-{-
-type family StateCollector newState (curIndex :: Nat) (curStates :: [(Nat, *)]) :: (Nat, [(Nat, *)]) where
-  StateCollector st curIndex '[] = '(curIndex, '[ '(curIndex, st)]) 
-  StateCollector st curIndex ( '(theIndex, st) ': moreEntries) = '(theIndex, ( '(theIndex, st) ': moreEntries)) 
-  StateCollector st curIndex ( '(theIndex, st1) ': moreEntries) = StateCollector' theIndex st1  (StateCollector st (theIndex+1) moreEntries) 
-
-type family StateCollector' (prevIndex :: Nat)  prevState (res :: (Nat, [(Nat, *)])) :: (Nat, [(Nat, *)]) where
-  StateCollector' prevIndex prevState '(newIndex, states) = '(newIndex, ( '(prevIndex,prevState) ': states))
--}
-
---
-{-
-type family ConsolidateEdges (edges :: [*]) :: ([(Nat, *)], [*]) where
-  ConsolidateEdges edges = ConsolidateEdges' edges '( '[ '(0,())], '[])
-
-type family ConsolidateEdges2 (edges :: [*]) (acc :: ([(Nat, *)], [*])):: ([(Nat, *)], [*]) where
-  ConsolidateEdges2 '[] acc = acc 
-  ConsolidateEdges2  ((Edge f fromState toState) ': moreEdges) '( indices, curEdges) =  
-    ConsolidateEdges3 (StateCollector fromState 0 indices) toState curEdges
--}
-
-    
-  

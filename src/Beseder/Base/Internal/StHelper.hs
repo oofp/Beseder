@@ -28,6 +28,8 @@ module Beseder.Base.Internal.StHelper
   , stFunc
   , SupportedRequests (..)
   , StReqs
+  , StateTitle
+  , ShowState
   ) where
 
 import            Protolude hiding (First)
@@ -40,6 +42,7 @@ import            Beseder.Base.Internal.TupleHelper
 import            Beseder.Utils.ListHelper
 import            Data.Coerce
 import            Haskus.Utils.Types.List
+import            GHC.TypeLits
 
 stWithName :: stData -> Named name -> St stData name
 stWithName stData _named = St stData
@@ -114,3 +117,10 @@ type family StReqs (s :: *) :: [*] where
   StReqs (V (x ': xs)) = ListsIntersect (StReqs x) (StReqs (V xs))
 
   
+type family StateTitle (st :: *) :: Symbol
+
+data (:=) (n :: Symbol) (s :: Symbol)
+
+type family ShowState (s :: *) :: Symbol where
+  ShowState () = "()"
+  ShowState (St s name) = AppendSymbol name (AppendSymbol " = " (StateTitle s))

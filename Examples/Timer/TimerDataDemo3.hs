@@ -27,11 +27,12 @@ import           Data.String
 
 helloFlow3 :: STransData TaskQ NoSplitter _ _
 helloFlow3 = do
-  newRes #t TimerRes
-  invoke #t (StartTimer 36)
-  newRes #t1 TimerRes
-  invoke #t1 (StartTimer 3)
-  --try @("t" :? IsTimerArmed) $ do
+  block $ do
+    newRes #t TimerRes
+    invoke #t (StartTimer 36)
+    newRes #t1 TimerRes
+    invoke #t1 (StartTimer 3)
+  -- try @("t" :? IsTimerArmed) $ do
   handleEvents $ do
       label #handleEvents 
       liftIO $ putStrLn ("handleEvents ...." :: Text)
@@ -57,3 +58,5 @@ helloEmpty = do
 -- :t flattenSteps $ evalSTransDataLabels'  helloFlow3 (Proxy :: Proxy '[()])
 -- :t flattenSteps $ evalSTransDataNamedLabels #atOn helloFlow3
 -- :t getLabel #atOn helloFlow3
+-- :t getSTransDiagramSymbol helloFlow3
+-- :t getSTransDiagramStates helloFlow3

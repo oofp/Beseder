@@ -98,6 +98,12 @@ getSTransDiagramSymbol' sd _ = Proxy @(EdgesToText (TransformEdges (Edges f sp x
 getSTransDiagramSymbol :: STransData m NoSplitter f a -> Proxy (EdgesToText (TransformEdges (Edges f NoSplitter '[()])))
 getSTransDiagramSymbol sd  = getSTransDiagramSymbol' sd (Proxy @('[()])) 
 
+getSTransDiagramStates' ::  forall sp m f xs a edges. STransData m sp f a -> Proxy xs -> Proxy (StatesToSymbol (Edges f sp xs))
+getSTransDiagramStates' sd _ = Proxy @(StatesToSymbol (Edges f sp xs))
+
+getSTransDiagramStates ::  forall sp m f xs a edges. STransData m sp f a -> Proxy xs -> Proxy (StatesToSymbol (Edges f NoSplitter '[()]))
+getSTransDiagramStates sd _ = Proxy @(StatesToSymbol (Edges f NoSplitter '[()]))
+
 evalSTransDataApp' :: STransData m sp f a -> Proxy xs -> Proxy (ApplyFunc f sp xs)
 evalSTransDataApp' sd_ _ = Proxy 
 

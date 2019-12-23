@@ -118,7 +118,8 @@ parseDecsState className decs = do
       undefStates = (resStates resDsc) \\ defStates
   liftIO $ putStrLn (("Identified static states: " :: Text) <> show undefStates)
   undefStateDecs <- lift $ concat <$> mapM mkStaticStateTrans undefStates
-  return $ decs <> undefStateDecs
+  stateTitleDecs <- lift $ concat <$> mapM mkStateTitle (resStates resDsc)
+  return $ decs <> undefStateDecs <> stateTitleDecs
 
 mkStaticStateTrans :: Text -> Q [Dec]
 mkStaticStateTrans stateTxt = 
@@ -128,6 +129,22 @@ mkStaticStateTrans stateTxt =
   where
     stateName = mkName (unpack stateTxt)  
 
+mkStateTitle :: Text -> Q [Dec]
+mkStateTitle stateTxt = 
+    return $ 
+      [ TySynInstD (mkName "StateTitle")
+        ( TySynEqn
+            [ AppT
+                ( AppT ( ConT stateName ) ( VarT mName ) ) ( VarT resName )
+            ]
+            ( LitT ( StrTyLit (unpack stateTxt) ) )
+        )
+      ]
+  where      
+    stateName = mkName (unpack stateTxt)  
+    mName = mkName "m"
+    resName = mkName "res"
+    
 -- 
 parseDec :: Name -> Dec -> StateT ResDsc Q [Dec]
 parseDec _className (DataFamilyD stateName _ _) = parseDataFam stateName

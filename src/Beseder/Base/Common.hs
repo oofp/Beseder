@@ -32,6 +32,7 @@ module Beseder.Base.Common
     , IsContentEq
     , SupportedRequests (..)
     , StReqs
+    , StateTitle
     ) where
 
 import Beseder.Base.Internal.Core 
