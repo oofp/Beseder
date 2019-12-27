@@ -60,3 +60,4 @@ helloEmpty = do
 -- :t getLabel #atOn helloFlow3
 -- :t getSTransDiagramSymbol helloFlow3
 -- :t getSTransDiagramStates helloFlow3
+-- :t validateSTransData helloFlow3

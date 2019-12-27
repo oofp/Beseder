@@ -23,6 +23,7 @@ import           Protolude
 import           Prelude (error)    
 import           Haskus.Utils.Variant
 import           Beseder.Base.Base
+import           Beseder.Base.Internal.TypeExp
 import           Beseder.Base.Common
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Quote
@@ -116,10 +117,19 @@ parseDecsState className decs = do
   liftIO $ printAsUml (pack $ nameBase className) resDsc
   let defStates = (termStates resDsc) <> (fst <$> (transitions resDsc))
       undefStates = (resStates resDsc) \\ defStates
+      reqsPerState = foldr addReqState (fmap (\st -> (st,[])) (resStates resDsc)) (fmap (\(r,s , _)-> (r,s)) (requests resDsc))  
   liftIO $ putStrLn (("Identified static states: " :: Text) <> show undefStates)
   undefStateDecs <- lift $ concat <$> mapM mkStaticStateTrans undefStates
   stateTitleDecs <- lift $ concat <$> mapM mkStateTitle (resStates resDsc)
-  return $ decs <> undefStateDecs <> stateTitleDecs
+  supportedRequests <- lift $ concat <$> mapM mkSupportedRequest reqsPerState
+  return $ decs <> undefStateDecs <> stateTitleDecs <> supportedRequests
+
+addReqState :: (Text , Text) -> [(Text, [Text])] -> [(Text, [Text])] 
+addReqState (req, st) [] = [(st, [req])]
+addReqState (req, st) ((s1, reqs) : moreEntries) =  
+  if (st == s1)
+    then  (st, (req : reqs)) : moreEntries
+    else  (s1, reqs) : (addReqState (req,st) moreEntries)
 
 mkStaticStateTrans :: Text -> Q [Dec]
 mkStaticStateTrans stateTxt = 
@@ -144,7 +154,62 @@ mkStateTitle stateTxt =
     stateName = mkName (unpack stateTxt)  
     mName = mkName "m"
     resName = mkName "res"
-    
+
+  
+  {-  
+  [ TySynInstD Beseder.Base.Internal.TypeExp.Eval
+    ( TySynEqn
+        [ AppT ( ConT Beseder.Base.Internal.StHelper.SupportedRequests )
+            ( AppT
+                ( AppT ( ConT Beseder.Base.Internal.Core.St )
+                    ( AppT
+                        ( AppT ( ConT Beseder.Resources.ResourceDefSample.State1 ) ( VarT m_0 ) ) ( VarT res_1 )
+                    )
+                ) ( VarT name_2 )
+            )
+        ]
+        ( AppT
+            ( AppT PromotedConsT ( ConT Beseder.Resources.ResourceDefSample.Req1 ) )
+            ( AppT
+                ( AppT PromotedConsT ( ConT Beseder.Resources.ResourceDefSample.Req2 ) ) PromotedNilT
+            )
+        )
+    )
+  ] 
+-}     
+mkSupportedRequest :: (Text , [Text])  -> Q [Dec]
+mkSupportedRequest (stateTxt, reqNames) = 
+    return $ 
+      [ TySynInstD (mkName "Eval")
+          ( TySynEqn
+              [ AppT ( ConT (mkName "SupportedRequests"))
+                  ( AppT
+                      ( AppT ( ConT (mkName "St"))
+                          ( AppT
+                              ( AppT ( ConT stateName) ( VarT mName ) ) ( VarT resName )
+                          )
+                      ) ( VarT nameName )
+                  ) 
+              ] (reqsAppt reqNames)
+              {-
+              ( AppT
+                  ( AppT PromotedConsT ( ConT Beseder.Resources.ResourceDefSample.Req1 ) )
+                  ( AppT
+                      ( AppT PromotedConsT ( ConT Beseder.Resources.ResourceDefSample.Req2 ) ) PromotedNilT
+                  )
+              )
+              -}
+          )
+      ]  
+    where      
+      stateName = mkName (unpack stateTxt)  
+      mName = mkName "m"
+      resName = mkName "res"
+      nameName = mkName "name"
+      reqsAppt [] = PromotedNilT
+      reqsAppt (rq : moreReqs) = AppT (AppT PromotedConsT (ConT (mkName (unpack rq)))) (reqsAppt moreReqs)
+
+
 -- 
 parseDec :: Name -> Dec -> StateT ResDsc Q [Dec]
 parseDec _className (DataFamilyD stateName _ _) = parseDataFam stateName
