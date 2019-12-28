@@ -85,25 +85,32 @@ type family ApplyFuncIfTrue (fl :: Bool) (func :: * -> [*] -> Exp ([*],[*])) (sp
   ApplyFuncIfTrue 'True func sp xs = '[Step func sp xs]
   ApplyFuncIfTrue 'False func sp xs = '[]
 
+type family ValidateFuncAllowEmpty (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: (Bool, [*]) where
+  ValidateFuncAllowEmpty func sp '[] = '( 'True, '[])
+  ValidateFuncAllowEmpty func sp xs = ValidateFunc func sp xs
+
 type family ValidateFunc (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: (Bool, [*]) where
   ValidateFunc (ComposeFunc f1 f2) sp xs = ValidateCompose (ValidateFunc f1 sp xs) f1 f2 sp xs
   ValidateFunc (BindFunc f1 f2) sp xs = ValidateFunc (ComposeFunc f1 f2) sp xs
-  ValidateFunc (CaptureFunc sp1 f1) sp xs = PropValRes (OnStep sp1) (ValidateFunc f1 sp (ListSplitterRes sp1 xs)) 
-  ValidateFunc (CaptureOrElseFunc sp1 f1 f2) sp xs = ValidateOnOrElse (ValidateFunc f1 sp (ListSplitterRes sp1 xs)) sp1 f1 f2 sp xs 
-  ValidateFunc (EmbedFunc sp1 f1) sp xs = PropValRes (TryStep sp1) (ValidateFunc f1 (sp :&& sp1) (ListSplitterRes sp1 xs)) 
+  ValidateFunc (CaptureFunc sp1 f1) sp xs = PropValRes (OnStep sp1) (ValidateFuncAllowEmpty f1 sp (ListSplitterRes sp1 xs)) 
+  ValidateFunc (CaptureOrElseFunc sp1 f1 f2) sp xs = ValidateOnOrElse (ValidateFuncAllowEmpty f1 sp (ListSplitterRes sp1 xs)) sp1 f1 f2 sp xs 
+  ValidateFunc (EmbedFunc sp1 f1) sp xs = PropValRes (TryStep sp1) (ValidateFuncAllowEmpty f1 (sp :&& sp1) (ListSplitterRes sp1 xs)) 
   ValidateFunc (ForeverFunc f) sp xs = PropValRes ForeverStep (ValidateFunc f sp xs)
   ValidateFunc (BlockFunc f) sp xs = PropValRes BlockStep (ValidateFunc f sp xs)
   ValidateFunc (ExtendForLoopFunc f) sp xs = '( 'True, '[])
   ValidateFunc (AlignFunc f) sp xs = ValidateFunc f sp xs
   ValidateFunc (ScopeFunc f _) sp xs = ValidateFunc f sp xs
-  ValidateFunc (HandleLoopFunc f) sp xs = 
+  ValidateFunc (HandleLoopFunc f) sp xs = ValidateTransformLoop f sp xs
+  {-  
     PropValRes BlockStep 
       (ValidateFunc 
         (ComposeFunc
           (ExtendForLoopFunc f) 
           (ForeverFunc (AlignFunc f))) sp xs)
+  -}
   ValidateFunc (LabelFunc label) sp xs = '( 'True, '[LabelStep label sp xs])
   ValidateFunc (InvokeAllFunc req name) sp xs = ValidateInvoke req name sp xs (ListContains (NamedRequest req name) (StReqs (V xs))) 
+  --ValidateFunc (ExtendForLoopFunc f) sp xs = ValidateTransformLoop sp xs f 
   ValidateFunc func sp xs = '( 'True, '[Step func sp xs])
 
 type family PropValRes (wr :: [*] -> *) (res :: (Bool, [*])) :: (Bool, [*]) where
@@ -118,7 +125,7 @@ type family ValidateCompose' (steps1 :: [*]) (res2 :: (Bool, [*])) :: (Bool, [*]
 
 type family ValidateOnOrElse (res1 :: (Bool, [*])) (sp1 :: *) (func1 :: * -> [*] -> Exp ([*],[*])) (func2 :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: (Bool, [*]) where
   ValidateOnOrElse '( 'False, steps1) sp1 f1 f2 sp xs = '( 'False, '[OnOrStep sp1 steps1 '[]])
-  ValidateOnOrElse '( 'True, steps1) sp1 f1 f2 sp xs = ValidateOnOrElse' sp1 steps1 (ValidateFunc f2 sp (ListSplitterReminder sp1 xs))
+  ValidateOnOrElse '( 'True, steps1) sp1 f1 f2 sp xs = ValidateOnOrElse' sp1 steps1 (ValidateFuncAllowEmpty f2 sp (ListSplitterReminder sp1 xs))
 
 type family ValidateOnOrElse' (sp1 :: *) (steps1 :: [*]) (res2 :: (Bool, [*])) :: (Bool, [*]) where
   ValidateOnOrElse' sp1 steps1 '(fl, steps2) = '(fl, '[OnOrStep sp1 steps1 steps2])
@@ -126,6 +133,36 @@ type family ValidateOnOrElse' (sp1 :: *) (steps1 :: [*]) (res2 :: (Bool, [*])) :
 type family ValidateInvoke (req :: *) (name :: Symbol) (sp :: *) (xs :: [*]) (fl :: Bool) :: (Bool, [*]) where
   ValidateInvoke req name sp xs 'True = '( 'True, '[Step (InvokeAllFunc req name) sp xs])
   ValidateInvoke req name sp xs 'False = '( 'False, '[ErrorStep (InvokeAllFunc req name) (V xs) "Request not supported"])
+
+type family ValidateTransformLoop (f :: * -> [*] -> Exp ([*],[*])) sp (xs :: [*]) :: (Bool, [*]) where
+  ValidateTransformLoop f sp xs = ValidateTransformLoop2 (ValidateFunc f sp xs) sp xs f     
+  
+type family ValidateTransformLoop2 (res :: (Bool, [*])) sp (xs :: [*]) (f :: * -> [*] -> Exp ([*],[*])) :: (Bool, [*]) where
+  ValidateTransformLoop2 '( 'False, steps) sp xs f = '( 'False, steps)
+  ValidateTransformLoop2 '( 'True, steps) sp xs f = ValidateTransformLoop3 steps sp (Eval (f sp xs)) '(xs,'[]) f    
+
+type family ValidateTransformLoop3 (steps :: [*]) sp (nextXsEx :: ([*], [*])) (totalXsEx :: ([*], [*])) (f :: * -> [*] -> Exp ([*],[*])) ::  (Bool, [*]) where
+  ValidateTransformLoop3 steps sp '(('[]), nextEx)  '(totalXs, totalEx) f = '( 'True, steps)    
+  ValidateTransformLoop3 steps sp '(nextXs, nextEx) '(totalXs, totalEx) f = ValidateTransformLoop4 steps sp '(nextXs, nextEx)  (IsSublist totalXs nextXs) '(totalXs, totalEx) f     
+
+type family ValidateTransformLoop4 (steps :: [*]) sp (nextXs :: ([*],[*])) (isSublist :: Bool) (totalXs :: ([*],[*])) (f :: * -> [*] -> Exp ([*],[*])) :: (Bool, [*]) where
+  ValidateTransformLoop4 steps sp nextXs True sumXs f = '(True, steps)    
+  ValidateTransformLoop4 steps sp '(nextXs, nextEx) 'False '(totalXs, totalEx) f = ValidateTransformLoop5 steps (ValidateFunc f sp nextXs) sp nextXs f '(Union totalXs nextXs, Union totalEx nextEx)    
+
+type family ValidateTransformLoop5 (steps :: [*]) (res :: (Bool, [*])) sp (nextXs :: [*]) (f :: * -> [*] -> Exp ([*],[*])) (totalXs :: ([*],[*]))  :: (Bool, [*]) where
+  ValidateTransformLoop5 steps '(False, moreSteps) sp nextXs f sumXs = '(False, Union steps moreSteps)    
+  ValidateTransformLoop5 steps '(True, moreSteps) sp nextXs f sumXs = ValidateTransformLoop3 (Union steps moreSteps) sp (Eval (f sp nextXs)) sumXs  f    
+    
+    
+{-  
+  type family TransformLoop' sp (nextXsEx :: ([*], [*])) (totalXsEx :: ([*], [*])) (f :: * -> [*] -> Exp ([*],[*])) ::  ([*], [*]) where
+    TransformLoop' sp '(('[]), nextEx)  '(totalXs, totalEx) f = '(totalXs, Union totalEx nextEx)    
+    TransformLoop' sp '(nextXs, nextEx) '(totalXs, totalEx) f = TransformLoop'' sp '(nextXs, nextEx)  (IsSublist totalXs nextXs) '(totalXs, totalEx) f     
+    
+  type family TransformLoop'' sp (nextXs :: ([*],[*])) (isSublist :: Bool) (totalXs :: ([*],[*])) (f :: * -> [*] -> Exp ([*],[*])) :: ([*], [*]) where
+    TransformLoop'' sp nextXs True sumXs f = sumXs    
+    TransformLoop'' sp '(nextXs, nextEx) 'False '(totalXs, totalEx) f = TransformLoop' sp (Eval (f sp nextXs)) '(Union totalXs nextXs, Union totalEx nextEx)  f    
+-}
 
 --
 
