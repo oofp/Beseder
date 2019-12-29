@@ -60,6 +60,10 @@ module Beseder.Base.ControlData
     , statesAndLabels'
     , validateSTransData
     , validateSTransData'
+    , validateSteps'
+    , validateSteps 
+    , getError' 
+    , getError 
     , scopeRes
     , clearAllBut
     , caseOf

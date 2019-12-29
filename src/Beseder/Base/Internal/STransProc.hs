@@ -197,6 +197,15 @@ type family FlattenSteps (steps :: [*]) :: [*] where
   FlattenSteps '[] = '[]
   FlattenSteps (s ': steps) = Concat (GetSteps s) (FlattenSteps steps)
 
+type family FilterSteps (steps :: [*]) (labels :: [Symbol]) :: [*] where
+  FilterSteps  '[] labels = '[] 
+  FilterSteps  ((ErrorStep func errState errText) ': moreSteps) labels = (ErrorStep func errState errText) ': (FilterSteps moreSteps labels)
+  FilterSteps  ((LabelStep name sp xs) ': moreSteps) labels = FilterLabelStep (LabelStep name sp xs) (ListContains name labels) moreSteps labels 
+  FilterSteps  (step ': moreSteps) labels = FilterSteps moreSteps labels
+
+type family FilterLabelStep (lStep :: *)(isIncluded :: Bool) (steps :: [*]) (labels :: [Symbol]) :: [*] where
+  FilterLabelStep lstep 'False steps labels = FilterSteps steps labels
+  FilterLabelStep lstep 'True steps labels = lstep ': (FilterSteps steps labels)
 
 --
 data Edge (func :: * -> [*] -> Exp ([*],[*])) (fromState :: *) (toState :: *)

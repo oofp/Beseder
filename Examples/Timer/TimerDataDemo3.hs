@@ -61,3 +61,5 @@ helloEmpty = do
 -- :t getSTransDiagramSymbol helloFlow3
 -- :t getSTransDiagramStates helloFlow3
 -- :t validateSTransData helloFlow3
+-- :t getError helloFlow3
+-- :t validateSteps helloFlow3 (Proxy @'["atOn"])
