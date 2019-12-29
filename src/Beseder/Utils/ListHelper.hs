@@ -24,7 +24,7 @@ type family FilterList (xs :: [k]) (ys :: [k]) :: [k] where
   FilterList (x ': xtail) ys = FilterList xtail (Filter x ys)
 
 -- TODO:: unify with Contains from Machine   
-type family ListContains (x :: *) (xs :: [*]) :: Bool where
+type family ListContains (x :: k) (xs :: [k]) :: Bool where
   ListContains x '[] = 'False
   ListContains x (x ': xs) = 'True
   ListContains x (y ': xs) = ListContains x xs
