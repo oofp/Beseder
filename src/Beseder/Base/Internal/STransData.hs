@@ -122,18 +122,17 @@ validateSTransData' sd_ _ = Proxy
 validateSTransData :: STransData m sp f a -> Proxy (ValidateFunc f NoSplitter '[()])
 validateSTransData sd_ = Proxy 
 
-validateSteps' :: STransData m sp f a -> Proxy (labels :: [Symbol]) -> Proxy xs -> Proxy (FilterSteps (FlattenSteps (Second (ValidateFunc f sp xs))) labels )
+validateSteps' :: STransData m sp f a -> Proxy (labels :: [Symbol]) -> Proxy xs -> Proxy (FilterValidated labels f sp xs)
 validateSteps' sd_ _ _ = Proxy 
 
-validateSteps :: STransData m sp f a -> Proxy (labels :: [Symbol]) -> Proxy (FilterSteps (FlattenSteps (Second (ValidateFunc f sp '[()]))) labels)
+validateSteps :: STransData m sp f a -> Proxy (labels :: [Symbol]) -> Proxy (FilterValidated labels f sp '[()])
 validateSteps sd_ _ = Proxy 
 
-getError' :: STransData m sp f a -> Proxy xs -> Proxy (FilterSteps (FlattenSteps (Second (ValidateFunc f sp xs))) '[])
+getError' :: STransData m sp f a -> Proxy xs -> Proxy (FilterValidated '[] f sp xs )
 getError' sd_ _ = Proxy 
 
-getError :: STransData m sp f a -> Proxy (FilterSteps (FlattenSteps (Second (ValidateFunc f sp '[()]))) '[])
+getError :: STransData m sp f a -> Proxy (FilterValidated '[] f sp '[()])
 getError sd_ = Proxy 
-
 
 evalSTransDataNamedLabels' :: Named label -> STransData m sp f a -> Proxy xs -> Proxy (ApplyWithFilter (LabelsName label) f sp xs)
 evalSTransDataNamedLabels' _ sd_ _ = Proxy 
