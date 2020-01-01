@@ -70,6 +70,7 @@ module Beseder.Base.ControlData
     , endCase
     , defCase
     , assert
+    , mkSTransDataType
     , All
     , By (..)
     , Not (..)
@@ -98,3 +99,4 @@ import Beseder.Base.Internal.STransProc
 import Beseder.Base.Internal.SplitOps
 import Beseder.Base.Internal.NatOne
 import Beseder.Base.Internal.STransIx (STrans)
+import  Beseder.Base.Internal.STransDataTH 

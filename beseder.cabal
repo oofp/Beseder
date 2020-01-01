@@ -65,6 +65,7 @@ library
                      , Beseder.Base.Internal.STransDef 
                      , Beseder.Base.Internal.STransProc
                      , Beseder.Base.Internal.STransData 
+                     , Beseder.Base.Internal.STransDataTH 
                      , Beseder.Base.Internal.STransDataDo 
                      , Beseder.Base.Internal.STransDataIntrp 
                      , Beseder.Base.Internal.STransMonad 
