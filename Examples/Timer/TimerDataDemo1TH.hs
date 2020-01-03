@@ -13,6 +13,7 @@
 {-# LANGUAGE UndecidableInstances   #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedLabels #-}
+
 {-# OPTIONS_GHC -fomit-interface-pragmas #-}
 
 module  TimerDataDemo1TH where
@@ -28,12 +29,15 @@ import           Language.Haskell.TH
 import           Language.Haskell.TH.Quote
 import           Data.List
 import           Prelude (error)    
+import           GHC.Exts (Any)    
 
 timer0 = timer1 1
 timer20 = timer2a 1 1
 
 mkSTransDataType "timer20" "Timer20"   
+mkSTransDataTypeAny "timer20" "Timer20Any"   
 
 type Timer20Res = Eval ((Timer20 IO) NoSplitter '[()])
+type Timer20ResAny = Eval ((Timer20Any) NoSplitter '[()])
 
 -- :kind! Timer20Res

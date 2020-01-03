@@ -14,6 +14,7 @@
 {-# LANGUAGE KindSignatures        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
+-- {-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Beseder.Base.Internal.STransDataIntrp 
   ( interpret

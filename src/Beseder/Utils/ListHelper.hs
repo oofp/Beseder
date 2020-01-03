@@ -101,3 +101,6 @@ type family Subtract' (x :: k) (isMember :: Bool) (xs :: [k]) (ys :: [k]) :: [k]
 
 subtractLists :: Proxy xs -> Proxy ys -> Proxy (Subtract xs ys)
 subtractLists _ _ = Proxy  
+
+type family HeadOfList (xs :: [*]) :: * where
+  HeadOfList xs = ListElem 0 xs

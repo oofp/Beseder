@@ -47,7 +47,6 @@ module Beseder.Base.ControlData
     , getSTransDiagramStates'
     , getLabel
     , getLabel'
-    , flattenSteps
     , edgesSTransData
     , edgesSTransData'
     , getSTransDiagram
@@ -63,7 +62,8 @@ module Beseder.Base.ControlData
     , validateSteps'
     , validateSteps 
     , getError' 
-    , getError 
+    , getError
+    , ValidateSteps 
     , scopeRes
     , clearAllBut
     , caseOf
@@ -71,6 +71,7 @@ module Beseder.Base.ControlData
     , defCase
     , assert
     , mkSTransDataType
+    , mkSTransDataTypeAny
     , All
     , By (..)
     , Not (..)

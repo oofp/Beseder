@@ -17,6 +17,7 @@
 
 module  Beseder.Base.Internal.STransDataTH 
   ( mkSTransDataType
+  , mkSTransDataTypeAny
   )where
 
 import           Protolude hiding (Type)                   
@@ -28,6 +29,7 @@ import           Language.Haskell.TH
 import           Language.Haskell.TH.Quote
 import           Data.List
 import           Prelude (error)    
+import           GHC.Exts (Any)    
 
 reifyValue :: String -> Q (Maybe Info) -- Q [Dec]
 reifyValue valName = do
@@ -38,7 +40,6 @@ reifyValue valName = do
       return Nothing -- [] -- Nothing
     (Just valName) -> do
       rInfo <- reify valName
-      liftIO $ putStrLn (show rInfo)
       return $ Just rInfo
       --liftIO $ putStrLn ("=================== Value found"::Text)
       --return []
@@ -64,6 +65,11 @@ varTNames (VarT name) = [name]
 varTNames (AppT t1 t2) = nub (varTNames t1 <> varTNames t2)
 varTNames _ = []
 
+replaceVarTs :: Type -> Type -> Type 
+replaceVarTs (VarT name) replTo = replTo
+replaceVarTs (AppT t1 t2) replTo = AppT (replaceVarTs t1 replTo) (replaceVarTs t2 replTo)
+replaceVarTs t _ = t
+
 {-
 [ TySynD StState1_0
     [ PlainTV m_1
@@ -78,6 +84,23 @@ varTNames _ = []
         ) ( VarT name_3 )
     )
 ]
+
+TySynD StState1S_0 []
+    ( ForallT
+        [ PlainTV m_1
+        , PlainTV res_2
+        , PlainTV name_3
+        ] []
+        ( AppT
+            ( AppT ( ConT Beseder.Base.Internal.Core.St )
+                ( AppT
+                    ( AppT ( ConT Beseder.Resources.ResourceDefSample.State1 ) ( VarT m_1 ) ) ( VarT res_2 )
+                )
+            ) ( VarT name_3 )
+        )
+    )
+]
+
 data TyVarBndr = PlainTV Name
 data Dec
   = ... | TySynD Name [TyVarBndr] Language.Haskell.TH.Type
@@ -92,7 +115,19 @@ mkSTransDataType funcName typeNameStr = do
       let names = varTNames fnType
           typeName = mkName typeNameStr  
       return [TySynD typeName (fmap PlainTV names) fnType]
-  
+      -- return [TySynD  typeName [] (ForallT (fmap PlainTV names) [] fnType)]
+
+mkSTransDataTypeAny :: String -> String -> Q [Dec]
+mkSTransDataTypeAny funcName typeNameStr = do
+  tpMaybe <- reifyFunc funcName
+  case tpMaybe of 
+    Nothing -> error "Cannot exract function type"
+    Just fnType -> do
+      let replTo = ConT (mkName "GHC.Exts.Any")
+          fnTypeNew = replaceVarTs fnType replTo
+          typeName = mkName typeNameStr  
+      return [TySynD typeName [] fnTypeNew]
+            
 -- $(stringE . show =<< reifyFunc "timer0")
 
 {-AppT 

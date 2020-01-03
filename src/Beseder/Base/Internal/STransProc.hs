@@ -361,4 +361,4 @@ type family VertexToText (v :: *) :: Symbol where
   VertexToText (VLabel l) = l
    
 
-type FilterValidated labels f sp xs = Nub (FilterSteps (FlattenSteps (Second (ValidateFunc f sp xs))) labels)
+type ValidateSteps labels f sp xs = Nub (FilterSteps (FlattenSteps (Second (ValidateFunc f sp xs))) labels)
