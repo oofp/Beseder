@@ -47,8 +47,14 @@ reifyValue valName = do
 -- $(stringE . show =<< reifyValue "timer1")
 
 getFuncType :: Info -> Maybe Type
-getFuncType (VarI _varName (ForallT _varBnd _ctx (AppT (AppT _ fType) _)) _maybeDec) = Just fType
+--getFuncType (VarI _varName (ForallT _varBnd _ctx (AppT (AppT _ fType) _)) _maybeDec) = Just fType
+getFuncType (VarI _varName (ForallT _varBnd _ctx nextType) _maybeDec) = getFuncType' nextType
 getFuncType _ = Nothing
+
+getFuncType' :: Type -> Maybe Type
+getFuncType' (AppT (AppT ArrowT _) nextType) = getFuncType' nextType
+getFuncType' (AppT (AppT _ fType) _) = Just fType
+getFuncType' _ = Nothing
 
 reifyFunc :: String -> Q (Maybe Type)
 reifyFunc valName = do
@@ -141,12 +147,14 @@ mkSTransDataTypeAny funcName typeNameStr = do
   (AppT 
     (AppT (ConT Beseder.Base.Internal.STransDef.ComposeFunc) (AppT (AppT (ConT Beseder.Base.Internal.STransDef.InvokeAllFunc) (ConT Beseder.Resources.Timer.TimerRes.StartTimer)) (LitT (StrTyLit "t1")))) (AppT (AppT (ConT Beseder.Base.Internal.STransDef.ComposeFunc) (AppT (AppT (ConT Beseder.Base.Internal.STransDef.CaptureFunc) (ConT Beseder.Base.Internal.SplitOps.Dynamics)) (ConT Beseder.Base.Internal.STransDef.GetNextAllFunc))) (AppT (ConT Beseder.Base.Internal.STransDef.ClearAllFunc) (LitT (StrTyLit "t1"))))
   )
+-}
 
+{-
 VarI TimerDataDemo1.timer1 
   (ForallT 
     [KindedTV m_6989586621679681078 (AppT (AppT ArrowT StarT) StarT),KindedTV sp_6989586621679681079 StarT] [] 
     (AppT (AppT ArrowT (ConT GHC.Types.Int)) 
-           (AppT 
+          (AppT 
             (AppT 
               (AppT (AppT (ConT Beseder.Base.Internal.STransData.STransData) (VarT m_6989586621679681078)) (VarT sp_6989586621679681079)) 
               (AppT 
@@ -174,8 +182,6 @@ VarI TimerDataDemo1.timer1
     )
   ) Nothing
 -}
-
-
 {-
 VarI TimerDataDemo1TH.timer0 
   (ForallT 

@@ -12,7 +12,8 @@
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE OverloadedLabels       #-}
+{-# LANGUAGE TemplateHaskell        #-}
 
 {-# OPTIONS_GHC -fomit-interface-pragmas #-}
 
@@ -36,8 +37,10 @@ timer20 = timer2a 1 1
 
 mkSTransDataType "timer20" "Timer20"   
 mkSTransDataTypeAny "timer20" "Timer20Any"   
+mkSTransDataTypeAny "timer1" "Timer1Any"   
+mkSTransDataTypeAny "timer2a" "Timer2aAny"   
 
 type Timer20Res = Eval ((Timer20 IO) NoSplitter '[()])
 type Timer20ResAny = Eval ((Timer20Any) NoSplitter '[()])
-
+-- :kind! Eval ((Timer1Any) NoSplitter '[()])
 -- :kind! Timer20Res
