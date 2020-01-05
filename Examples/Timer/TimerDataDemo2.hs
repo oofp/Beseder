@@ -13,6 +13,8 @@
 {-# LANGUAGE UndecidableInstances   #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TemplateHaskell        #-}
+
 {-# OPTIONS_GHC -fomit-interface-pragmas #-}
 
 module  TimerDataDemo2 where
@@ -24,6 +26,7 @@ import           Beseder.Base.Common
 import           Beseder.Misc.Misc
 import           Beseder.Resources.Timer
 import           Data.String 
+import           GHC.Exts (Any)    
 
 timer1 :: Int -> STransData m sp _ () 
 timer1 timeoutSec1 = do                  
@@ -39,7 +42,7 @@ timer1 timeoutSec1 = do
 
 
 
-timerForever :: STransData TaskQ NoSplitter _ _
+timerForever :: STransData m NoSplitter _ _
 timerForever = do
   newRes #t TimerRes
   invoke #t (StartTimer 36)
@@ -57,9 +60,35 @@ timerForever = do
   liftIO $ putStrLn ("loop is completed" :: Text)
   invoke #t1 StopTimer
   clearAllResources    
-  
+
+mkSTransDataTypeAny "timerForever" "TimerForever"
+
+
+-- :kind! Eval (TimerForever NoSplitter '[()])
+-- :kind!  ValidateSteps '[] TimerForever NoSplitter '[()]
+{- --invoke #t1 (StartTimer 3)
+= '[ErrorStep
+      (ForeverFunc
+         (ComposeFunc
+            GetNextAllFunc
+            (ComposeFunc
+               LiftIOFunc
+               (CaptureFunc
+                  ("t1" :? IsTimerTriggered)
+                  (ComposeFunc
+                     (ClearAllFunc "t1") (NewResFunc TimerRes "t1" GHC.Exts.Any))))))
+      (Haskus.Utils.Variant.V
+         '[(St (TimerArmedEvData GHC.Exts.Any) "t",
+            St (TimerArmedEvData GHC.Exts.Any) "t1")],
+       Haskus.Utils.Variant.V
+         '[(St (TimerArmedEvData GHC.Exts.Any) "t",
+            St (TimerNotArmedEvData GHC.Exts.Any) "t1")])
+      "Forever start/end dont't match"]
+-}
+
 -- :t evalSTransData timer1 1)
 -- :t validateSTransData timerForever
+
 
 --runTimer1 :: IO ()  
 --runTimer1 = runAsyncData $ (timer1 2)

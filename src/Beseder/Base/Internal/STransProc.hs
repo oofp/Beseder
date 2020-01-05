@@ -35,6 +35,8 @@ import           Data.Text
 data Step (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*])
 data OnStep (sp1 :: *) (steps :: [*])  
 data OnOrStep (sp1 :: *) (stepsOn :: [*]) (stepsElse :: [*])  
+data IfElseStep (stepsIf :: [*]) (stepsElse :: [*])  
+data IffStep (stepsIf :: [*])   
 data TryStep (sp1 :: *) (steps :: [*])  
 data ForeverStep (steps :: [*])  
 data BlockStep (steps :: [*])  
@@ -48,6 +50,8 @@ type family ApplyFunc (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) 
   ApplyFunc (CaptureFunc sp1 f1) sp xs = '[OnStep sp1 (ApplyFunc f1 sp (ListSplitterRes sp1 xs))] 
   ApplyFunc (CaptureOrElseFunc sp1 f1 f2) sp xs = '[OnOrStep sp1 (ApplyFunc f1 sp (ListSplitterRes sp1 xs)) (ApplyFunc f2 sp (ListSplitterReminder sp1 xs))] 
   ApplyFunc (EmbedFunc sp1 f1) sp xs = '[TryStep sp1 (ApplyFunc f1 (sp :&& sp1) (ListSplitterRes sp1 xs))] 
+  ApplyFunc (IfElseFunc f1 f2) sp xs = '[IfElseStep (ApplyFunc f1 sp xs) (ApplyFunc f2 sp xs)] 
+  ApplyFunc (IffFunc f) sp xs = '[IffStep (ApplyFunc f sp xs)] 
   ApplyFunc (ForeverFunc f) sp xs = '[ForeverStep (ApplyFunc f sp xs)]
   ApplyFunc (BlockFunc f) sp xs = '[BlockStep (ApplyFunc f sp xs)]
   ApplyFunc (ExtendForLoopFunc f) sp xs = '[]
@@ -68,6 +72,8 @@ type family ApplyWithFilter (fltr :: (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> 
   ApplyWithFilter fltr (CaptureFunc sp1 f1) sp xs = '[OnStep sp1 (ApplyWithFilter fltr f1 sp (ListSplitterRes sp1 xs))] 
   ApplyWithFilter fltr (CaptureOrElseFunc sp1 f1 f2) sp xs = '[OnOrStep sp1 (ApplyWithFilter fltr f1 sp (ListSplitterRes sp1 xs)) (ApplyWithFilter fltr f2 sp (ListSplitterReminder sp1 xs))] 
   ApplyWithFilter fltr (EmbedFunc sp1 f1) sp xs = '[TryStep sp1 (ApplyWithFilter fltr f1 (sp :&& sp1) (ListSplitterRes sp1 xs))] 
+  ApplyWithFilter fltr (IffFunc f) sp xs = '[IffStep (ApplyWithFilter fltr f sp xs)] 
+  ApplyWithFilter fltr (IfElseFunc f1 f2) sp xs = '[IfElseStep (ApplyWithFilter fltr f1 sp xs) (ApplyWithFilter fltr f2 sp xs)] 
   ApplyWithFilter fltr (BlockFunc f) sp xs = '[BlockStep (ApplyWithFilter fltr f sp xs)]
   ApplyWithFilter fltr (ForeverFunc f) sp xs = '[ForeverStep (ApplyWithFilter fltr f sp xs)]
   ApplyWithFilter fltr (ExtendForLoopFunc f) sp xs = '[]
@@ -95,7 +101,9 @@ type family ValidateFunc (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*
   ValidateFunc (CaptureFunc sp1 f1) sp xs = PropValRes (OnStep sp1) (ValidateFuncAllowEmpty f1 sp (ListSplitterRes sp1 xs)) 
   ValidateFunc (CaptureOrElseFunc sp1 f1 f2) sp xs = ValidateOnOrElse (ValidateFuncAllowEmpty f1 sp (ListSplitterRes sp1 xs)) sp1 f1 f2 sp xs 
   ValidateFunc (EmbedFunc sp1 f1) sp xs = PropValRes (TryStep sp1) (ValidateFuncAllowEmpty f1 (sp :&& sp1) (ListSplitterRes sp1 xs)) 
-  ValidateFunc (ForeverFunc f) sp xs = PropValRes ForeverStep (ValidateFunc f sp xs)
+  ValidateFunc (IffFunc f) sp xs = ValidateFunc f sp xs 
+  ValidateFunc (IfElseFunc f1 f2) sp xs = ValidateIfElse (ValidateFunc f1 sp xs) f1 f2 sp xs 
+  ValidateFunc (ForeverFunc f) sp xs = PropValRes ForeverStep (ValidateForever (ValidateFunc f sp xs) f sp xs)
   ValidateFunc (BlockFunc f) sp xs = PropValRes BlockStep (ValidateFunc f sp xs)
   ValidateFunc (ExtendForLoopFunc f) sp xs = '( 'True, '[])
   ValidateFunc (AlignFunc f) sp xs = ValidateFunc f sp xs
@@ -116,6 +124,14 @@ type family ValidateFunc (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*
 type family PropValRes (wr :: [*] -> *) (res :: (Bool, [*])) :: (Bool, [*]) where
   PropValRes wr '(fl, steps) = '(fl, '[wr steps])
 
+type family ValidateForever  (res1 :: (Bool, [*])) (f :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: (Bool, [*]) where
+  ValidateForever '( 'False, steps) f sp xs = '( 'False, steps)
+  ValidateForever '( 'True, steps) f sp xs  = ValidateForever' steps xs (Eval (f sp xs)) f
+
+type family ValidateForever' (steps :: [*]) (xs :: [*]) (rs_ex :: ([*],[*])) (f :: * -> [*] -> Exp ([*],[*])) :: (Bool, [*]) where
+  ValidateForever' steps xs '(xs, rs) f = '( 'True, steps)
+  ValidateForever' steps xs '(ys, rs) f = '( 'False, Concat steps '[ErrorStep (ForeverFunc f) (V xs, V ys) "Forever start/end dont't match"])
+
 type family ValidateCompose (res1 :: (Bool, [*])) (func1 :: * -> [*] -> Exp ([*],[*])) (func2 :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: (Bool, [*]) where
   ValidateCompose '( 'False, steps1) f1 f2 sp xs = '( 'False, steps1)
   ValidateCompose '( 'True, steps1) f1 f2 sp xs = ValidateCompose' steps1 (ValidateFunc f2 sp (First (Eval (f1 sp xs)))) 
@@ -123,6 +139,13 @@ type family ValidateCompose (res1 :: (Bool, [*])) (func1 :: * -> [*] -> Exp ([*]
 type family ValidateCompose' (steps1 :: [*]) (res2 :: (Bool, [*])) :: (Bool, [*]) where
   ValidateCompose steps1 '(fl, steps2) = '(fl, Concat steps1 steps2)
 
+type family ValidateIfElse (res1 :: (Bool, [*])) (func1 :: * -> [*] -> Exp ([*],[*])) (func2 :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: (Bool, [*]) where
+  ValidateIfElse '( 'False, steps1) f1 f2 sp xs = '( 'False, '[IfElseStep steps1 '[]])
+  ValidateIfElse '( 'True, steps1) f1 f2 sp xs = ValidateIfElse' steps1 (ValidateFunc f2 sp xs)
+  
+type family ValidateIfElse' (steps1 :: [*]) (res2 :: (Bool, [*])) :: (Bool, [*]) where
+  ValidateOnOrElse' steps1 '(fl, steps2) = '(fl, '[IfElseStep steps1 steps2])
+    
 type family ValidateOnOrElse (res1 :: (Bool, [*])) (sp1 :: *) (func1 :: * -> [*] -> Exp ([*],[*])) (func2 :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: (Bool, [*]) where
   ValidateOnOrElse '( 'False, steps1) sp1 f1 f2 sp xs = '( 'False, '[OnOrStep sp1 steps1 '[]])
   ValidateOnOrElse '( 'True, steps1) sp1 f1 f2 sp xs = ValidateOnOrElse' sp1 steps1 (ValidateFuncAllowEmpty f2 sp (ListSplitterReminder sp1 xs))
@@ -216,6 +239,8 @@ type family Edges (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [
   Edges (CaptureFunc sp1 f1) sp xs = Edges f1 sp (ListSplitterRes sp1 xs) 
   Edges (CaptureOrElseFunc sp1 f1 f2) sp xs = Concat (Edges f1 sp (ListSplitterRes sp1 xs)) (Edges f2 sp (ListSplitterReminder sp1 xs)) 
   Edges (EmbedFunc sp1 f1) sp xs = Edges f1 (sp :&& sp1) (ListSplitterRes sp1 xs) 
+  Edges (IffFunc f) sp xs = Edges f sp xs 
+  Edges (IfElseFunc f1 f2) sp xs = Concat (Edges f1 sp xs) (Edges f2 sp xs) 
   Edges (ForeverFunc f) sp xs = Edges f sp xs
   Edges (BlockFunc f) sp xs = Edges' f sp xs
   Edges (ExtendForLoopFunc f) sp xs = '[]
