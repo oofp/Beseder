@@ -246,6 +246,8 @@ type family Edges (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [
   Edges (ExtendForLoopFunc f) sp xs = '[]
   Edges (AlignFunc f) sp xs = Edges f sp xs
   Edges (ScopeFunc f _) sp xs = Edges f sp xs
+  Edges (HandleLoopFunc (ComposeFunc (CaptureFunc Dynamics GetNextAllFunc) f)) sp xs = 
+    EdgesEventLoop f sp (First (TransformLoop sp xs (ComposeFunc (CaptureFunc Dynamics GetNextAllFunc) f)))
   Edges (HandleLoopFunc f) sp xs = 
     Edges' f sp (First (TransformLoop sp xs f))
   {-  
@@ -256,6 +258,9 @@ type family Edges (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [
   -}        
   Edges func sp xs = Edges' func sp xs
 
+type family EdgesEventLoop (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [*] where  
+  EdgesEventLoop func sp xs = Concat (Edges' GetNextAllFunc sp xs) (Edges func sp (First (Eval (GetNextAllFunc sp xs)))) 
+  
 type family Edges' (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [*] where  
   Edges' func sp '[] = '[]  
   Edges' func sp (x ': xs) = Concat (Edges2 func x (Eval (func sp '[x]))) (Edges' func sp xs)
@@ -388,5 +393,5 @@ type family VertexToText (v :: *) :: Symbol where
 
 type ValidateSteps labels f sp xs = Nub (FilterSteps (FlattenSteps (Second (ValidateFunc f sp xs))) labels)
 type StateDiagramSym f xs = StateDiagramFromEdges (Edges f NoSplitter xs)  
-type StateDiagramFromEdges (edges :: [*]) = AppendSymbol (EdgesToText (TransformEdges edges)) (StatesToSymbol edges)   
+type StateDiagramFromEdges (edges :: [*]) = AppendSymbol (EdgesToText (TransformEdges edges)) (AppendSymbol "\n" (StatesToSymbol edges))   
 
