@@ -387,3 +387,6 @@ type family VertexToText (v :: *) :: Symbol where
    
 
 type ValidateSteps labels f sp xs = Nub (FilterSteps (FlattenSteps (Second (ValidateFunc f sp xs))) labels)
+type StateDiagramSym f xs = StateDiagramFromEdges (Edges f NoSplitter xs)  
+type StateDiagramFromEdges (edges :: [*]) = AppendSymbol (EdgesToText (TransformEdges edges)) (StatesToSymbol edges)   
+

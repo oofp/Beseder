@@ -32,6 +32,7 @@ executable CommApps
   hs-source-dirs:      ./Comm
   main-is:             Main.hs
   other-modules:       CommApps
+                    ,  CommDataApps
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-T -dshow-passes -fomit-interface-pragmas -fprint-potential-instances
   build-depends:       base
                     , beseder

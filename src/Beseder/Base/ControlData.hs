@@ -64,6 +64,7 @@ module Beseder.Base.ControlData
     , getError' 
     , getError
     , ValidateSteps 
+    , StateDiagramSym
     , scopeRes
     , clearAllBut
     , caseOf

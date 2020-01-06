@@ -38,7 +38,8 @@ import           Beseder.Base.Common
 import           Beseder.Misc.Misc
 import           Beseder.Resources.Comm 
 
-import           CommApps
+--import           CommApps
+import           CommDataApps
 
 echoWS :: WSClient 
 echoWS = WSClient

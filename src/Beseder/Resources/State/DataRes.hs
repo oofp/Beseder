@@ -30,12 +30,13 @@ module Beseder.Resources.State.DataRes
   , InitAsFalse
   ) where  
 
-import           Protolude  
+import           Protolude hiding (Any)
 import           Haskus.Utils.Variant
 import           Beseder.Base.Base
 import           Beseder.Base.Common
 import           Control.Arrow (Kleisli (..))
 import           qualified GHC.Show (Show (..))
+import           GHC.Exts (Any)    
 
 newtype D a = D a deriving (Show, Eq)
 
@@ -66,6 +67,18 @@ instance (Monad m) => Request m (SetData a) (St (D b) name) where
 instance (Monad m) => Request m (ModifyData a b) (St (D a) name) where
   type ReqResult (ModifyData a b) (St (D a) name) = '[St (D b) name]
   request (ModifyData f) (St (D a)) = return $ variantFromValue (St (D (f a)))
+  
+
+--type family SupportedRequestsFam (st :: *) :: [*]
+
+--type SetDataAny = forall b. SetData b  
+--type ModifyDataAny a = forall c. ModifyData a c
+type instance Eval (SupportedRequests (St (D (Proxy (fl :: Bool))) name)) = [SetTrue, SetFalse] --'[SetData Any, ModifyData a Any]
+--type instance SupportedRequestsFam (St (D a) name) = forall b. '[SetData b, ModifyData a b]
+
+type instance StateTitle (D (Proxy 'True)) = "true"
+type instance StateTitle (D (Proxy 'False)) = "false"
+--type instance StateTitle (D a) = "Data"
   
 getData :: St (D a) name -> a
 getData (St (D a)) = a  

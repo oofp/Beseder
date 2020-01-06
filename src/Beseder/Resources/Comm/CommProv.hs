@@ -73,6 +73,18 @@ type CommMsgRcvd name commPars i o e m  = St (StCommMsgRcvd commPars i o e m) na
 type CommClosed name commPars i o e m  = St (StCommClosed commPars i o e m) name
 type CommFailed name commPars i o e m   = St (StCommFailed commPars i o e m) name 
 
+type instance Eval (SupportedRequests (CommInitiated name commPars i o e m)) = '[CloseComm]
+type instance Eval (SupportedRequests (CommWaitForMsg name commPars i o e m)) = '[CloseComm, SendMsg o]
+type instance Eval (SupportedRequests (CommMsgRcvd name commPars i o e m)) = '[GetNextMsg, CloseComm, SendMsg o]
+type instance Eval (SupportedRequests (CommClosed name commPars i o e m)) = '[]
+type instance Eval (SupportedRequests (CommFailed name commPars i o e m)) = '[]
+
+type instance StateTitle (StCommInitiated commPars i o e m) = "CommInitiated"
+type instance StateTitle (StCommWaitForMsg commPars i o e m) = "CommWaitForMsg"
+type instance StateTitle (StCommMsgRcvd commPars i o e m) = "CommMsgRcvd"
+type instance StateTitle (StCommClosed commPars i o e m) = "CommClosed"
+type instance StateTitle (StCommFailed commPars i o e m) = "CommFailed"
+
 instance (MonadIO m, CommProv commPars i o e m) => CreateRes m name (CommRes commPars i o e) (V '[CommInitiated name commPars i o e m ])  where
   createRes _nm pars = fmap (variantFromValue . St) (createComm pars)  
 
