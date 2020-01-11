@@ -39,7 +39,7 @@ library
                      , Beseder.Resources.State.DataRes
                      , Beseder.Resources.State.PureRes
                      , Beseder.Resources.State.ImpRes
-                     , Beseder.Resources.State.BinarySwitch
+                     , Beseder.Resources.State.BinarySwitchRes
                      , Beseder.Resources.State.StateLogger  
                      , Beseder.Resources.Monitor.BinaryMonitorRes
                      , Beseder.Resources.Timer
@@ -100,6 +100,8 @@ library
                      , Beseder.Resources.Comm.Impl.STMComm
                      , Beseder.Resources.Composite.CompositeRes
                      , Beseder.Resources.Composite.CompositeDataRes
+                     , Beseder.Resources.Monitor.Impl.BinaryMonitorProd
+                     , Beseder.Resources.State.Impl.BinarySwitchCons
   build-depends:       base >= 4.7 && < 5
                      , protolude
                      , network

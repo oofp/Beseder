@@ -259,7 +259,7 @@ type family Edges (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [
   Edges func sp xs = Edges' func sp xs
 
 type family EdgesEventLoop (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [*] where  
-  EdgesEventLoop func sp xs = Concat (Edges' GetNextAllFunc sp xs) (Edges func sp (First (Eval (GetNextAllFunc sp xs)))) 
+  EdgesEventLoop func sp xs = Concat (Edges' GetNextAllFunc sp xs) (Edges' func sp (First (Eval (GetNextAllFunc sp xs)))) 
   
 type family Edges' (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [*] where  
   Edges' func sp '[] = '[]  
@@ -270,7 +270,7 @@ type family Edges2 (func :: * -> [*] -> Exp ([*],[*])) x (xs_ex :: ([*],[*])) ::
 
 type family Edges3 (func :: * -> [*] -> Exp ([*],[*])) x (xs_ex :: [*]) :: [*] where
   Edges3 func x '[] = '[]
-  Edges3 (LabelFunc name) x '[x] = '[Edge (LabelFunc name) x x] 
+  -- Edges3 (LabelFunc name) x '[x] = '[Edge (LabelFunc name) x x] -- disable
   Edges3 func x (x ': xs) = Edges3 func x xs
   Edges3 func x (y ': xs) = (Edge func x y) ': (Edges3 func x xs)
   
