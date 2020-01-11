@@ -97,3 +97,6 @@ restartTimer doorTimeoutSec = do
   invoke #doorTimer (StartTimer doorTimeoutSec)
 
 ```
+and here is state diagram extracted for this application:
+
+![EntranceDoor](https://user-images.githubusercontent.com/25211514/72211816-6492ad00-349f-11ea-84c0-a33597f1cfc2.png)
