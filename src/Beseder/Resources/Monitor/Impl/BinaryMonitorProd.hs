@@ -13,7 +13,11 @@
 {-# LANGUAGE FunctionalDependencies  #-}
 {-# LANGUAGE RankNTypes            #-}
 
-module Beseder.Resources.Monitor.Impl.BinaryMonitorProd where
+module Beseder.Resources.Monitor.Impl.BinaryMonitorProd 
+  ( BinaryMonitorProd (..)
+  , BinaryMonitorProdRes
+  , mkBinaryMonitorProd 
+  ) where
 
 import           Protolude  
 import           Haskus.Utils.Variant
@@ -22,6 +26,10 @@ import           Beseder.Resources.Monitor.BinaryMonitorRes
 --import           qualified GHC.Show (Show (..))
 
 data BinaryMonitorProd = BinaryMonitorProd 
+type BinaryMonitorProdRes m = ResPar m BinaryMonitorProd
+
+mkBinaryMonitorProd :: Producer m Bool -> BinaryMonitorProdRes m
+mkBinaryMonitorProd  = MkBinaryMonitorProd
 
 instance Monad m => BinaryMonitorProv m BinaryMonitorProd where
   data  BinMonitorOn m BinaryMonitorProd = BinMonitorOn (Producer m Bool)

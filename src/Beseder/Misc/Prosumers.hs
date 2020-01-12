@@ -13,6 +13,8 @@
 module Beseder.Misc.Prosumers
   ( Consumer (..)
   , Producer (..) 
+  , GetConsumer (..)
+  , GetProducer (..)
   , STMConsumer (..)
   , TVarConsumer (..)
   , stmProducer

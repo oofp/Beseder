@@ -41,3 +41,5 @@ buildRes ''BinaryMonitorProv
 
 type instance TermRequest (St (BinMonitorOn m res) name) = StopMonitor
 type instance TermRequest (St (BinMonitorOff m res) name) = StopMonitor
+
+instance GetInstance StopMonitor where getInstance = StopMonitor

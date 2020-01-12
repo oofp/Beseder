@@ -15,6 +15,8 @@
 
 module Beseder.Resources.State.Impl.BinarySwitchCons 
   ( BinSwitchCons (..)
+  , mkBinSwitchCons
+  , BinSwitchConsRes
   ) where
 
 import           Protolude  
@@ -24,13 +26,18 @@ import           Beseder.Misc.Prosumers.Consumer
 import           Beseder.Resources.State.BinarySwitchRes
 --
 
-data BinSwitchCons cons = BinSwitchCons cons
-instance (Monad m, GetConsumer cons m Bool) => BinarySwitchProv m (BinSwitchCons cons) where
-  data  BinSwitchOn m (BinSwitchCons cons) = BinSwitchOn (Consumer m Bool)  
-  data  BinSwitchOff m (BinSwitchCons cons) = BinSwitchOff (Consumer m Bool)
-  data  ResPar m (BinSwitchCons cons) = MkBinSwitchCons cons 
+data BinSwitchCons = BinSwitchCons 
+type BinSwitchConsRes m = ResPar m BinSwitchCons
 
-  createBinarySwitch (MkBinSwitchCons consSrc) = BinSwitchOff <$> consumer consSrc
+mkBinSwitchCons :: Consumer m Bool -> BinSwitchConsRes m
+mkBinSwitchCons = MkBinSwitchCons
+
+instance Monad m => BinarySwitchProv m BinSwitchCons where
+  data  BinSwitchOn m BinSwitchCons = BinSwitchOn (Consumer m Bool)  
+  data  BinSwitchOff m BinSwitchCons = BinSwitchOff (Consumer m Bool)
+  data  ResPar m BinSwitchCons = MkBinSwitchCons (Consumer m Bool) 
+
+  createBinarySwitch (MkBinSwitchCons cons) = return $ BinSwitchOff cons
 
   turnOnBinarySwitch TurnOn (BinSwitchOff cons) = do 
     (consume cons) (Just True) 

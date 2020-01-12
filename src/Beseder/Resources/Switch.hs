@@ -13,10 +13,11 @@
 {-# LANGUAGE FunctionalDependencies  #-}
 {-# LANGUAGE RankNTypes            #-}
 
-module Beseder.Resources.Monitor 
-  ( module Beseder.Resources.Monitor.BinaryMonitorRes
-  , module Beseder.Resources.Monitor.Impl.BinaryMonitorProd
-  ) where
+module Beseder.Resources.Switch 
+  ( module Beseder.Resources.State.BinarySwitchRes
+  , module Beseder.Resources.State.Impl.BinarySwitchCons 
+  )
+  where
 
-import           Beseder.Resources.Monitor.BinaryMonitorRes
-import           Beseder.Resources.Monitor.Impl.BinaryMonitorProd
+import           Beseder.Resources.State.BinarySwitchRes
+import           Beseder.Resources.State.Impl.BinarySwitchCons 

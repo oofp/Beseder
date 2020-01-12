@@ -35,17 +35,11 @@ module  EntranceDoor where
 import           Protolude                    hiding (Product, Any, handle, return, gets, lift, liftIO,
                                                (>>), (>>=), forever, until,try,on)
 import           Beseder.Base.ControlData                                               
-import           Beseder.Base.Base
-import           Beseder.Base.Common
-import           Beseder.Misc.Misc
 import           Beseder.Resources.Timer
-import           Beseder.Resources.Monitor.BinaryMonitorRes
-import           Beseder.Resources.State.ImpRes 
-import           Beseder.Resources.State.BinarySwitchRes 
-import           Beseder.Resources.State.DataRes 
+import           Beseder.Resources.Monitor
+import           Beseder.Resources.Switch
 import           Beseder.Resources.Comm 
 import           Data.String 
-import           qualified Protolude 
 import           GHC.Exts (Any)    
 
 data FobReader = FobReader 
