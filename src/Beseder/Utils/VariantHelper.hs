@@ -11,6 +11,7 @@
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE UndecidableInstances      #-}
 {-# LANGUAGE FunctionalDependencies    #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Beseder.Utils.VariantHelper where
 
@@ -22,6 +23,9 @@ import           Haskus.Utils.Types.List
 import           Haskus.Utils.Variant
 import           Protolude               hiding (Product)
 import           Beseder.Utils.ListHelper
+import           Beseder.Base.Internal.Classes 
+import           Data.Coerce
+import           System.Random
 
 convertEither ::
   ( --Productable (V s1x)   (V '[s2])
@@ -274,3 +278,119 @@ unionEither :: forall xs ys zs.
 {-# INLINE unionEither #-}
 unionEither  = nubVariant . concatEither 
 
+{-
+class GetVarInstance (xs :: [*]) where
+  getVarInstance :: Int -> V xs
+  getVarSize :: Proxy xs -> Int
+
+instance GetInstance x => GetVarInstance '[x] where
+  getVarInstance _ = variantFromValue getInstance 
+  getVarSize _ = 0
+
+instance (Liftable (x1 ': xs) (x ': x1 ': xs), Liftable '[x] (x ': x1 ': xs), GetInstance x, GetVarInstance (x1 ': xs)) => GetVarInstance (x ': x1 ': xs) where
+  getVarInstance indx = 
+    let xsSize = getVarSize (Proxy @(x1 ':xs))
+    in 
+      if (xsSize == indx)
+        then
+          liftVariant $ variantFromValue (getInstance @x)
+        else 
+          let v_xs :: V (x1 ': xs)
+              v_xs = getVarInstance indx 
+          in liftVariant v_xs    
+  getVarSize _px = getVarSize (Proxy @(x1 ':xs)) + 1  
+-}
+
+class GetVarInstance (xs :: [*]) where
+  getVarInstance :: Int -> V xs
+
+instance GetInstance x => GetVarInstance '[x] where
+  getVarInstance _ = variantFromValue getInstance 
+ 
+instance (Liftable (x1 ': xs) (x ': x1 ': xs), Liftable '[x] (x ': x1 ': xs), GetInstance x, GetVarInstance (x1 ': xs)) => GetVarInstance (x ': x1 ': xs) where
+  getVarInstance 0 = liftVariant $ variantFromValue (getInstance @x)
+  getVarInstance n = 
+    let v_xs :: V (x1 ': xs)
+        v_xs = getVarInstance (n-1) 
+    in liftVariant v_xs    
+
+class GetVarInstanceFrom (par :: *) (xs :: [*]) where
+  getVarInstanceFrom :: par -> Int -> V xs
+
+instance Coercible par x => GetVarInstanceFrom par '[x] where
+  getVarInstanceFrom par _ = variantFromValue (coerce par) 
+ 
+instance (Liftable (x1 ': xs) (x ': x1 ': xs), Liftable '[x] (x ': x1 ': xs), Coercible par x, GetVarInstanceFrom par (x1 ': xs)) => GetVarInstanceFrom par (x ': x1 ': xs) where
+  getVarInstanceFrom par 0 = 
+    let x :: x
+        x = coerce par
+    in liftVariant $ variantFromValue x
+  getVarInstanceFrom par n = 
+    let v_xs :: V (x1 ': xs)
+        v_xs = getVarInstanceFrom par (n-1) 
+    in liftVariant v_xs    
+
+getVarSize :: forall xs. (KnownNat (Length xs)) => V xs -> Int 
+getVarSize _v_xs = 
+  let pxNat :: Proxy (Length xs)
+      pxNat = Proxy 
+  in fromIntegral $ natVal pxNat
+
+
+getListSize :: forall xs. (KnownNat (Length xs)) => Proxy xs -> Int 
+getListSize _px_xs = 
+  let pxNat :: Proxy (Length xs)
+      pxNat = Proxy 
+  in fromIntegral $ natVal pxNat
+
+getRandomVar :: forall xs m. (KnownNat (Length xs), GetVarInstance xs, MonadIO m) => m (V xs)
+getRandomVar = do
+  let varSize = getListSize (Proxy @xs)
+  indx <- liftIO $ randomRIO (0, varSize)
+  return $ getVarInstance indx
+
+getRandomVarFrom :: forall par xs m. (KnownNat (Length xs), GetVarInstanceFrom par xs, MonadIO m) => par -> m (V xs)
+getRandomVarFrom par = do
+  let varSize = getListSize (Proxy @xs)
+  indx <- liftIO $ randomRIO (0, varSize)
+  return $ getVarInstanceFrom par indx
+
+
+{-
+type L4 = '[(),Text,Char,Int]          
+instance GetInstance Char  where getInstance = '0'
+instance GetInstance Text  where getInstance = ""
+instance GetInstance Int  where getInstance = 0
+--let getRVar :: IO (V L4); getRVar = getRandomVar
+-}
+
+class CoerceVar xs ys where
+  coerceVar :: V xs -> V ys
+
+instance CoerceVar '[] '[] where
+  coerceVar v_xs = v_xs
+
+instance (Coercible x y, CoerceVar xs ys, Liftable '[y] (y ': ys), Liftable ys (y ': ys)) => CoerceVar (x ': xs) (y ': ys) where
+  coerceVar v_x_xs = case popVariantHead v_x_xs of
+    Right x -> 
+      let y :: y
+          y = coerce x
+      in liftVariant (variantFromValue y)
+    Left v_xs -> 
+      let v_ys :: V ys
+          v_ys = coerceVar v_xs
+      in liftVariant v_ys 
+
+
+{-
+newtype C = C Char deriving Show
+newtype II = II Int deriving Show
+
+vci,vci0 :: V [Char,Int] 
+vci = variantFromEither (Right '0')
+vci0 = variantFromEither (Left 5)
+
+vci2, vci3 :: V [C,II]      
+vci2 = coerceVar vci
+vci3 = coerceVar vci0
+-}
