@@ -21,7 +21,6 @@ module Beseder.Resources.State.Impl.BinarySwitchCons
 
 import           Protolude  
 import           Haskus.Utils.Variant
--- import           qualified GHC.Show (Show (..))
 import           Beseder.Misc.Prosumers.Consumer
 import           Beseder.Resources.State.BinarySwitchRes
 --
