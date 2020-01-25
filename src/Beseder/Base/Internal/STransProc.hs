@@ -109,6 +109,7 @@ type family ValidateFunc (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*
   ValidateFunc (AlignFunc f) sp xs = ValidateFunc f sp xs
   ValidateFunc (ScopeFunc f _) sp xs = ValidateFunc f sp xs
   ValidateFunc (HandleLoopFunc f) sp xs = ValidateTransformLoop f sp xs
+  ValidateFunc (AssertFunc sp1) sp xs = ValidateAssert sp1 (ListSplitterReminder sp1 xs) xs
   {-  
     PropValRes BlockStep 
       (ValidateFunc 
@@ -157,6 +158,10 @@ type family ValidateInvoke (req :: *) (name :: Symbol) (sp :: *) (xs :: [*]) (fl
   ValidateInvoke req name sp xs 'True = '( 'True, '[Step (InvokeAllFunc req name) sp xs])
   ValidateInvoke req name sp xs 'False = '( 'False, '[ErrorStep (InvokeAllFunc req name) (V xs) "Request not supported"])
 
+type family ValidateAssert (sp1 :: *) (xsDiff :: [*]) (xs :: [*]) :: (Bool, [*]) where
+  ValidateAssert sp1 '[] xs = '( 'True, '[])      
+  ValidateAssert sp1 xsDiff xs = '( 'False, '[ErrorStep (AssertFunc sp1) (V xs) "Assertion failure"])    
+
 type family ValidateTransformLoop (f :: * -> [*] -> Exp ([*],[*])) sp (xs :: [*]) :: (Bool, [*]) where
   ValidateTransformLoop f sp xs = ValidateTransformLoop2 (ValidateFunc f sp xs) sp xs f     
   
@@ -175,7 +180,6 @@ type family ValidateTransformLoop4 (steps :: [*]) sp (nextXs :: ([*],[*])) (isSu
 type family ValidateTransformLoop5 (steps :: [*]) (res :: (Bool, [*])) sp (nextXs :: [*]) (f :: * -> [*] -> Exp ([*],[*])) (totalXs :: ([*],[*]))  :: (Bool, [*]) where
   ValidateTransformLoop5 steps '(False, moreSteps) sp nextXs f sumXs = '(False, Union steps moreSteps)    
   ValidateTransformLoop5 steps '(True, moreSteps) sp nextXs f sumXs = ValidateTransformLoop3 (Union steps moreSteps) sp (Eval (f sp nextXs)) sumXs  f    
-    
     
 {-  
   type family TransformLoop' sp (nextXsEx :: ([*], [*])) (totalXsEx :: ([*], [*])) (f :: * -> [*] -> Exp ([*],[*])) ::  ([*], [*]) where

@@ -33,7 +33,7 @@ timer1 timeoutSec1 = do
   newRes #t1 TimerRes                    
   invoke #t1  (StartTimer timeoutSec1)   
   newRes #t2 TimerRes                    
-  invoke #t2  (StartTimer timeoutSec1)   
+  invoke #t2  (StartTimer timeoutSec1)
   handleEvents $ do
     on @("t1" :? IsTimerTriggered) $ do
       invoke #t2 StopTimer
@@ -46,6 +46,7 @@ timerForever = do
   invoke #t (StartTimer 36)
   newRes #t1 TimerRes
   invoke #t1 (StartTimer 3)
+  assert @("t1" :? IsTimerArmed)    
   try @(Dynamics) $ do
     try @("t" :? IsTimerArmed) $ do
       forever $ do
@@ -60,7 +61,6 @@ timerForever = do
   clearAllResources    
 
 mkSTransDataTypeAny "timerForever" "TimerForever"
-
 
 timerHandleTo :: STransData m NoSplitter _ _
 timerHandleTo = do
