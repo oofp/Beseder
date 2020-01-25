@@ -40,8 +40,6 @@ timer1 timeoutSec1 = do
   clear #t1
   clear #t2                              
 
-
-
 timerForever :: STransData m NoSplitter _ _
 timerForever = do
   newRes #t TimerRes
@@ -64,6 +62,21 @@ timerForever = do
 mkSTransDataTypeAny "timerForever" "TimerForever"
 
 
+timerHandleTo :: STransData m NoSplitter _ _
+timerHandleTo = do
+  newRes #t TimerRes
+  invoke #t (StartTimer 36)
+  newRes #t1 TimerRes
+  invoke #t1 (StartTimer 3)
+  newRes #t2 TimerRes
+  handleTo @("t2" :? IsTimerTriggered) $ do
+    on @("t2" :? IsTimerNotArmed) (invoke #t2 (StartTimer 5))
+  skipTo @("t1" :? IsTimerTriggered)  
+  skipTo @("t" :? IsTimerTriggered)  
+
+mkSTransDataTypeAny "timerHandleTo" "TimerHandleTo"
+
+-- :kind! Eval (TimerHandleTo NoSplitter '[()])
 -- :kind! Eval (TimerForever NoSplitter '[()])
 -- :kind!  ValidateSteps '[] TimerForever NoSplitter '[()]
 {- --invoke #t1 (StartTimer 3)

@@ -46,6 +46,7 @@ library
                      , Beseder.Resources.Comm
                      , Beseder.Resources.Composite
                      , Beseder.Resources.ResourceDef
+                     , Beseder.Resources.Utils.ResourceMock
                      , Beseder.Misc.Misc
                      , Beseder.Misc.Prosumers
   other-modules:       Beseder.Base.Internal.Classes

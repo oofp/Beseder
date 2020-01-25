@@ -161,4 +161,8 @@ ifElse = IfElse
 iff :: Bool -> STransData m sp f1 () -> STransData m sp (IffFunc f1) ()  
 iff = Iff
     
-  
+handleTo :: forall sp1 sp f m. STransData m ((sp :&& (Not sp1)) :&& Dynamics) f () -> STransData m sp (EmbedFunc (Not sp1) (HandleEventsFunc f)) ()
+handleTo hnd = 
+  Try @(Not sp1) (handleEvents hnd) 
+
+

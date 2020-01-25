@@ -32,6 +32,7 @@ module Beseder.Base.ControlData
     , pumpEvents 
     , ifElse
     , iff
+    , handleTo
     , block
     , evalSTransData
     , evalSTransDataApp
