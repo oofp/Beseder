@@ -39,7 +39,7 @@ data IfElseStep (stepsIf :: [*]) (stepsElse :: [*])
 data IffStep (stepsIf :: [*])   
 data TryStep (sp1 :: *) (steps :: [*])  
 data ForeverStep (steps :: [*])  
-data BlockStep (steps :: [*])  
+data BlockStep (label :: Symbol) (steps :: [*])  
 data LoopStep (steps :: [*])  
 data LabelStep (label :: Symbol) (sp :: *) (xs :: [*])  
 data ErrorStep (func :: * -> [*] -> Exp ([*],[*])) (errState :: *) (errText :: Symbol) 
@@ -53,7 +53,7 @@ type family ApplyFunc (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) 
   ApplyFunc (IfElseFunc f1 f2) sp xs = '[IfElseStep (ApplyFunc f1 sp xs) (ApplyFunc f2 sp xs)] 
   ApplyFunc (IffFunc f) sp xs = '[IffStep (ApplyFunc f sp xs)] 
   ApplyFunc (ForeverFunc f) sp xs = '[ForeverStep (ApplyFunc f sp xs)]
-  ApplyFunc (BlockFunc f) sp xs = '[BlockStep (ApplyFunc f sp xs)]
+  ApplyFunc (BlockFunc label f) sp xs = '[BlockStep label (ApplyFunc f sp xs)]
   ApplyFunc (ExtendForLoopFunc f) sp xs = '[]
   ApplyFunc (AlignFunc f) sp xs = ApplyFunc f sp xs
   ApplyFunc (ScopeFunc f _) sp xs = ApplyFunc f sp xs
@@ -74,7 +74,7 @@ type family ApplyWithFilter (fltr :: (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> 
   ApplyWithFilter fltr (EmbedFunc sp1 f1) sp xs = '[TryStep sp1 (ApplyWithFilter fltr f1 (sp :&& sp1) (ListSplitterRes sp1 xs))] 
   ApplyWithFilter fltr (IffFunc f) sp xs = '[IffStep (ApplyWithFilter fltr f sp xs)] 
   ApplyWithFilter fltr (IfElseFunc f1 f2) sp xs = '[IfElseStep (ApplyWithFilter fltr f1 sp xs) (ApplyWithFilter fltr f2 sp xs)] 
-  ApplyWithFilter fltr (BlockFunc f) sp xs = '[BlockStep (ApplyWithFilter fltr f sp xs)]
+  ApplyWithFilter fltr (BlockFunc label f) sp xs = '[BlockStep label (ApplyWithFilter fltr f sp xs)]
   ApplyWithFilter fltr (ForeverFunc f) sp xs = '[ForeverStep (ApplyWithFilter fltr f sp xs)]
   ApplyWithFilter fltr (ExtendForLoopFunc f) sp xs = '[]
   ApplyWithFilter fltr (AlignFunc f) sp xs = ApplyWithFilter fltr f sp xs
@@ -104,7 +104,7 @@ type family ValidateFunc (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*
   ValidateFunc (IffFunc f) sp xs = ValidateFunc f sp xs 
   ValidateFunc (IfElseFunc f1 f2) sp xs = ValidateIfElse (ValidateFunc f1 sp xs) f1 f2 sp xs 
   ValidateFunc (ForeverFunc f) sp xs = PropValRes ForeverStep (ValidateForever (ValidateFunc f sp xs) f sp xs)
-  ValidateFunc (BlockFunc f) sp xs = PropValRes BlockStep (ValidateFunc f sp xs)
+  ValidateFunc (BlockFunc label f) sp xs = PropValRes (BlockStep label) (ValidateFunc f sp xs)
   ValidateFunc (ExtendForLoopFunc f) sp xs = '( 'True, '[])
   ValidateFunc (AlignFunc f) sp xs = ValidateFunc f sp xs
   ValidateFunc (ScopeFunc f _) sp xs = ValidateFunc f sp xs
@@ -216,7 +216,7 @@ type family GetSteps (d :: *) :: [*] where
   GetSteps (OnOrStep sp1 steps1 steps2) = Concat (FlattenSteps steps1) (FlattenSteps steps2)
   GetSteps (TryStep sp1 steps) = FlattenSteps steps  
   GetSteps (ForeverStep steps) = FlattenSteps steps  
-  GetSteps (BlockStep steps) = FlattenSteps steps  
+  GetSteps (BlockStep label steps) = FlattenSteps steps  
   GetSteps (LoopStep steps) = FlattenSteps steps  
   GetSteps step = '[step]
   
@@ -246,7 +246,7 @@ type family Edges (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [
   Edges (IffFunc f) sp xs = Edges f sp xs 
   Edges (IfElseFunc f1 f2) sp xs = Concat (Edges f1 sp xs) (Edges f2 sp xs) 
   Edges (ForeverFunc f) sp xs = Edges f sp xs
-  Edges (BlockFunc f) sp xs = Edges' f sp xs
+  Edges (BlockFunc label f) sp xs = Edges' (BlockFunc label f) sp xs
   Edges (ExtendForLoopFunc f) sp xs = '[]
   Edges (AlignFunc f) sp xs = Edges f sp xs
   Edges (ScopeFunc f _) sp xs = Edges f sp xs
@@ -285,6 +285,8 @@ type family GetStatesAndLabels (edges :: [*]) :: * where
 type family GetStatesAndLabels' (edges :: [*]) :: * where
   GetStatesAndLabels' '[] = StatesAndLabels '[] '[]  
   GetStatesAndLabels' ((Edge (LabelFunc name) from to) ': moreEdges) = AddLabel name from (GetStatesAndLabels' moreEdges) 
+  GetStatesAndLabels' ((Edge (BlockFunc "" sub) from to) ': moreEdges) = AddState from (AddState to (GetStatesAndLabels' moreEdges))
+  GetStatesAndLabels' ((Edge (BlockFunc name sub) from to) ': moreEdges) = AddState from (AddState to (AddLabel name from (GetStatesAndLabels' moreEdges)))
   GetStatesAndLabels' ((Edge otherFunc () ()) ': moreEdges) = GetStatesAndLabels' moreEdges
   GetStatesAndLabels' ((Edge otherFunc from ()) ': moreEdges) = AddState from (GetStatesAndLabels' moreEdges)
   GetStatesAndLabels' ((Edge otherFunc () to) ': moreEdges) = AddState to (GetStatesAndLabels' moreEdges)
@@ -295,7 +297,7 @@ type family AddLabel (name :: Symbol) (s :: *) (stsLabels :: *) :: * where
 
 type family AddState (s :: *) (stsLabels :: *) :: * where  
   AddState s (StatesAndLabels sts lbls) = StatesAndLabels (s ': sts) lbls
-    
+
 type family PostProcessStatesLabels (stsLabels :: *) :: * where
   PostProcessStatesLabels (StatesAndLabels sts lbls) = StatesAndLabels (Nub sts) lbls
 
@@ -327,17 +329,30 @@ type family StatesToSymbol (edges :: [*]) :: Symbol where
   StatesToSymbol edges = StatesToSymbol' (GetStatesAndLabels edges)
 
 type family StatesToSymbol' (stsLabels :: *) :: Symbol where
-  StatesToSymbol' (StatesAndLabels sts lbls) = StatesListToSymbol 0 sts
+  StatesToSymbol' (StatesAndLabels sts lbls) = StatesListToSymbol 0 sts lbls
   
-type family StatesListToSymbol (ix :: Nat) (sts :: [*]) :: Symbol where
-  StatesListToSymbol ix '[] = ""
-  StatesListToSymbol ix (st ': moreStates) = AppendSymbol (StateToSymbol (NatToSymbol (ix+1)) st) (StatesListToSymbol (ix+1) moreStates)
+type family StatesListToSymbol (ix :: Nat) (sts :: [*]) (lbls :: [(*,Symbol)]) :: Symbol where
+  StatesListToSymbol ix '[] lbls = ""
+  StatesListToSymbol ix (st ': moreStates) lbls = AppendSymbol (StateToSymbol (StateIndex (ix+1) (FindStateLabel st lbls)) st 'True) (StatesListToSymbol (ix+1) moreStates lbls)
 
-type family StateToSymbol (ixSym :: Symbol) (st :: *) :: Symbol where
-  StateToSymbol ix () = ""
-  StateToSymbol ix (St s name) = AppendSymbol (AppendSymbol ix (AppendSymbol " : " (ShowState (St s name)))) "\n"
-  StateToSymbol ix (s, smore) = AppendSymbol (StateToSymbol ix s) (StateToSymbol ix smore)
+type family FindStateLabel (st :: *) (lbls :: [(*,Symbol)]) :: Symbol where
+  FindStateLabel st '[] = ""
+  FindStateLabel st ( '(st, l) ': moreLabels) = l
+  FindStateLabel st ( '(st1, l) ': moreLabels) = FindStateLabel st moreLabels
 
+type family StateIndex (ix :: Nat) (l ::Symbol) :: Symbol where
+  StateIndex ix "" = NatToSymbol ix
+  StateIndex ix l = l
+
+type family StateToSymbol (ixSym :: Symbol) (st :: *) (flSepar :: Bool):: Symbol where
+  StateToSymbol ix () flSepar = ""
+  StateToSymbol ix (St s name) flSepar  = AppendSymbol (AppendSymbol ix (AppendSymbol " : " (ShowState (St s name)))) (Separator ix flSepar)
+  StateToSymbol ix (s, smore) flSepar = AppendSymbol (StateToSymbol ix s 'False) (StateToSymbol ix smore flSepar)
+
+type family Separator (ixSym :: Symbol) (flSep :: Bool) :: Symbol where
+  Separator ix 'True = AppendSymbol "\n" (AppendSymbol ix " : - \n") 
+  Separator ix 'False = "\n" 
+  
 type family TransformEdges (edges :: [*]) :: [*] where
   TransformEdges edges = TransformEdges' edges (GetStatesAndLabels edges) 
 
@@ -397,5 +412,5 @@ type family VertexToText (v :: *) :: Symbol where
 
 type ValidateSteps labels f sp xs = Nub (FilterSteps (FlattenSteps (Second (ValidateFunc f sp xs))) labels)
 type StateDiagramSym f xs = StateDiagramFromEdges (Edges f NoSplitter xs)  
-type StateDiagramFromEdges (edges :: [*]) = AppendSymbol (EdgesToText (TransformEdges edges)) (AppendSymbol "\n" (StatesToSymbol edges))   
+type StateDiagramFromEdges (edges :: [*]) = AppendSymbol (EdgesToText (Nub (TransformEdges edges))) (AppendSymbol "\n" (StatesToSymbol edges))   
 

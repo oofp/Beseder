@@ -244,8 +244,8 @@ instance
 instance  
   ( Qm q m
   , Interpretable q m sp xs rs ex f 
-  ) => Interpretable q m sp xs rs ex (BlockFunc f) where
-    interpret (Block sd) = block (interpret sd) 
+  ) => Interpretable q m sp xs rs ex (BlockFunc l f) where
+    interpret (Block l sd) = block (interpret sd) 
       
 instance  
   ( Qm q m

@@ -43,8 +43,8 @@ type instance Eval (GetFunc name x sp xs) = '(xs, '[])
 data OpFunc :: * -> * -> [*] -> Exp ([*],[*])
 type instance Eval (OpFunc a sp xs) = '(xs, '[])
 
-data BlockFunc :: (* -> [*] -> Exp ([*],[*])) -> (* -> [*] -> Exp ([*],[*]))
-type instance Eval (BlockFunc f sp xs) = Eval (f sp xs)
+data BlockFunc :: Symbol -> (* -> [*] -> Exp ([*],[*])) -> (* -> [*] -> Exp ([*],[*]))
+type instance Eval (BlockFunc blockName f sp xs) = Eval (f sp xs)
 
 data AssertFunc :: * -> * -> [*] -> Exp ([*],[*])
 type instance Eval (AssertFunc sp1 sp xs) = AssertFam (ListSplitterRes2 sp1 xs)

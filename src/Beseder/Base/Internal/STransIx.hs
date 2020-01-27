@@ -363,7 +363,7 @@ liftRes (Left v_ex1) = Left $ liftVariant v_ex1
 block :: 
   ( Monad (q m)
   , MonadTrans q
-  ) => STrans q m sp xs ys ex f () -> STrans q m sp xs ys ex (BlockFunc f) ()
+  ) => STrans q m sp xs ys ex f () -> STrans q m sp xs ys ex (BlockFunc n f) ()
 block = coerce 
 
 assert :: forall sp1 q m sp xs. 

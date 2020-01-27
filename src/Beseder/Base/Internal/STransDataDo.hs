@@ -67,8 +67,8 @@ instance CaseOf (AssertFunc sp) where
   type CaseOfFunc (AssertFunc sp) = AssertFunc sp
   caseOf (Compose (On sd1) sd2) = onOrElse sd1 sd2
 
-instance CaseOf (BlockFunc f) where
-  type CaseOfFunc (BlockFunc f) = BlockFunc f
+instance CaseOf (BlockFunc nm f) where
+  type CaseOfFunc (BlockFunc nm f) = BlockFunc nm f
   caseOf (Compose (On sd1) sd2) = onOrElse sd1 sd2
     
 instance CaseOf f_sub3 => CaseOf (ComposeFunc (CaptureFunc sp2 f_sub2) f_sub3) where
@@ -78,11 +78,17 @@ instance CaseOf f_sub3 => CaseOf (ComposeFunc (CaptureFunc sp2 f_sub2) f_sub3) w
 endCase :: STransData m sp (AssertFunc EmptyList) ()  
 endCase = Assert @EmptyList
 
-defCase :: STransData m sp f () -> STransData m sp (BlockFunc f) ()  
-defCase = Block
+noNamed :: Named ""
+noNamed = Named
 
-block :: STransData m sp f () -> STransData m sp (BlockFunc f) ()  
-block = Block
+defCase :: STransData m sp f () -> STransData m sp (BlockFunc "" f) ()  
+defCase = Block noNamed
+
+block :: STransData m sp f () -> STransData m sp (BlockFunc "" f) ()  
+block = Block noNamed
+
+lb :: Named label -> STransData m sp f () -> STransData m sp (BlockFunc label f) ()  
+lb = Block
 
 assert :: forall sp1 sp m. STransData m sp (AssertFunc sp1) ()
 assert = Assert

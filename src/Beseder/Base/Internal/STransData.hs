@@ -57,7 +57,7 @@ data STransData (m :: * -> *) (sp :: *) (sfunc :: * -> [*] -> Exp ([*],[*])) (a 
   Iff :: Bool -> STransData m sp f1 () -> STransData m sp (IffFunc f1) ()  
   Scope :: STransData m sp f () -> Proxy df -> STransData m sp (ScopeFunc f df) ()
   Func :: Proxy ff -> STransData m sp (FuncFunc ff) ()
-  Block :: STransData m sp f () -> STransData m sp (BlockFunc f) ()
+  Block :: Named label -> STransData m sp f () -> STransData m sp (BlockFunc label f) ()
   Assert :: forall sp1 sp m. STransData m sp (AssertFunc sp1) ()
   --WhatNext :: STransData m sp (WhatNextFunc s) s
   --WhatNames :: STransData m sp (WhatNamesFunc names) names
