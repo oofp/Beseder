@@ -34,6 +34,7 @@ module Beseder.Base.ControlData
     , iff
     , handleTo
     , block
+    , lb
     , evalSTransData
     , evalSTransDataApp
     , evalSTransDataLabels
@@ -64,8 +65,12 @@ module Beseder.Base.ControlData
     , validateSteps 
     , getError' 
     , getError
+    , Edges
+    , GetStatesAndLabels
+    , TransformEdges
     , ValidateSteps 
     , StateDiagramSym
+    , StateDiagramSym'
     , scopeRes
     , clearAllBut
     , caseOf

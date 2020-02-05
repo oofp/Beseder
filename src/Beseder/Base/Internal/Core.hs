@@ -245,11 +245,11 @@ next2 (state1, state2) func = do
                 return True)
     return True
 
-instance (MonadIO m, CollapseStateTrans s1, TermState m s1, Transition m s2, KnownNat (Length (NextStates s2))) => Transition m (StateTransData2 'Static 'Dynamic s1 s2)  where
+instance (MonadIO m, CollapseStateTrans s1, StateTrans s1 ~ Static, Transition m s2, KnownNat (Length (NextStates s2))) => Transition m (StateTransData2 'Static 'Dynamic s1 s2)  where
   type NextStates (StateTransData2 'Static 'Dynamic s1 s2) =  Product '[CollapsedStateTrans s1] (NextStates s2)
   next (StateTransData2 (s1, s2)) func = next s2 (\s2res -> func (productVariant (variantFromValue (collapseStateTrans s1)) s2res))
 
-instance (MonadIO m, Transition m s1, CollapseStateTrans s2 ,TermState m s2) => Transition m (StateTransData2 'Dynamic 'Static s1 s2)  where
+instance (MonadIO m, Transition m s1, CollapseStateTrans s2 ,StateTrans s2 ~ Static) => Transition m (StateTransData2 'Dynamic 'Static s1 s2)  where
   type NextStates (StateTransData2 'Dynamic 'Static s1 s2) =  Product (NextStates s1) '[CollapsedStateTrans s2]
   next (StateTransData2 (s1, s2)) func = next s1 (\s1res -> func (productVariant s1res (variantFromValue (collapseStateTrans s2))))
 

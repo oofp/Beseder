@@ -66,8 +66,9 @@ timerHandleTo :: STransData m NoSplitter _ _
 timerHandleTo = do
   newRes #t TimerRes
   invoke #t (StartTimer 36)
-  newRes #t1 TimerRes
-  invoke #t1 (StartTimer 3)
+  lb #tim1 $ do
+    newRes #t1 TimerRes
+    invoke #t1 (StartTimer 3)
   newRes #t2 TimerRes
   handleTo @("t2" :? IsTimerTriggered) $ do
     on @("t2" :? IsTimerNotArmed) (invoke #t2 (StartTimer 5))
@@ -75,7 +76,9 @@ timerHandleTo = do
   skipTo @("t" :? IsTimerTriggered)  
 
 mkSTransDataTypeAny "timerHandleTo" "TimerHandleTo"
-
+type HandleToEdges = Edges TimerHandleTo NoSplitter '[()]
+type HandleToDiagram = StateDiagramSym TimerHandleTo '[()]
+ 
 -- :kind! Eval (TimerHandleTo NoSplitter '[()])
 -- :kind! Eval (TimerForever NoSplitter '[()])
 -- :kind!  ValidateSteps '[] TimerForever NoSplitter '[()]

@@ -26,6 +26,7 @@ module Beseder.Base.Common
     , ListOfNamed
     , ToVarOfNamed 
     , nameFromSt
+    , stFromName
     , stFunc
     , UnwrapContent
     , AreEq
@@ -33,6 +34,7 @@ module Beseder.Base.Common
     , SupportedRequests (..)
     , StReqs
     , StateTitle
+    , CoerceVar (..)
     ) where
 
 import Beseder.Base.Internal.Core 
@@ -44,5 +46,5 @@ import Beseder.Base.Internal.STransIx
 import Beseder.Base.Internal.STransDataIntrp
 import Beseder.Base.Internal.STransDef
 import Beseder.Base.Internal.TupleHelper (GetTypeByNameVar,GetResByName)
-import Beseder.Utils.VariantHelper (getVarLength)
+import Beseder.Utils.VariantHelper (getVarLength, CoerceVar (..))
 import Beseder.Base.Internal.StHelper

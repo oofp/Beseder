@@ -49,6 +49,7 @@ reifyValue valName = do
 getFuncType :: Info -> Maybe Type
 --getFuncType (VarI _varName (ForallT _varBnd _ctx (AppT (AppT _ fType) _)) _maybeDec) = Just fType
 getFuncType (VarI _varName (ForallT _varBnd _ctx nextType) _maybeDec) = getFuncType' nextType
+getFuncType (VarI _varName nextType _maybeDec) = getFuncType' nextType
 getFuncType _ = Nothing
 
 getFuncType' :: Type -> Maybe Type

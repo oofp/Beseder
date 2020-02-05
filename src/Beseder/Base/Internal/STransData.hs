@@ -92,17 +92,17 @@ getSTransDiagram' sd _ = showV (Proxy @(TransformEdges (Edges f sp xs)))
 getSTransDiagram :: (TransformEdges (Edges f NoSplitter '[()]) ~ edges, ShowV edges) => STransData m NoSplitter f a -> Text
 getSTransDiagram sd  = getSTransDiagram' sd (Proxy @('[()])) 
 
-getSTransDiagramSymbol' ::  forall sp m f xs a edges. STransData m sp f a -> Proxy xs -> Proxy (EdgesToText (TransformEdges (Edges f sp xs)))
-getSTransDiagramSymbol' sd _ = Proxy @(EdgesToText (TransformEdges (Edges f sp xs)))
+getSTransDiagramSymbol' ::  forall sp m f xs a edges. STransData m sp f a -> Proxy xs -> Proxy (EdgesToText (TransformEdges (Edges f sp xs)) "")
+getSTransDiagramSymbol' sd _ = Proxy @(EdgesToText (TransformEdges (Edges f sp xs)) "")
 
-getSTransDiagramSymbol :: STransData m NoSplitter f a -> Proxy (EdgesToText (TransformEdges (Edges f NoSplitter '[()])))
+getSTransDiagramSymbol :: STransData m NoSplitter f a -> Proxy (EdgesToText (TransformEdges (Edges f NoSplitter '[()])) "")
 getSTransDiagramSymbol sd  = getSTransDiagramSymbol' sd (Proxy @('[()])) 
 
-getSTransDiagramStates' ::  forall sp m f xs a edges. STransData m sp f a -> Proxy xs -> Proxy (StatesToSymbol (Edges f sp xs))
-getSTransDiagramStates' sd _ = Proxy @(StatesToSymbol (Edges f sp xs))
+getSTransDiagramStates' ::  forall sp m f xs a edges. STransData m sp f a -> Proxy xs -> Proxy (StatesToSymbol (Edges f sp xs) "")
+getSTransDiagramStates' sd _ = Proxy @(StatesToSymbol (Edges f sp xs) "")
 
-getSTransDiagramStates ::  forall sp m f xs a edges. STransData m sp f a -> Proxy xs -> Proxy (StatesToSymbol (Edges f NoSplitter '[()]))
-getSTransDiagramStates sd _ = Proxy @(StatesToSymbol (Edges f NoSplitter '[()]))
+getSTransDiagramStates ::  forall sp m f xs a edges. STransData m sp f a -> Proxy xs -> Proxy (StatesToSymbol (Edges f NoSplitter '[()]) "")
+getSTransDiagramStates sd _ = Proxy @(StatesToSymbol (Edges f NoSplitter '[()]) "")
 
 evalSTransDataApp' :: STransData m sp f a -> Proxy xs -> Proxy (ApplyFunc f sp xs)
 evalSTransDataApp' sd_ _ = Proxy 

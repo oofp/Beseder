@@ -236,6 +236,7 @@ type family FilterLabelStep (lStep :: *)(isIncluded :: Bool) (steps :: [*]) (lab
 
 --
 data Edge (func :: * -> [*] -> Exp ([*],[*])) (fromState :: *) (toState :: *)
+data BlockEdge (label :: Symbol) (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) 
 
 type family Edges (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [*] where
   Edges (ComposeFunc f1 f2) sp xs = Concat (Edges f1 sp xs) (Edges f2 sp (First (Eval (f1 sp xs))))
@@ -246,7 +247,7 @@ type family Edges (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [
   Edges (IffFunc f) sp xs = Edges f sp xs 
   Edges (IfElseFunc f1 f2) sp xs = Concat (Edges f1 sp xs) (Edges f2 sp xs) 
   Edges (ForeverFunc f) sp xs = Edges f sp xs
-  Edges (BlockFunc label f) sp xs = Edges' (BlockFunc label f) sp xs
+  Edges (BlockFunc label f) sp xs = (BlockEdge label f sp xs) ': (Edges' (BlockFunc label f) sp xs)
   Edges (ExtendForLoopFunc f) sp xs = '[]
   Edges (AlignFunc f) sp xs = Edges f sp xs
   Edges (ScopeFunc f _) sp xs = Edges f sp xs
@@ -291,6 +292,7 @@ type family GetStatesAndLabels' (edges :: [*]) :: * where
   GetStatesAndLabels' ((Edge otherFunc from ()) ': moreEdges) = AddState from (GetStatesAndLabels' moreEdges)
   GetStatesAndLabels' ((Edge otherFunc () to) ': moreEdges) = AddState to (GetStatesAndLabels' moreEdges)
   GetStatesAndLabels' ((Edge otherFunc from to) ': moreEdges) = AddState from (AddState to (GetStatesAndLabels' moreEdges))
+  GetStatesAndLabels' ((BlockEdge label f sp xs) ': moreEdges) = GetStatesAndLabels' moreEdges
 
 type family AddLabel (name :: Symbol) (s :: *) (stsLabels :: *) :: * where  
   AddLabel name s (StatesAndLabels sts lbls) = StatesAndLabels sts ( '(s, name) ': lbls) 
@@ -325,15 +327,15 @@ instance (ShowV v, ShowV vs) => ShowV (v ': vs) where
 instance (ShowV v, ShowV v1) => ShowV ((-->) v v1) where
   showV _ = (showV (Proxy @v)) <> " --> " <> (showV (Proxy @v1))
       
-type family StatesToSymbol (edges :: [*]) :: Symbol where
-  StatesToSymbol edges = StatesToSymbol' (GetStatesAndLabels edges)
+type family StatesToSymbol (edges :: [*]) (prefix :: Symbol) :: Symbol where
+  StatesToSymbol edges p = StatesToSymbol' (GetStatesAndLabels edges) p
 
-type family StatesToSymbol' (stsLabels :: *) :: Symbol where
-  StatesToSymbol' (StatesAndLabels sts lbls) = StatesListToSymbol 0 sts lbls
+type family StatesToSymbol' (stsLabels :: *) (prefix :: Symbol) :: Symbol where
+  StatesToSymbol' (StatesAndLabels sts lbls) p = StatesListToSymbol 0 sts lbls p
   
-type family StatesListToSymbol (ix :: Nat) (sts :: [*]) (lbls :: [(*,Symbol)]) :: Symbol where
-  StatesListToSymbol ix '[] lbls = ""
-  StatesListToSymbol ix (st ': moreStates) lbls = AppendSymbol (StateToSymbol (StateIndex (ix+1) (FindStateLabel st lbls)) st 'True) (StatesListToSymbol (ix+1) moreStates lbls)
+type family StatesListToSymbol (ix :: Nat) (sts :: [*]) (lbls :: [(*,Symbol)]) (prefix :: Symbol) :: Symbol where
+  StatesListToSymbol ix '[] lbls p = ""
+  StatesListToSymbol ix (st ': moreStates) lbls p = AppendSymbol (StateToSymbol (StateIndex (ix+1) (FindStateLabel st lbls)) p st 'True) (StatesListToSymbol (ix+1) moreStates lbls p)
 
 type family FindStateLabel (st :: *) (lbls :: [(*,Symbol)]) :: Symbol where
   FindStateLabel st '[] = ""
@@ -342,16 +344,17 @@ type family FindStateLabel (st :: *) (lbls :: [(*,Symbol)]) :: Symbol where
 
 type family StateIndex (ix :: Nat) (l ::Symbol) :: Symbol where
   StateIndex ix "" = NatToSymbol ix
-  StateIndex ix l = l
+  StateIndex ix l = ""
 
-type family StateToSymbol (ixSym :: Symbol) (st :: *) (flSepar :: Bool):: Symbol where
-  StateToSymbol ix () flSepar = ""
-  StateToSymbol ix (St s name) flSepar  = AppendSymbol (AppendSymbol ix (AppendSymbol " : " (ShowState (St s name)))) (Separator ix flSepar)
-  StateToSymbol ix (s, smore) flSepar = AppendSymbol (StateToSymbol ix s 'False) (StateToSymbol ix smore flSepar)
+type family StateToSymbol (ixSym :: Symbol) (prefix :: Symbol) (st :: *) (flSepar :: Bool):: Symbol where
+  StateToSymbol "" prefix st flSepar = ""
+  StateToSymbol ix prefix () flSepar = ""
+  StateToSymbol ix prefix (St s name) flSepar  = ConcatSymbols [prefix, ix, " : ", ShowState (St s name), Separator ix prefix flSepar]
+  StateToSymbol ix prefix (s, smore) flSepar = ConcatSymbols [StateToSymbol ix prefix s 'False, StateToSymbol ix prefix smore flSepar]
 
-type family Separator (ixSym :: Symbol) (flSep :: Bool) :: Symbol where
-  Separator ix 'True = AppendSymbol "\n" (AppendSymbol ix " : - \n") 
-  Separator ix 'False = "\n" 
+type family Separator (ixSym :: Symbol) (prefix :: Symbol) (flSep :: Bool) :: Symbol where
+  Separator ix p 'True = ConcatSymbols ["\n", p, ix, " : - \n"] 
+  Separator ix p 'False = "\n" 
   
 type family TransformEdges (edges :: [*]) :: [*] where
   TransformEdges edges = TransformEdges' edges (GetStatesAndLabels edges) 
@@ -361,6 +364,7 @@ type family TransformEdges' (edges :: [*]) (stsLabels :: *) :: [*] where
   TransformEdges' ((Edge (LabelFunc name) x x) ': edges) stsLabels = TransformEdges' edges stsLabels
   TransformEdges' ((Edge f from to) ': edges) stsLabels = 
       ((-->) (GetVertex 'False from stsLabels)  (GetVertex 'True to stsLabels)) ': (TransformEdges' edges stsLabels)
+  TransformEdges' ((BlockEdge name f sp xs) ': edges) stsLabels = TransformEdges' edges stsLabels
 
 type family GetVertex (flEnd :: Bool) (s :: *) (stsLabels :: *) where
   GetVertex 'False () stsLabels = VBegin
@@ -395,22 +399,47 @@ type family NatToSymbol (n :: Nat) :: Symbol where
   NatToSymbol n = AppendSymbol (NatToSymbol (Div n 10)) (NatToSymbol (Mod n 10))
   
 
-type family EdgesToText (edges :: [*]) :: Symbol where
-  EdgesToText '[] = ""
-  EdgesToText '[e] = EdgeToText e
-  EdgesToText (e ': moreEdges) = AppendSymbol (EdgeToText e) (AppendSymbol "\n" (EdgesToText moreEdges)) 
+type family EdgesToText (edges :: [*]) (prefix :: Symbol) :: Symbol where
+  EdgesToText '[] p = ""
+  EdgesToText '[e] p = EdgeToText e p
+  EdgesToText (e ': moreEdges) p = ConcatSymbols [EdgeToText e p, "\n", EdgesToText moreEdges p]
 
-type family EdgeToText (edge :: *) :: Symbol where
-  EdgesToText (v1 --> v2) = AppendSymbol (VertexToText v1) (AppendSymbol " --> " (VertexToText v2))
+type family EdgeToText (edge :: *) (prefix :: Symbol) :: Symbol where
+  EdgesToText (v1 --> v2) prefix  = AppendSymbol (VertexToText v1 prefix) (AppendSymbol " --> " (VertexToText v2 prefix))
 
-type family VertexToText (v :: *) :: Symbol where
-  VertexToText VBegin = "[*]"
-  VertexToText VEnd = "[*]"
-  VertexToText (VIndex ix) = (NatToSymbol ix)
-  VertexToText (VLabel l) = l
+type family VertexToText (v :: *) (prefix :: Symbol) :: Symbol where
+  VertexToText VBegin p = "[*]"
+  VertexToText VEnd p = "[*]"
+  VertexToText (VIndex ix) p = AppendSymbol p (NatToSymbol ix)
+  VertexToText (VLabel l) p = l
    
 
 type ValidateSteps labels f sp xs = Nub (FilterSteps (FlattenSteps (Second (ValidateFunc f sp xs))) labels)
+
+type StateDiagramFromEdges (edges :: [*]) = StateDiagramFromEdges' edges ""
+
 type StateDiagramSym f xs = StateDiagramFromEdges (Edges f NoSplitter xs)  
-type StateDiagramFromEdges (edges :: [*]) = AppendSymbol (EdgesToText (Nub (TransformEdges edges))) (AppendSymbol "\n" (StatesToSymbol edges))   
+type StateDiagramSym' f sp xs = StateDiagramFromEdges (Edges f sp xs)  
+
+type StateDiagramFromEdges' (edges :: [*]) (prefix :: Symbol) = 
+  ConcatSymbols
+    [ EdgesToText (Nub (TransformEdges edges)) prefix 
+    , "\n"
+    , StatesToSymbol edges prefix  
+    , "\n"
+    , BlockDiagrams edges
+    ] 
+
+type family BlockDiagrams (edges :: [*]) :: Symbol where
+  BlockDiagrams '[] = ""  
+  BlockDiagrams ((BlockEdge label f sp xs) ': moreEdges) = ConcatSymbols [BlockDiagram label f sp xs, "\n", BlockDiagrams moreEdges]
+  BlockDiagrams (edge ': moreEdges) = BlockDiagrams moreEdges
+
+type family BlockDiagram (label :: Symbol) (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: Symbol where
+  BlockDiagram label func sp xs = ConcatSymbols ["state ", label, " {\n", StateDiagramFromEdges' (Edges func sp xs) label, "\n}"]
+
+type family ConcatSymbols (list :: [Symbol]) :: Symbol where
+  ConcatSymbols '[] = ""
+  ConcatSymbols (s ': tail) = AppendSymbol s (ConcatSymbols tail)
+    
 

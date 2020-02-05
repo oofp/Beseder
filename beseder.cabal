@@ -49,6 +49,7 @@ library
                      , Beseder.Resources.Utils.ResourceMock
                      , Beseder.Misc.Misc
                      , Beseder.Misc.Prosumers
+                     , Beseder.Resources.Monitor.EventMonitorRes
   other-modules:       Beseder.Base.Internal.Classes
                      , Beseder.Base.Internal.Cont
                      , Beseder.Base.Internal.Core
