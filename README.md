@@ -99,4 +99,4 @@ restartTimer doorTimeoutSec = do
 ```
 and here is state diagram extracted for this application:
 
-![EntranceDoor](https://user-images.githubusercontent.com/25211514/72211816-6492ad00-349f-11ea-84c0-a33597f1cfc2.png)
+![EntranceDoor](https://user-images.githubusercontent.com/25211514/73844951-9a515a00-47ef-11ea-8874-65b12d607588.png)
