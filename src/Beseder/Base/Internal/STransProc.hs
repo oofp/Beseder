@@ -234,6 +234,22 @@ type family FilterLabelStep (lStep :: *)(isIncluded :: Bool) (steps :: [*]) (lab
   FilterLabelStep lstep 'False steps labels = FilterSteps steps labels
   FilterLabelStep lstep 'True steps labels = lstep ': (FilterSteps steps labels)
 
+type GetLabel' (label :: Symbol) (f :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) = 
+  FlattenSteps (ApplyWithFilter (LabelsName label) f sp xs)
+
+type GetLabel (label :: Symbol) (f :: * -> [*] -> Exp ([*],[*])) = 
+  GetLabel' label  f NoSplitter '[()]
+
+type family LabelsToSymbols (ls :: [*]) :: [(Symbol, [Symbol])] where
+   LabelsToSymbols '[] = '[]
+   LabelsToSymbols ((LabelStep l sp xs) ': ls) = '(l, ShowStates xs) ': LabelsToSymbols ls
+   
+type ShowLabel' (label :: Symbol) (f :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) =
+  LabelsToSymbols (GetLabel' label f sp xs)
+
+type ShowLabel (label :: Symbol) (f :: * -> [*] -> Exp ([*],[*]))  =
+  ShowLabel' label f NoSplitter '[()]
+
 --
 data Edge (func :: * -> [*] -> Exp ([*],[*])) (fromState :: *) (toState :: *)
 data BlockEdge (label :: Symbol) (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) 

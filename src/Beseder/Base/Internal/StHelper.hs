@@ -30,6 +30,7 @@ module Beseder.Base.Internal.StHelper
   , StReqs
   , StateTitle
   , ShowState
+  , ShowStates
   ) where
 
 import            Protolude hiding (First)
@@ -124,3 +125,8 @@ data (:=) (n :: Symbol) (s :: Symbol)
 type family ShowState (s :: *) :: Symbol where
   ShowState () = "()"
   ShowState (St s name) = AppendSymbol name (AppendSymbol " = " (StateTitle s))
+  ShowState (St s name, moreStates) = AppendSymbol (ShowState (St s name)) (AppendSymbol " , " (ShowState moreStates))
+
+type family ShowStates (sts :: [*]) :: [Symbol] where
+  ShowStates '[] = '[]
+  ShowStates (s ': moreStates) = (ShowState s) ': (ShowStates moreStates)

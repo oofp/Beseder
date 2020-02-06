@@ -71,6 +71,11 @@ module Beseder.Base.ControlData
     , ValidateSteps 
     , StateDiagramSym
     , StateDiagramSym'
+    , GetLabel
+    , GetLabel'
+    , ShowLabel'
+    , ShowLabel
+    , ApplyFunc
     , scopeRes
     , clearAllBut
     , caseOf
