@@ -1,6 +1,9 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 module Beseder.Base.Internal.Classes 
     ( TaskPoster (..)
     , GetInstance (..)
+    , CreateFrom (..)
     ) where
 
 import Protolude
@@ -11,4 +14,5 @@ class (MonadIO q) => TaskPoster q where
 class GetInstance a where
     getInstance :: a
 
-      
+class CreateFrom a b where
+    createFrom :: a -> b

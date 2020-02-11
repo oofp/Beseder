@@ -23,13 +23,12 @@
 {-# LANGUAGE UndecidableInstances   #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedLabels #-}
+
 {-# OPTIONS_GHC -fomit-interface-pragmas #-}
 
 module  Main where
 
 import           Protolude                   
-import           Control.Monad.Cont (ContT)
-import           Beseder.Base.Common
 import           Beseder.Misc.Misc
 import           Apps.BlackJackPromptApp
 

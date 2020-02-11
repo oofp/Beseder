@@ -31,12 +31,12 @@ module Beseder.Resources.Comm.CommProv
   ) where
 
 import           Protolude hiding (TypeError)
-import           Control.Concurrent.STM.TVar
 import           Control.Monad.Cont
 import           Haskus.Utils.Types
 import           Haskus.Utils.Variant
 import           Beseder.Base.Base
 import           Beseder.Base.Common
+import qualified Prelude as SafeUndef (undefined) 
 
 data CommRes commPars i o e = CommRes commPars deriving Show
 newtype SendMsg o = SendMsg o deriving (Show, Eq)
@@ -157,7 +157,7 @@ instance (MonadIO m, CommProv commPars i o e m) => Transition m (CommInitiated n
   next (St evData) cbFunc = runContT (commInitTransition evData) 
     (\case 
       Left failed -> cbFunc (toVariantAt @1 (St failed)) 
-      Right wait -> cbFunc (toVariantAt @0 (St wait)))
+      Right waitMsg -> cbFunc (toVariantAt @0 (St waitMsg)))
 
 instance (MonadIO m, CommProv commPars i o e m) => Transition m (CommWaitForMsg name commPars i o e m) where
   type instance NextStates (CommWaitForMsg name commPars i o e m) = '[CommMsgRcvd name commPars i o e m , CommClosed name commPars i o e m ]
@@ -169,7 +169,7 @@ instance (MonadIO m, CommProv commPars i o e m) => Transition m (CommWaitForMsg 
 instance (MonadIO m, CommProv commPars i o e m) => Transition m (CommMsgRcvd name commPars i o e m) where
   type instance NextStates (CommMsgRcvd name commPars i o e m) =
     TypeError ( 'Text "Use GetNextMessage before to read next incoming message") 
-  next _ _ = undefined
+  next _ _ = SafeUndef.undefined
                   
 getIncomingMsg :: forall m name commPars i o e. CommProv commPars i o e m  => CommMsgRcvd name commPars i o e m  -> i
 getIncomingMsg (St rcvdMsgState) = getRecvdMsg rcvdMsgState       

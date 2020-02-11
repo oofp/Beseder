@@ -17,17 +17,12 @@ module Beseder.Base.Internal.SplitFunc where
 
 import           Protolude                    hiding (Product, handle)
 import           Haskus.Utils.Flow
-import           Haskus.Utils.Types.List
 import           Beseder.Base.Internal.Core
-import           Beseder.Base.Internal.Named
 import           Beseder.Base.Internal.TupleHelper
 import           Beseder.Base.Internal.TypeExp
-import           Beseder.Base.Internal.Classes
 import           Beseder.Utils.ListHelper
-import           Beseder.Utils.ListHelper
-import           Beseder.Utils.Lst
-import           Haskus.Utils.Types.List
 import           Haskus.Utils.Variant
+import qualified Prelude as SafeUndef (undefined) 
 
 data NoSplitter :: * -> Exp Bool
 data ByResName :: Symbol -> * -> Exp Bool
@@ -84,7 +79,7 @@ class SplitVar (sp :: * -> Exp Bool) xs where
   splitVar :: Proxy sp -> Variant xs -> Var (SplitList sp xs)   
 
 instance SplitVar sp '[] where
-  splitVar px_sp _ = undefined  
+  splitVar _px_sp _ = SafeUndef.undefined  
 
 --instance (VarFromValue SplitVar sp (x ': xs) where
 --  splitVar px_sp xs =   case popVariantHead v_xs of

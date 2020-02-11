@@ -21,15 +21,12 @@ module  Beseder.Base.Internal.STransDataTH
   )where
 
 import           Protolude hiding (Type)                   
-import           Beseder.Base.Common
-import           Beseder.Misc.Misc
-import           Beseder.Resources.Timer
 import           Data.String 
 import           Language.Haskell.TH
-import           Language.Haskell.TH.Quote
+-- import           Language.Haskell.TH.Quote
 import           Data.List
 import           Prelude (error)    
-import           GHC.Exts (Any)    
+--import           GHC.Exts (Any)    
 
 reifyValue :: String -> Q (Maybe Info) -- Q [Dec]
 reifyValue valName = do
@@ -38,8 +35,8 @@ reifyValue valName = do
     Nothing -> do
       liftIO $ putStrLn ("=================== Value NOT found"::Text)
       return Nothing -- [] -- Nothing
-    (Just valName) -> do
-      rInfo <- reify valName
+    (Just valName') -> do
+      rInfo <- reify valName'
       return $ Just rInfo
       --liftIO $ putStrLn ("=================== Value found"::Text)
       --return []
@@ -62,10 +59,12 @@ reifyFunc valName = do
   maybeInfo <- reifyValue valName
   return (maybeInfo >>= getFuncType) 
 
+{-
 getVarTNames :: String -> Q (Maybe [Name])
 getVarTNames valName = do
   tpMaybe <- reifyFunc valName
   return (fmap varTNames tpMaybe)
+-}
 
 varTNames :: Type -> [Name]
 varTNames (VarT name) = [name]
@@ -73,7 +72,7 @@ varTNames (AppT t1 t2) = nub (varTNames t1 <> varTNames t2)
 varTNames _ = []
 
 replaceVarTs :: Type -> Type -> Type 
-replaceVarTs (VarT name) replTo = replTo
+replaceVarTs (VarT _name) replTo = replTo
 replaceVarTs (AppT t1 t2) replTo = AppT (replaceVarTs t1 replTo) (replaceVarTs t2 replTo)
 replaceVarTs t _ = t
 

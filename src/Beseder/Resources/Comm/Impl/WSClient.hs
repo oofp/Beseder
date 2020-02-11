@@ -18,16 +18,10 @@ module Beseder.Resources.Comm.Impl.WSClient
 
 import           Protolude hiding (TypeError)
 import           Control.Concurrent.STM.TVar
-import           Haskus.Utils.Types
-import           Haskus.Utils.Variant
-import           Beseder.Base.Base
-import           Beseder.Base.Common
-import           Beseder.Resources.Comm.CommProv 
 import           Beseder.Resources.Comm.CommProvImpl 
 import qualified Network.WebSockets  as WS
 import           Network.WebSockets.Connection
 import qualified Data.ByteString.Lazy as LBStr
-import           Prelude (String)
 import           Data.Text
 import           Network.Socket (withSocketsDo)
 import           qualified GHC.Show (Show (..))

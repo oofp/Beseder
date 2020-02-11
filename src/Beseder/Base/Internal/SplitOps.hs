@@ -93,4 +93,4 @@ type (:?) (name :: Symbol) (pred :: a -> Exp Bool) = By (PredWithName (Named nam
 infixr 8 :?
 
 predWithName :: forall pred name. Named name -> By (PredWithName (Named name) pred) 
-predWithName named = By
+predWithName _named = By

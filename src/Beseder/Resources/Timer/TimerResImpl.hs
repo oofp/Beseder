@@ -45,7 +45,7 @@ instance TaskPoster m => TimerProv m where
   clearNotArmedTimer TimerNotArmedData = return ()
   clearStoppedTimer TimerStoppedData = return ()
   clearTriggeredTimer TimerTriggeredData = return ()
-  timerTransition (TimerArmedData asyncTask cbTvar) cbFunc  = 
+  timerTransition (TimerArmedData _asyncTask cbTvar) cbFunc  = 
     liftIO $ atomically $ writeTVar cbTvar (Just cbFunc) >> return True
 
 

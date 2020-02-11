@@ -8,6 +8,7 @@ module Beseder.Base.Common
     , First
     , Second
     , GetInstance (..)
+    , CreateFrom (..)
     , TaskPoster (..)
     , execTrans
     , execApp
@@ -31,10 +32,12 @@ module Beseder.Base.Common
     , UnwrapContent
     , AreEq
     , IsContentEq
-    , SupportedRequests (..)
+    , SupportedRequests
     , StReqs
     , StateTitle
     , CoerceVar (..)
+    , Var (..)
+    , IndexedPar (..)
     ) where
 
 import Beseder.Base.Internal.Core 
@@ -43,8 +46,7 @@ import Beseder.Base.Internal.Named
 import Beseder.Base.Internal.TypeExp 
 import Beseder.Base.Internal.Classes 
 import Beseder.Base.Internal.STransIx
-import Beseder.Base.Internal.STransDataIntrp
 import Beseder.Base.Internal.STransDef
 import Beseder.Base.Internal.TupleHelper (GetTypeByNameVar,GetResByName)
-import Beseder.Utils.VariantHelper (getVarLength, CoerceVar (..))
+import Beseder.Utils.VariantHelper (getVarLength, CoerceVar (..), Var (..), IndexedPar (..))
 import Beseder.Base.Internal.StHelper

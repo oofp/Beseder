@@ -123,6 +123,7 @@ library
                      , type-errors
                      , process
                      , pretty-simple
+                     , random-shuffle
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings, NoImplicitPrelude
 

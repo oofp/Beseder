@@ -14,7 +14,6 @@ module Resource.BlackJackRes where
 
 import           Haskus.Utils.Variant
 import           Protolude
-import           Beseder.Base.Base                                               
 import           Beseder.Base.Common                                               
 import           Beseder.Resources.State.PureRes
 import           Game.BlackJack

@@ -28,6 +28,7 @@ import           Beseder.Base.Internal.Named
 import           Beseder.Base.Internal.TupleHelper
 import           Beseder.Utils.VariantHelper
 import           Beseder.Utils.ListHelper
+import qualified Prelude as SafeUndef (undefined) 
 
 infixl 0 |>
 (|>) :: a -> (a -> b) -> b
@@ -203,7 +204,7 @@ foreverFlowEx' ::
 foreverFlowEx' f flowToExec = do 
   ei_v_ex_v_xs <- flowToExec
   case ei_v_ex_v_xs of 
-    Left _v_ex -> undefined -- "v_ex is '[]"
+    Left _v_ex -> SafeUndef.undefined -- "v_ex is '[]"
     Right v_xs -> do 
       ei_v_ex_v_xs' <- f (return $ Right v_xs)
       case ei_v_ex_v_xs' of

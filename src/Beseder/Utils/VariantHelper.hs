@@ -26,6 +26,7 @@ import           Beseder.Utils.ListHelper
 import           Beseder.Base.Internal.Classes 
 import           Data.Coerce
 import           System.Random
+import qualified Prelude as SafeUndef (undefined) 
 
 convertEither ::
   ( --Productable (V s1x)   (V '[s2])
@@ -164,7 +165,7 @@ proxyOfVar :: Variant cs -> Proxy cs
 proxyOfVar _ = Proxy
 
 proxyOfFilter :: (bs ~ FilterList as cs) => Variant cs -> Proxy as -> Proxy bs
-proxyOfFilter v_cs p_as = Proxy
+proxyOfFilter _v_cs _p_as = Proxy
 
 splitVar1 :: 
   ( bs ~ FilterList as cs
@@ -197,7 +198,8 @@ instance (xs ~ ys) => CopyVar xs ys 'True where
   copyVar v_xs _ = v_xs
 
 instance CopyVar xs ys 'False where
-  copyVar v_xs _ = undefined
+  copyVar _v_xs _ = SafeUndef.undefined 
+
 
 class SplitFastOr as bs cs (asEq :: Bool) (bsEq :: Bool) where
   splitFastOr :: Variant cs -> Proxy as -> Proxy bs -> Proxy asEq -> Proxy bsEq -> Either (Variant as) (Variant bs)
@@ -216,16 +218,16 @@ instance (VariantSplitter' as bs (c:cs)  (IsMemberOfList c as)) => SplitFastOr a
     in splitVariant' v_cs px py pxBool 
 
 instance (as ~ cs) => SplitFastOr as bs cs 'True 'False where
-  splitFastOr v_cs px py _ _ = Left v_cs 
+  splitFastOr v_cs _px _py _ _ = Left v_cs 
     
 instance (bs ~ cs) => SplitFastOr as bs cs 'False 'True where
-  splitFastOr v_cs px py _ _ = Right v_cs 
+  splitFastOr v_cs _px _py _ _ = Right v_cs 
           
 class VariantSplitter as bs cs where
   splitVariant :: Variant cs -> Proxy as -> Proxy bs -> Either (Variant as) (Variant bs)
 
 instance VariantSplitter as bs '[]  where
-  splitVariant v_cs _ _  = undefined    
+  splitVariant _v_cs _ _  = SafeUndef.undefined 
 
 instance (SplitFastOr as bs (c : cs) (ListEq (c : cs) as) (ListEq (c : cs) bs)) => VariantSplitter as bs (c : cs) where
   splitVariant v_cs px py = splitFastOr v_cs px py (Proxy @(ListEq (c : cs) as)) (Proxy @(ListEq (c : cs) bs))
@@ -234,7 +236,8 @@ class VariantSplitter' as bs cs (fl ::Bool) where
   splitVariant' :: Variant cs -> Proxy as -> Proxy bs -> Proxy fl -> Either (Variant as) (Variant bs)
 
 instance VariantSplitter' as bs '[] (fl ::Bool) where
-  splitVariant' v_cs _ _ _ = undefined
+  splitVariant' _v_cs _ _ _ = SafeUndef.undefined 
+
 
 instance (IsSubset '[c] as ~ True, Liftable '[c] as, VariantSplitter as bs cx) => VariantSplitter' as bs (c:cx) 'True where
   splitVariant' v_cs px py _ =     
@@ -258,11 +261,9 @@ headToTailV v_xs =
   case popVariantHead v_xs of
     Right x -> liftVariant (variantFromValue x)
     Left v_filtered -> liftVariant v_filtered
-      
-      
 
 getVarLength :: forall xs. KnownNat (Length xs) => Variant xs -> Int
-getVarLength v_xs = natValue @(Length xs)
+getVarLength _v_xs = natValue @(Length xs)
 
 concatEither :: forall xs ys. KnownNat (Length xs) => Either (V xs) (V ys) -> V (Concat xs ys)
 {-# INLINE concatEither #-}
@@ -329,6 +330,24 @@ instance (Liftable (x1 ': xs) (x ': x1 ': xs), Liftable '[x] (x ': x1 ': xs), Co
     let v_xs :: V (x1 ': xs)
         v_xs = getVarInstanceFrom par (n-1) 
     in liftVariant v_xs    
+
+data Var xs = Var { unVar :: (V xs) }
+data IndexedPar par = IndexedPar Int par
+
+instance CreateFrom par x => CreateFrom (IndexedPar par) (Var '[x]) where
+  createFrom (IndexedPar _ par) = Var $ variantFromValue (createFrom par) 
+ 
+instance (Liftable (x1 ': xs) (x ': x1 ': xs), Liftable '[x] (x ': x1 ': xs), CreateFrom par x, CreateFrom (IndexedPar par) (Var (x1 ': xs))) => CreateFrom (IndexedPar par) (Var (x ': x1 ': xs)) where
+  createFrom (IndexedPar 0 par) = 
+    let x :: x
+        x = createFrom par
+        v_x = variantFromValue x
+        v_xs = liftVariant v_x 
+    in Var v_xs
+  createFrom (IndexedPar n par) = 
+    let var_xs :: Var (x1 ': xs)
+        var_xs = createFrom (IndexedPar (n-1) par)  
+    in Var $ (liftVariant (unVar var_xs))    
 
 getVarSize :: forall xs. (KnownNat (Length xs)) => V xs -> Int 
 getVarSize _v_xs = 

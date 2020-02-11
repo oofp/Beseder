@@ -40,12 +40,11 @@ import           Beseder.Base.Internal.STransDef
 import           Beseder.Base.Internal.STransIx
 import           Beseder.Base.Internal.SplitOps
 import           Beseder.Base.Internal.Classes
-import           Beseder.Base.Internal.TypeExp
 import           Beseder.Utils.ListHelper
 import           Haskus.Utils.Types.List
 import           Control.Monad.Cont (ContT)
 import           Control.Monad.Trans (MonadTrans)
-import           Beseder.Base.Internal.STransMonad (return, (>>), (>>=))
+import           Beseder.Base.Internal.STransMonad ((>>))
 
 {-
 return :: Monad (q m) => a -> STrans q m sp xs xs '[] (ReturnFunc a) a

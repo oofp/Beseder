@@ -25,8 +25,8 @@ import           Haskus.Utils.Variant
 import           Beseder.Base.Base
 import           Beseder.Base.Internal.Core
 import           Beseder.Base.Common
-import           qualified GHC.Show (Show (..))
- 
+import qualified Prelude as SafeUndef (undefined) 
+
 newtype PureRes p = PureRes p deriving Show
 
 class MkPureRes pureRes  where
@@ -50,14 +50,14 @@ class PureStVar xs name where
   asPureStVar :: Named name -> V xs -> V (PureStList name xs) 
   
 instance PureStVar ('[]) name where
-  asPureStVar named _ = undefined
+  asPureStVar _named _ = SafeUndef.undefined
 
 newtype PSt a = PSt a
 type PureSt a name = St (PSt a) name
 type instance UnwrapContent (PureSt a name) = a
 
 pureStWithName :: stData -> Named name -> St (PSt stData) name
-pureStWithName stData named = St (PSt stData)
+pureStWithName stData _named = St (PSt stData)
   
 instance 
   ( PureStVar xs name 

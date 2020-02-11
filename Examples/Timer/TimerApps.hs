@@ -13,20 +13,20 @@
 {-# LANGUAGE UndecidableInstances   #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedLabels #-}
+
 {-# OPTIONS_GHC -fomit-interface-pragmas #-}
+{-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 
 module  TimerApps where
 
 import           Protolude                    hiding (Product, handle, return, gets, lift, liftIO,
                                                (>>), (>>=), forever, until,try,on)
 import           Beseder.Base.Control                                               
-import           Beseder.Base.Base
 import           Beseder.Base.Common
-import           Beseder.Misc.Misc
 import           Beseder.Resources.Timer
 import           Data.String 
 import           Control.Monad.Cont (ContT)
-import           qualified Protolude 
 
 timerHello :: TaskPoster m  => Int -> STrans (ContT Bool) m NoSplitter '[()] '[()] '[] _ () 
 timerHello timeoutSec1 = do              -- [()]
@@ -91,7 +91,7 @@ complexLogicTimersApp timeoutSec1 timeoutSec2 timeoutSec3 timeoutSec4 = MkApp $ 
         invoke #t4 StopTimer 
       on @("t1" :? IsTimerArmed) $ 
         invoke #t1 StopTimer 
-  res3 :: _ <- whatNext
+  _res3 :: _ <- whatNext
   clearAllResources
 
 

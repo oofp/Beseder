@@ -17,17 +17,12 @@
 module Beseder.Base.Internal.STransData where
 
 import           Protolude                    hiding (Product, handle,TypeError,First,forever, on)
-import           Haskus.Utils.Types.List
 import           Beseder.Base.Internal.Core
 import           Beseder.Base.Internal.Named
-import           Beseder.Base.Internal.Flow hiding (newRes)
 import           Beseder.Base.Internal.TypeExp
-import           Beseder.Base.Internal.TupleHelper
 import           Beseder.Base.Internal.SplitOps
 import           Beseder.Base.Internal.STransDef
 import           Beseder.Base.Internal.STransProc
-import           Beseder.Base.Internal.STransMonad
-import           Beseder.Base.Internal.NatOne
 
 data STransData (m :: * -> *) (sp :: *) (sfunc :: * -> [*] -> Exp ([*],[*])) (a :: *) where 
   Return :: a -> STransData m sp (ReturnFunc a) a
@@ -63,88 +58,88 @@ data STransData (m :: * -> *) (sp :: *) (sfunc :: * -> [*] -> Exp ([*],[*])) (a 
   --WhatNames :: STransData m sp (WhatNamesFunc names) names
 
 evalSTransData' :: forall sp m f xs a. STransData m sp f a -> Proxy xs -> Proxy (Eval (f sp xs))
-evalSTransData' sd _ = Proxy
+evalSTransData' _sd _ = Proxy
 
 evalSTransData :: STransData m NoSplitter f a -> Proxy (Eval (f NoSplitter '[()]))
 evalSTransData sd  = evalSTransData' sd (Proxy @('[()])) 
 
 edgesSTransData' :: forall sp m f xs a. STransData m sp f a -> Proxy xs -> Proxy (Edges f sp xs)
-edgesSTransData' sd _ = Proxy
+edgesSTransData' _sd _ = Proxy
 
 edgesSTransData :: STransData m NoSplitter f a -> Proxy (Edges f NoSplitter '[()])
 edgesSTransData sd  = edgesSTransData' sd (Proxy @('[()])) 
 
 statesAndLabels' :: forall sp m f xs a. STransData m sp f a -> Proxy xs -> Proxy (GetStatesAndLabels (Edges f sp xs))
-statesAndLabels' sd _ = Proxy
+statesAndLabels' _sd _ = Proxy
 
 statesAndLabels :: STransData m NoSplitter f a -> Proxy (GetStatesAndLabels (Edges f NoSplitter '[()]))
 statesAndLabels sd  = statesAndLabels' sd (Proxy @('[()])) 
 
 vedgesSTransData' :: forall sp m f xs a. STransData m sp f a -> Proxy xs -> Proxy (TransformEdges (Edges f sp xs))
-vedgesSTransData' sd _ = Proxy
+vedgesSTransData' _sd _ = Proxy
 
 vedgesSTransData :: STransData m NoSplitter f a -> Proxy (TransformEdges (Edges f NoSplitter '[()]))
 vedgesSTransData sd  = vedgesSTransData' sd (Proxy @('[()])) 
 
 getSTransDiagram' ::  forall sp m f xs a edges. (TransformEdges (Edges f sp xs) ~ edges, ShowV edges) => STransData m sp f a -> Proxy xs -> Text
-getSTransDiagram' sd _ = showV (Proxy @(TransformEdges (Edges f sp xs)))
+getSTransDiagram' _sd _ = showV (Proxy @(TransformEdges (Edges f sp xs)))
 
 getSTransDiagram :: (TransformEdges (Edges f NoSplitter '[()]) ~ edges, ShowV edges) => STransData m NoSplitter f a -> Text
 getSTransDiagram sd  = getSTransDiagram' sd (Proxy @('[()])) 
 
-getSTransDiagramSymbol' ::  forall sp m f xs a edges. STransData m sp f a -> Proxy xs -> Proxy (EdgesToText (TransformEdges (Edges f sp xs)) "")
-getSTransDiagramSymbol' sd _ = Proxy @(EdgesToText (TransformEdges (Edges f sp xs)) "")
+getSTransDiagramSymbol' ::  forall sp m f xs a. STransData m sp f a -> Proxy xs -> Proxy (EdgesToText (TransformEdges (Edges f sp xs)) "")
+getSTransDiagramSymbol' _sd _ = Proxy @(EdgesToText (TransformEdges (Edges f sp xs)) "")
 
 getSTransDiagramSymbol :: STransData m NoSplitter f a -> Proxy (EdgesToText (TransformEdges (Edges f NoSplitter '[()])) "")
 getSTransDiagramSymbol sd  = getSTransDiagramSymbol' sd (Proxy @('[()])) 
 
-getSTransDiagramStates' ::  forall sp m f xs a edges. STransData m sp f a -> Proxy xs -> Proxy (StatesToSymbol (Edges f sp xs) "")
-getSTransDiagramStates' sd _ = Proxy @(StatesToSymbol (Edges f sp xs) "")
+getSTransDiagramStates' ::  forall sp m f xs a. STransData m sp f a -> Proxy xs -> Proxy (StatesToSymbol (Edges f sp xs) "")
+getSTransDiagramStates' _sd _ = Proxy @(StatesToSymbol (Edges f sp xs) "")
 
-getSTransDiagramStates ::  forall sp m f xs a edges. STransData m sp f a -> Proxy xs -> Proxy (StatesToSymbol (Edges f NoSplitter '[()]) "")
-getSTransDiagramStates sd _ = Proxy @(StatesToSymbol (Edges f NoSplitter '[()]) "")
+getSTransDiagramStates ::  forall sp m f xs a. STransData m sp f a -> Proxy xs -> Proxy (StatesToSymbol (Edges f NoSplitter '[()]) "")
+getSTransDiagramStates _sd _ = Proxy @(StatesToSymbol (Edges f NoSplitter '[()]) "")
 
 evalSTransDataApp' :: STransData m sp f a -> Proxy xs -> Proxy (ApplyFunc f sp xs)
-evalSTransDataApp' sd_ _ = Proxy 
+evalSTransDataApp' _sd_ _ = Proxy 
 
 evalSTransDataApp :: STransData m NoSplitter f a -> Proxy (ApplyFunc f NoSplitter '[()])
-evalSTransDataApp sd_  = Proxy 
+evalSTransDataApp _sd_  = Proxy 
 
 evalSTransDataLabels' :: STransData m sp f a -> Proxy xs -> Proxy (ApplyWithFilter LabelsOnly f sp xs)
-evalSTransDataLabels' sd_ _ = Proxy 
+evalSTransDataLabels' _sd_ _ = Proxy 
 
 evalSTransDataLabels :: STransData m sp f a -> Proxy (ApplyWithFilter LabelsOnly f NoSplitter '[()])
-evalSTransDataLabels sd_ = Proxy 
+evalSTransDataLabels _sd_ = Proxy 
 
 validateSTransData' :: STransData m sp f a -> Proxy xs -> Proxy (ValidateFunc f sp xs)
-validateSTransData' sd_ _ = Proxy 
+validateSTransData' _sd_ _ = Proxy 
 
 validateSTransData :: STransData m sp f a -> Proxy (ValidateFunc f NoSplitter '[()])
-validateSTransData sd_ = Proxy 
+validateSTransData _sd_ = Proxy 
 
 validateSteps' :: STransData m sp f a -> Proxy (labels :: [Symbol]) -> Proxy xs -> Proxy (ValidateSteps labels f sp xs)
-validateSteps' sd_ _ _ = Proxy 
+validateSteps' _sd_ _ _ = Proxy 
 
 validateSteps :: STransData m sp f a -> Proxy (labels :: [Symbol]) -> Proxy (ValidateSteps labels f sp '[()])
-validateSteps sd_ _ = Proxy 
+validateSteps _sd_ _ = Proxy 
 
 getError' :: STransData m sp f a -> Proxy xs -> Proxy (ValidateSteps '[] f sp xs )
-getError' sd_ _ = Proxy 
+getError' _sd_ _ = Proxy 
 
 getError :: STransData m sp f a -> Proxy (ValidateSteps '[] f sp '[()])
-getError sd_ = Proxy 
+getError _sd_ = Proxy 
 
 evalSTransDataNamedLabels' :: Named label -> STransData m sp f a -> Proxy xs -> Proxy (ApplyWithFilter (LabelsName label) f sp xs)
-evalSTransDataNamedLabels' _ sd_ _ = Proxy 
+evalSTransDataNamedLabels' _ _sd_ _ = Proxy 
 
 evalSTransDataNamedLabels :: Named label -> STransData m sp f a -> Proxy (ApplyWithFilter (LabelsName label) f NoSplitter '[()])
-evalSTransDataNamedLabels _ sd_ = Proxy 
+evalSTransDataNamedLabels _ _sd_ = Proxy 
 
 evalSTransDataAppFiltered' :: Proxy (withFilter ::  (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp Bool) -> STransData m sp f a -> Proxy xs -> Proxy (ApplyWithFilter withFilter f sp xs)
-evalSTransDataAppFiltered' _ sd_ _ = Proxy 
+evalSTransDataAppFiltered' _ _sd_ _ = Proxy 
 
 evalSTransDataAppFiltered :: Proxy (withFilter ::  (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp Bool) -> STransData m sp f a -> Proxy (ApplyWithFilter withFilter f NoSplitter '[()])
-evalSTransDataAppFiltered _ sd_ = Proxy 
+evalSTransDataAppFiltered _ _sd_ = Proxy 
 
 flattenSteps :: Proxy (stepsTree :: [*])  -> Proxy (FlattenSteps stepsTree)
 flattenSteps _ = Proxy

@@ -15,9 +15,7 @@
 
 module Beseder.Utils.BoolHelper where
 
-import           Haskus.Utils.Types.List
 import           Protolude hiding (TypeError)
-import           GHC.TypeLits
 
 class KnownBool (b :: Bool) where
   boolVal :: Proxy b -> Bool

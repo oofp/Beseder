@@ -17,16 +17,10 @@
 module Beseder.Base.Internal.STransFunc where
 
 import           Protolude                    hiding (Product, handle,TypeError,First,forever, on)
-import           Haskus.Utils.Types.List
-import           Beseder.Base.Internal.Core
 import           Beseder.Base.Internal.Named
-import           Beseder.Base.Internal.Flow hiding (newRes)
 import           Beseder.Base.Internal.TypeExp
-import           Beseder.Base.Internal.TupleHelper
-import           Beseder.Base.Internal.SplitOps
 import           Beseder.Base.Internal.STransDef
 import           Beseder.Base.Internal.STransData
-import           Beseder.Base.Internal.NatOne
 
 class ReifyTrans m sp (sfunc :: * -> [*] -> Exp ([*],[*])) a where
   reifyTrans :: Proxy sfunc -> STransData m sp sfunc a 

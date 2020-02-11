@@ -23,10 +23,9 @@ import           Protolude
 import           Prelude (error)    
 import           Haskus.Utils.Variant
 import           Beseder.Base.Base
-import           Beseder.Base.Internal.TypeExp
 import           Beseder.Base.Common
 import           Language.Haskell.TH
-import           Language.Haskell.TH.Quote
+-- import           Language.Haskell.TH.Quote
 import           Beseder.Base.Internal.StHelper
 import           Data.Text (pack, unpack)
 import           Data.List ((\\))
@@ -110,11 +109,11 @@ printAsUml classText resDsc = do
         
 
 parseDecsState :: Name -> [Dec] -> StateT ResDsc Q [Dec]
-parseDecsState className decs = do
-  decs <- concat <$> mapM (parseDec className) decs
+parseDecsState className decsInput = do
+  decs <- concat <$> mapM (parseDec className) decsInput
   resDsc <- get
   liftIO $ putStrLn (("***************** ResDsc: " :: Text) <> show resDsc)
-  liftIO $ printAsUml (pack $ nameBase className) resDsc
+  -- liftIO $ printAsUml (pack $ nameBase className) resDsc
   let defStates = (termStates resDsc) <> (fst <$> (transitions resDsc))
       undefStates = (resStates resDsc) \\ defStates
       reqsPerState = foldr addReqState (fmap (\st -> (st,[])) (resStates resDsc)) (fmap (\(r,s , _)-> (r,s)) (requests resDsc))  
@@ -277,7 +276,6 @@ buildState stateName =
         ) 
         ( VarT namePar )
   where
-    stStrName = nameBase stateName
     mPar = mkName "m"
     namePar = mkName "name"
     resPar = mkName "res"
@@ -356,7 +354,6 @@ buildStatePred stateName =
 parseMkRes :: Name -> Name -> Name -> StateT ResDsc Q [Dec]
 parseMkRes className funcName initStateName = do
   let mName = mkName "m"
-      nameName = mkName "name"
       resName = mkName "res"
       mkResName = mkName "MkRes"
       resParName = mkName "ResPar"
@@ -413,7 +410,6 @@ parseTransition className funcName fromStateName statesListType = do
       |]    
   where
     mName = mkName "m"
-    nameName = mkName "name"
     resName = mkName "res"
     stateNames = parseStatesList statesListType
     stateTexts = fmap (pack . nameBase) stateNames
@@ -435,7 +431,6 @@ parseRequest className funcName reqName fromStateName statesListType = do
       |]    
   where
       mName = mkName "m"
-      nameName = mkName "name"
       resName = mkName "res"
       stateNames = parseStatesList statesListType
       statesListTypeNew = return $ buildStateList stateNames resName mName 
@@ -467,7 +462,7 @@ parseStatesList
 parseStatesList _ = []
 
 buildStateList :: [Name] -> Name -> Name -> Language.Haskell.TH.Type
-buildStateList [] resName monadName = SigT PromotedNilT (AppT ListT StarT) 
+buildStateList [] _resName _monadName = SigT PromotedNilT (AppT ListT StarT) 
 buildStateList (stateName : moreStates) resName monadName = 
   AppT 
     (AppT 

@@ -17,7 +17,6 @@ module Beseder.Resources.Timer.PaceResImpl where
 
 import           Protolude    
 import           Haskus.Utils.Variant
-import           Beseder.Base.Base
 import           Beseder.Base.Common
 import           Beseder.Resources.Timer.PaceRes
 import           Beseder.Misc.Prosumers.Producer

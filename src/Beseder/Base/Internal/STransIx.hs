@@ -42,6 +42,7 @@ import           Beseder.Base.Internal.STransDef
 import           Control.Arrow (Kleisli (..))
 import           Beseder.Base.Internal.STransMonad hiding (return, (>>), (>>=))
 import           Data.Coerce
+import qualified Prelude as SafeUndef (undefined) 
 
 -- Constrains
 type family ComposeCFam sp f_a as as1 f_b bs zs where 
@@ -238,7 +239,7 @@ embed sp1 (STrans t) =
             ) => Either (Either (V ex2) (V ex1)) (V xs) -> V zs
           merge3 (Left (Left v_ex2)) = liftVariant v_ex2  
           merge3 (Left (Right v_ex1)) = liftVariant v_ex1 
-          merge3 (Right v_xs) = liftVariant v_xs
+          merge3 (Right v_xs') = liftVariant v_xs'
         in do 
           v_3 <- case splitV sp1 v_xs of 
             Right v_x_sub -> do 
@@ -667,7 +668,7 @@ refuncNextSteps :: (NextSteps steps m sp xs rs ex f, Eval (f sp xs) ~ Eval (Next
   STrans (ContT Bool) m sp xs rs ex f () -> STrans (ContT Bool) m sp xs rs ex (NextStepsFunc steps) ()
 refuncNextSteps = refunc
 
-nextSteps' :: (_) => (NextSteps steps m sp xs rs ex f, Eval (f sp xs) ~ Eval (NextStepsFunc steps sp xs)) =>
+nextSteps' :: (NextSteps steps m sp xs rs ex f, Eval (f sp xs) ~ Eval (NextStepsFunc steps sp xs)) =>
   Proxy steps -> STrans (ContT Bool) m sp xs rs ex (NextStepsFunc steps) ()
 nextSteps' = refuncNextSteps . nextSteps 
 
@@ -691,7 +692,8 @@ execTrans_ t = do
   ei <- runTrans t NoSplitter (variantFromValue ())
   case ei of
     Right (v_rs,()) ->  return v_rs
-    Left _ -> undefined -- cannot happen as ex ~ '[]
+    Left _ -> SafeUndef.undefined 
+ -- cannot happen as ex ~ '[]
 
 type ExecutableFunc sfunc = Eval (sfunc NoSplitter '[()]) ~ '(('[()]),'[])    
 type ExecutableTrans q m sfunc = STrans q m NoSplitter '[()] '[()]  ('[])  sfunc ()
@@ -721,21 +723,23 @@ extractKleisliT (STrans t) = Kleisli (\v_xs -> do
   ei <- t NoSplitter v_xs
   case ei of
     Right (v_rs,()) -> return v_rs
-    Left _ -> undefined) 
+    Left _ -> SafeUndef.undefined) 
 
 extractKleisli :: (Monad m,Eval (sfunc NoSplitter xs) ~ '(rs,'[])) => STrans IdentityT m NoSplitter xs rs '[] sfunc () -> Kleisli m (V xs) (V rs)
 extractKleisli (STrans t) = Kleisli (\v_xs -> runIdentityT $ do
   ei <- t NoSplitter v_xs
   case ei of
     Right (v_rs,()) -> return v_rs
-    Left _ -> undefined) 
+    Left _ -> SafeUndef.undefined) 
+
 
 extractHandler :: forall m sfunc x rs. (Monad m,Eval (sfunc NoSplitter '[x]) ~ '(rs,'[])) => STrans IdentityT m NoSplitter '[x] rs '[] sfunc () -> (x -> m (V rs))
 extractHandler (STrans t) x = runIdentityT $ do
   ei <- t NoSplitter (variantFromValue x)
   case ei of
     Right (v_rs,()) -> return v_rs
-    Left _ -> undefined
+    Left _ -> SafeUndef.undefined 
+
 
 
 instance (Monad (q m)) => STransMonad (STrans q m) where

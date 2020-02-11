@@ -27,6 +27,7 @@ import           Data.Function (id)
 import           Data.Coerce 
 import           Beseder.Base.Internal.Classes
 import           Beseder.Base.Internal.TypeExp
+import qualified Prelude as SafeUndef (undefined) 
 
 -- Base resource operations: 
 class (Monad q) => CreateRes q name res state | q name res -> state where  
@@ -383,7 +384,7 @@ newVWrap _ = VWrap
 
 instance (MonadIO q) => Request q req (VWrap '[] w) where
   type ReqResult req (VWrap '[] w) = '[]
-  request _req _vempty = undefined
+  request _req _vempty = SafeUndef.undefined
 
 instance 
   ( MonadIO q
@@ -407,7 +408,7 @@ type instance  StateTrans (TransWrap xs) = 'Dynamic
 
 instance (MonadIO m) => Transition m (TransWrap '[]) where
   type NextStates (TransWrap '[]) = '[]
-  next _req _t_empty = undefined
+  next _req _t_empty = SafeUndef.undefined
 
 instance 
   ( MonadIO m

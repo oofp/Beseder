@@ -17,6 +17,8 @@
 {-# LANGUAGE TemplateHaskell        #-}
 
 {-# OPTIONS_GHC -fomit-interface-pragmas #-}
+{-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 
 module  CommDataApps where
 
@@ -26,11 +28,13 @@ import           Control.Monad.Cont (ContT)
 import           Beseder.Base.ControlData
 import           Beseder.Base.Control (STransApp (..))                                                
 import           Beseder.Resources.Comm 
-import           Beseder.Base.Common
-import           Beseder.Misc.Misc
 import           Beseder.Resources.State.DataRes
 import           GHC.Exts (Any)    
 import           Data.String
+
+{-# OPTIONS_GHC -fomit-interface-pragmas #-}
+{-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 
 proxyDataApp :: forall m i1 i2 o1 o2 e1 e2 comm1 comm2. 
   ( _

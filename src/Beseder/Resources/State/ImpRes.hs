@@ -26,8 +26,8 @@ import           Haskus.Utils.Variant
 import           Beseder.Base.Base
 import           Beseder.Base.Internal.Core
 import           Beseder.Base.Common
-import           qualified GHC.Show (Show (..))
-import           Beseder.Utils.BoolHelper 
+import qualified Prelude as SafeUndef (undefined) 
+
 newtype ImpRes p = ImpRes p deriving Show
 
 class MkImpRes m impRes where
@@ -51,14 +51,14 @@ class ImpureStVar xs name where
   asImpureStVar :: Named name -> V xs -> V (ImpureStList name xs) 
   
 instance ImpureStVar ('[]) name where
-  asImpureStVar named _ = undefined
+  asImpureStVar _named _ = SafeUndef.undefined
 
 newtype ImpSt a = ImpSt a
 type ImpureSt a name = St (ImpSt a) name
 type instance UnwrapContent (ImpureSt a name) = a
 
 impureStWithName :: stData -> Named name -> St (ImpSt stData) name
-impureStWithName stData named = St (ImpSt stData)
+impureStWithName stData _named = St (ImpSt stData)
   
 instance 
   ( ImpureStVar xs name 

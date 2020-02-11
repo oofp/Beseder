@@ -27,6 +27,7 @@ import           Haskus.Utils.Variant
 import           Beseder.Base.Internal.TypeExp
 import           Data.Function (id)
 import           Prelude (error)
+import qualified Prelude as SafeUndef (undefined) 
 
 type family TargetIndex name a :: Nat where
   TargetIndex name a = TargetIndex' name a 0
@@ -205,7 +206,7 @@ instance
 
 instance OrderByName names (V '[]) where
   type OrderByNameRes names (V '[]) = (V '[])
-  orderByName names v = v  
+  orderByName _names v = v  
 
 type OrderByName' names t = (OrderByName names t, Nub names ~ names, TupleLength t ~ Length names)
 
@@ -403,7 +404,8 @@ class GetTypeByNameVar (name :: Symbol) t xs where
   getTypeByNameVar :: Named name -> V xs -> t
   
 instance GetTypeByNameVar name t '[] where
-  getTypeByNameVar _named _v = undefined
+  getTypeByNameVar _named _v = SafeUndef.undefined 
+
 
 instance (TT x (TargetByName name x), GetTarget (TargetByName name x) (TypeByName name x), TypeByName name x ~ t, GetTypeByNameVar name t xs) => GetTypeByNameVar name t (x ': xs) where
   getTypeByNameVar named v_x_xs = case popVariantHead v_x_xs of

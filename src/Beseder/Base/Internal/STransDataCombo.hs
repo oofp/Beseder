@@ -20,14 +20,10 @@ module Beseder.Base.Internal.STransDataCombo where
 
 import           Protolude                    hiding (Product, handle, return, gets, lift, liftIO,
                                                       (>>), (>>=), forever, until,try,on)
-import           Beseder.Base.Internal.Named
 import           Beseder.Base.Internal.SplitOps
-import           Beseder.Base.Internal.NatOne
 import           Beseder.Base.Internal.STransDef
 import           Beseder.Base.Internal.STransFunc
 import           Beseder.Base.Internal.STransData
-import           Beseder.Base.Internal.STransDataDo
-import           Beseder.Base.Internal.STransFunc
 import           Beseder.Base.Internal.TypeExp
 import           Beseder.Base.Internal.TupleHelper
 import           Beseder.Utils.ListHelper
@@ -61,4 +57,4 @@ type instance Eval (ClearAllButComp names xs) =
     ClearResourcesFam (Subtract (GetAllNames xs) names) 
 
 clearAllBut :: Proxy (names :: [Symbol]) -> STransData m sp (FuncFunc (ClearAllButComp names)) () 
-clearAllBut px = Func Proxy   
+clearAllBut _px = Func Proxy   

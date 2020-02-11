@@ -24,6 +24,7 @@ import           Beseder.Base.Internal.SplitOps
 import           Beseder.Utils.VariantHelper
 import           Beseder.Utils.ListHelper
 import           Beseder.Utils.Lst
+import qualified Prelude as SafeUndef (undefined) 
    
 splitFlow :: 
   ( ListSplitter sp ys
@@ -91,21 +92,21 @@ fromExFlow :: (Monad (q m)) => MFlowEx q m xs '[] -> MFlow q m xs
 fromExFlow flowEx = do
   ei <- flowEx
   case ei of 
-    Left _ -> undefined
+    Left _ -> SafeUndef.undefined
     Right res -> return res 
 
 fromExFlowA :: (Monad (q m)) => MFlowExA q m xs '[] a -> MFlowA q m xs a 
 fromExFlowA flowEx = do
   ei <- flowEx
   case ei of 
-    Left _ -> undefined
+    Left _ -> SafeUndef.undefined
     Right res -> return res 
 
 fromExFlowA' :: (Monad (q m)) => MFlowExA q m xs '[] () -> MFlow q m xs 
 fromExFlowA' flowEx = do
   ei <- flowEx
   case ei of 
-    Left _ -> undefined
+    Left _ -> SafeUndef.undefined
     Right (res,()) -> return res 
 
 lstFromVar :: V xs -> Lst xs

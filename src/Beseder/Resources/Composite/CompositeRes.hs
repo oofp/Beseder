@@ -18,6 +18,10 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
+{-# OPTIONS_GHC -fomit-interface-pragmas #-}
+{-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+
 module  Beseder.Resources.Composite.CompositeRes
   ( compRes
   , CResPar
@@ -25,12 +29,10 @@ module  Beseder.Resources.Composite.CompositeRes
   , StateHandlerProv (..)  
   , StatesHandlerProv (..)
   , compReq
-  , CompReq
   , invokeC
   ) where
 
 import            Protolude hiding (First)
-import            GHC.TypeLits (Symbol, ErrorMessage (..), TypeError)
 import            Haskus.Utils.Variant 
 import            Haskus.Utils.Types.List
 import            Beseder.Base.Base
@@ -39,10 +41,9 @@ import            Beseder.Base.Internal.SplitOps
 import            Beseder.Base.Internal.Core
 import            Beseder.Base.Internal.StHelper
 import            Beseder.Base.Internal.STransIx
-import qualified  Beseder.Base.Internal.STransIxDo as SDo 
-import            Beseder.Base.Internal.TypeExp
 import            Control.Monad.Identity (IdentityT, runIdentityT)
 import            qualified GHC.Show (Show (..))
+import qualified Prelude as SafeUndef (undefined) 
 
 type StateHandler (m :: * -> *) (hf :: * -> Exp [*])  (res :: *) = res -> m (V (Eval (hf res)))  
 
@@ -55,7 +56,7 @@ class StatesHandlerProv (m :: * -> *) (hf :: * -> Exp [*])  (xs :: [*]) where
 
 instance StatesHandlerProv m hf '[] where
   type StatesHandlerRes hf '[] = '[]
-  getStatesHandler _ _ = undefined
+  getStatesHandler _ _ = SafeUndef.undefined
 
 instance 
   ( StateHandlerProv m hf x

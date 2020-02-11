@@ -21,9 +21,6 @@ module Beseder.Resources.Comm.CommProvImpl
 import           Protolude hiding (TypeError)
 import           Control.Concurrent.STM.TVar
 import           Control.Monad.Cont
-import           Haskus.Utils.Types
-import           Haskus.Utils.Variant
-import           Beseder.Base.Base
 import           Beseder.Base.Common
 import           Beseder.Resources.Comm.CommProv 
     
@@ -109,7 +106,7 @@ instance (CommProvImpl commPars m i o e, TaskPoster m) => CommProv commPars i o 
     let contFunc cbFunc = liftIO $ atomically $ modifyTVar commState (\comSt -> comSt {cb2=Just cbFunc}) >> return True
     in ContT contFunc
 
-  getRecvdMsg (StCommMsgRcvd commState i) = i
+  getRecvdMsg (StCommMsgRcvd _commState i) = i
   getFailure (StCommFailed e) = e
 
 handleInitiatedState :: (TaskPoster m) => TVar (CommState commPars m i o e) -> Either e (CommReqs m o) -> m (Bool)
@@ -117,7 +114,7 @@ handleInitiatedState  comStTVar errOrComm = do
   cb1Maybe <- liftIO $ atomically $ do
     comSt <- readTVar comStTVar
     case errOrComm of 
-      Left e -> writeTVar comStTVar (comSt {cb1=Nothing})
+      Left _e -> writeTVar comStTVar (comSt {cb1=Nothing})
       Right commRqs -> writeTVar comStTVar (comSt {cb1=Nothing, commReqs=Just commRqs})
     return $ (cb1 comSt)
   case cb1Maybe of 
@@ -125,7 +122,7 @@ handleInitiatedState  comStTVar errOrComm = do
     Just cb1Func -> 
       case errOrComm of 
         Left e -> cb1Func (Left $ StCommFailed e)
-        Right commRqs -> cb1Func (Right $ StCommWaitForMsg comStTVar)
+        Right _commRqs -> cb1Func (Right $ StCommWaitForMsg comStTVar)
  
 
 handleConnectedState :: (TaskPoster m) => TVar (CommState commPars m i o e) -> Maybe i -> m (Bool)

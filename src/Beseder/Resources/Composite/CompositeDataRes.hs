@@ -27,9 +27,7 @@ module  Beseder.Resources.Composite.CompositeDataRes
   ) where
 
 import            Protolude hiding (First)
-import            GHC.TypeLits (Symbol, ErrorMessage (..), TypeError)
 import            Haskus.Utils.Variant 
-import            Haskus.Utils.Types.List
 import            Beseder.Base.Base
 import            Beseder.Base.Common
 import            Beseder.Utils.ListHelper
@@ -39,10 +37,7 @@ import            Beseder.Base.Internal.StHelper
 import            Beseder.Base.Internal.STransIx
 import            Beseder.Base.Internal.STransData
 import            Beseder.Base.Internal.STransDataIntrp
-import qualified  Beseder.Base.Internal.STransIxDo as SDo 
-import            Beseder.Base.Internal.TypeExp
 import            Control.Monad.Identity (IdentityT, runIdentityT)
-import            qualified GHC.Show (Show (..))
 
 class CompositeDataRes m rt where
   type CreateFunc m rt :: * -> [*] -> Exp ([*], [*]) 

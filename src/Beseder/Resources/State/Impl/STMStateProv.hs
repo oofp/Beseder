@@ -20,9 +20,6 @@ import           Protolude
 import           GHC.Show (Show (..))
 import           Control.Concurrent.STM.TVar
 import           Data.Coerce
-import           Haskus.Utils.Variant
-import           Beseder.Base.Base
-import           Beseder.Base.Common
 import           Beseder.Resources.State.MonoStateProv
 
 newtype STMState s = STMState s deriving Show

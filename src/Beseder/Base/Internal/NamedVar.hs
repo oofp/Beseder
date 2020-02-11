@@ -21,13 +21,11 @@ module Beseder.Base.Internal.NamedVar
   ) 
   where
 
-import           Data.Text
-import           GHC.Exts
-import           GHC.TypeLits
 import           Protolude
 import           Beseder.Base.Internal.Named
 import           Haskus.Utils.Variant
 import           Beseder.Base.Internal.Core (St (..))
+import qualified Prelude as SafeUndef (undefined) 
 
 type family ListOfNamed nt name (dataList :: [*]) where
   ListOfNamed nt name '[] = '[]
@@ -37,7 +35,7 @@ class ToVarOfNamed nt xs name where
   toVarOfNamed :: Named name -> V xs -> (forall x. x -> Named name -> nt x name) -> V (ListOfNamed nt name xs) 
 
 instance ToVarOfNamed nt  ('[]) name where
-  toVarOfNamed named _ _ = undefined
+  toVarOfNamed _named _ _ = SafeUndef.undefined
   
 instance 
   ( ToVarOfNamed nt xs name 

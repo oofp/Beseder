@@ -26,7 +26,7 @@ module Beseder.Base.Internal.StHelper
   , AreEq
   , IsContentEq
   , stFunc
-  , SupportedRequests (..)
+  , SupportedRequests 
   , StReqs
   , StateTitle
   , ShowState
@@ -39,11 +39,11 @@ import            Beseder.Base.Internal.Core
 import            Beseder.Base.Internal.Named
 import            Beseder.Base.Internal.Flow
 import            Beseder.Base.Internal.TypeExp
-import            Beseder.Base.Internal.TupleHelper
 import            Beseder.Utils.ListHelper
 import            Data.Coerce
 import            Haskus.Utils.Types.List
 import            GHC.TypeLits
+import qualified Prelude as SafeUndef (undefined) 
 
 stWithName :: stData -> Named name -> St stData name
 stWithName stData _named = St stData
@@ -59,7 +59,8 @@ class StVar xs name where
   asStVar :: Named name -> V xs -> V (StList name xs) 
   
 instance StVar ('[]) name where
-  asStVar _named _ = undefined
+  asStVar _named _ = SafeUndef.undefined 
+
 
 instance 
   ( StVar xs name 
@@ -79,7 +80,8 @@ class StWrapVar (w :: * -> *) xs name where
   asStWrapVar :: (forall x. x -> w x) -> Named name -> V xs -> V (StWrapList w name xs) 
   
 instance StWrapVar w ('[]) name where
-  asStWrapVar _ _ _ = undefined
+  asStWrapVar _ _ _ = SafeUndef.undefined 
+
 
 instance 
   ( StWrapVar w xs name 
@@ -120,7 +122,7 @@ type family StReqs (s :: *) :: [*] where
   
 type family StateTitle (st :: *) :: Symbol
 
-data (:=) (n :: Symbol) (s :: Symbol)
+-- data (:=) (n :: Symbol) (s :: Symbol)
 
 type family ShowState (s :: *) :: Symbol where
   ShowState () = "()"

@@ -19,17 +19,8 @@ module Beseder.Resources.Comm.Impl.Console
   where
 
 import           Protolude hiding (TypeError)
-import           Control.Concurrent.STM.TVar
-import           Control.Monad.Cont
-import           Haskus.Utils.Types
-import           Haskus.Utils.Variant
-import           Beseder.Base.Base
-import           Beseder.Base.Common
 import           Beseder.Resources.Comm.CommProv 
 import           Beseder.Resources.Comm.CommProvImpl 
-
-import           Prelude (String)
-import           Data.Text
 
 data Console = Console deriving Show 
 type ConsoleRes = CommRes Console Text Text ()

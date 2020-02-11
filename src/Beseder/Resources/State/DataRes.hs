@@ -17,6 +17,7 @@ module Beseder.Resources.State.DataRes
   , SetData (..)
   , ModifyData (..) 
   , StD
+  , setDataProxy
   , getData
   , setTrue 
   , setFalse
@@ -36,7 +37,6 @@ import           Beseder.Base.Base
 import           Beseder.Base.Common
 import           Control.Arrow (Kleisli (..))
 import           qualified GHC.Show (Show (..))
-import           GHC.Exts (Any)    
 
 newtype D a = D a deriving (Show, Eq)
 
