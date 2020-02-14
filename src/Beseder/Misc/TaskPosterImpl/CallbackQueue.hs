@@ -5,6 +5,8 @@
 {-# LANGUAGE ConstraintKinds        #-}
 {-# LANGUAGE FlexibleContexts       #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Beseder.Misc.TaskPosterImpl.CallbackQueue where
 
 import           Control.Concurrent.STM.TChan

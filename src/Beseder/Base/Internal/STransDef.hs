@@ -92,7 +92,10 @@ type family UnionExs (bs_ex :: ([*],[*]))  (ex_a :: [*]) :: ([*],[*]) where
 
 type family ConcatExs (bs_ex :: ([*],[*]))  (ex_a :: [*]) :: ([*],[*]) where
   ConcatExs '(bs,ex_b) ex_a = '(bs, Concat ex_a ex_b)
-  
+
+type family ConcatTuple (xs_ex :: ([*],[*]))  :: [*] where
+  ConcatTuple '(xs,ex)  = Concat xs ex
+
 type family IsIDFunc (f :: * -> [*] -> ([*],[*]) -> *) :: Bool where
   IsIDFunc IDFunc = 'True
   IsIDFunc _ = 'False
@@ -274,9 +277,11 @@ type instance Eval (HandleLoopFunc f sp xs) =
   
 
 data ScopeFunc ::  (* -> [*] -> Exp ([*],[*])) ->  ([*] -> [*] -> Exp (* -> [*] -> Exp ([*],[*]))) ->  * -> [*] -> Exp  ([*],[*]) 
-type instance Eval (ScopeFunc f df sp xs) = 
-    Eval ((ComposeFunc f (Eval (df xs (First (Eval (f sp xs)))))) sp xs)    
+type instance Eval (ScopeFunc f df sp xs) = EvalScopeFunc df sp xs (ConcatTuple (Eval (f sp xs)))
 
+type family EvalScopeFunc (df :: [*] -> [*] -> Exp (* -> [*] -> Exp ([*],[*])))   (sp :: *)  (xs ::[*])  (ys :: [*]) :: ([*],[*]) where
+--type family EvalScopeFunc df (sp :: *)  (xs ::[*])  (ys :: [*]) :: ([*],[*]) where  
+  EvalScopeFunc df sp xs ys = Eval ((Eval (df xs ys)) sp ys) 
 
 data FuncFunc :: ([*] -> Exp (* -> [*] -> Exp ([*],[*]))) ->  * -> [*] -> Exp  ([*],[*]) 
 type instance Eval (FuncFunc f sp xs) = Eval ((Eval (f xs)) sp xs)

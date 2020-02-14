@@ -270,6 +270,10 @@ concatEither :: forall xs ys. KnownNat (Length xs) => Either (V xs) (V ys) -> V 
 concatEither (Left v_xs) = appendVariant @ys v_xs
 concatEither (Right v_ys) = prependVariant @xs v_ys
 
+concatRightLeft :: forall xs ys. KnownNat (Length ys) => Either (V xs) (V ys, ())  -> V (Concat ys xs)
+{-# INLINE concatRightLeft #-}
+concatRightLeft (Left v_xs) = prependVariant @ys v_xs
+concatRightLeft (Right (v_ys,())) = appendVariant @xs v_ys
 
 unionEither :: forall xs ys zs. 
   ( KnownNat (Length xs)

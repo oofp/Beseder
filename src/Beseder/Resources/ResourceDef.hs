@@ -17,7 +17,14 @@
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE QuasiQuotes           #-}
 
-module Beseder.Resources.ResourceDef where
+module Beseder.Resources.ResourceDef 
+  ( MkResDef 
+  , RequestDef
+  , TransitionDef 
+  , TermDef
+  , OpDef
+  , buildRes
+  ) where
 
 import           Protolude    
 import           Prelude (error)    
@@ -42,7 +49,7 @@ data ResDsc = ResDsc
   , transitions :: [(Text,[Text])]
   , requests :: [(Text,Text,[Text])]
   , termStates :: [Text]
-  } deriving (Show)
+  } deriving (Show,Read)
 
 instance Semigroup ResDsc where
   r1 <> r2 = 
@@ -74,8 +81,9 @@ addReq reqEntry resDsc = resDsc {requests = reqEntry : requests resDsc}
 addTerm :: Text -> ResDsc -> ResDsc 
 addTerm termState resDsc = resDsc {termStates = termState : termStates resDsc}
 
-mkResDefName :: Name
-mkResDefName = ''MkResDef
+-- not used
+--mkResDefName :: Name
+--mkResDefName = ''MkResDef
  
 --
 buildRes :: Name -> Q [Dec]
@@ -84,6 +92,24 @@ buildRes className = do
   case classDef of 
     (ClassI (ClassD _cxt _cn _tyVarBndr _funDep decEntries) _) -> parseDecs className decEntries
     _ -> error "Should be class declaration"
+{-
+printResAsUmlIO :: Name -> IO () 
+printResAsUmlIO className = runQ $ do
+  classDef <- reify className  
+  case classDef of 
+    (ClassI (ClassD _cxt _cn _tyVarBndr _funDep decEntries) _) -> do
+      resDsc <- getResDsc className decEntries
+      liftIO $ printAsUml (pack $ nameBase className) resDsc
+    _ -> error "Should be class declaration"
+
+printResAsUml :: Name -> Q (Maybe ResDsc) 
+printResAsUml className = do
+  classDef <- reify className  
+  case classDef of 
+    (ClassI (ClassD _cxt _cn _tyVarBndr _funDep decEntries) _) -> 
+      Just <$> getResDsc className decEntries
+    _ -> return Nothing
+-}
 
 parseDecs :: Name -> [Dec] -> Q [Dec]
 parseDecs className decs = 
@@ -108,12 +134,17 @@ printAsUml classText resDsc = do
   putStrLn ("@enduml" :: Text)
         
 
+-- not used
+--getResDsc :: Name -> [Dec] -> Q ResDsc 
+--getResDsc className decsInput = do
+--  execStateT (mapM (parseDec className) decsInput) emptyResDsc
+
 parseDecsState :: Name -> [Dec] -> StateT ResDsc Q [Dec]
 parseDecsState className decsInput = do
   decs <- concat <$> mapM (parseDec className) decsInput
   resDsc <- get
   liftIO $ putStrLn (("***************** ResDsc: " :: Text) <> show resDsc)
-  -- liftIO $ printAsUml (pack $ nameBase className) resDsc
+  liftIO $ printAsUml (pack $ nameBase className) resDsc
   let defStates = (termStates resDsc) <> (fst <$> (transitions resDsc))
       undefStates = (resStates resDsc) \\ defStates
       reqsPerState = foldr addReqState (fmap (\st -> (st,[])) (resStates resDsc)) (fmap (\(r,s , _)-> (r,s)) (requests resDsc))  
@@ -265,6 +296,7 @@ parseDec _ dec = do
 ***************** Cannot recognize entry: SigD Beseder.Resources.ResourceDefSample.term2 (ForallT [KindedTV k_6989586621679263184 StarT,KindedTV m_6989586621679263154 (AppT (AppT ArrowT StarT) StarT),KindedTV res_6989586621679263155 (VarT k_6989586621679263184)] [AppT (AppT (ConT Beseder.Resources.ResourceDefSample.MyResDef) (VarT m_6989586621679263154)) (VarT res_6989586621679263155)] (AppT (AppT (ConT Beseder.Resources.ResourceDef.TermDef) (VarT m_6989586621679263154)) (AppT (AppT (ConT Beseder.Resources.ResourceDefSample.State2) (VarT m_6989586621679263154)) (VarT res_6989586621679263155))))
 -}
 
+{-
 buildState :: Name -> TypeQ
 buildState stateName = 
     return $
@@ -279,6 +311,7 @@ buildState stateName =
     mPar = mkName "m"
     namePar = mkName "name"
     resPar = mkName "res"
+-}
 
 parseDataFam :: Name -> StateT ResDsc Q [Dec]
 parseDataFam stateName =  

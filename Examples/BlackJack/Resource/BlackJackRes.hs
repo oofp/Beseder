@@ -9,6 +9,7 @@
 {-# LANGUAGE TypeSynonymInstances  #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Resource.BlackJackRes where
 
@@ -78,6 +79,7 @@ cardsOfPlayer st = cardsOf getPlayerCards st
 cardsOfDealer :: St (PSt (GameState gameStatus playerStatus handStatus)) name  -> Game.Card.HandCards
 cardsOfDealer st = cardsOf getDealerCards st
 
+cardsOf :: (t1 -> t2) -> St (PSt t1) name -> t2
 cardsOf getCards (St (PSt gameState)) = getCards gameState 
 
 gameResult :: (Typeable gameResult) => StGameOver gameResult name -> Text

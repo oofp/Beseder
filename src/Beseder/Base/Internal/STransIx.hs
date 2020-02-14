@@ -159,12 +159,28 @@ composeT (STrans t1) (STrans t2) =
             Right v_rs2_b -> Right v_rs2_b
             Left ei_ex1_ex2 -> Left $ concatEither ei_ex1_ex2))    
 
+{-
 scopeT ::              
   ( Monad (q m)
   , KnownNat (Length ex1)
   --, rs1 ~ First (Eval (f1 sp xs))
   ) => STrans q m sp xs rs1 ex1 f1 () -> STrans q m sp rs1 rs2 ex2 (Eval (fd xs rs1)) () -> STrans q m sp xs rs2 (Concat ex1 ex2) (ScopeFunc f1 fd) ()
 scopeT t1 t2 = unsafeRefunc $ composeT t1 t2 
+-}
+
+scopeT ::              
+  ( Monad (q m)
+  , KnownNat (Length rs1)
+  , rs1_ex1 ~ Concat rs1 ex1
+  --, rs1 ~ First (Eval (f1 sp xs))
+  -- , '(rs2, ex2) ~ Eval (ScopeFunc f1 fd sp xs) -- just an assertion
+  ) => STrans q m sp xs rs1 ex1 f1 () -> STrans q m sp rs1_ex1 rs2 ex2 (Eval (fd xs rs1_ex1)) () -> STrans q m sp xs rs2 ex2 (ScopeFunc f1 fd) ()
+scopeT (STrans t1) (STrans t2) = -- unsafeRefunc $ composeT t1 t2 
+    STrans $ (\sp v_xs -> 
+      do
+        ei_rs1_ex1 <- t1 sp v_xs
+        let v_rs1_ex1 = concatRightLeft ei_rs1_ex1
+        t2 sp v_rs1_ex1)
 
 funcT ::              
   ( Monad (q m)

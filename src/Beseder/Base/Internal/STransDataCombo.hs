@@ -49,7 +49,8 @@ clearResources _ =
         pxNames = Proxy
     in reifyTrans pxNames
 
-scopeRes :: STransData m sp f () -> STransData m sp (ScopeFunc f ClearScopedComp) () 
+type ScopeResFunc f = ScopeFunc f ClearScopedComp
+scopeRes :: STransData m sp f () -> STransData m sp (ScopeResFunc f) () 
 scopeRes st = Scope st (Proxy @ClearScopedComp)
 
 data ClearAllButComp :: [Symbol] -> [*] -> Exp (* -> [*] -> Exp ([*],[*]))

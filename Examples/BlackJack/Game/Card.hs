@@ -32,6 +32,7 @@ module Game.Card
   , addCardToHand
   , gotBlackJack
   , getHandCards
+  , Card
   ) where
 
 import           System.Random.Shuffle

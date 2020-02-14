@@ -10,6 +10,8 @@
 {-# LANGUAGE TypeSynonymInstances  #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Beseder.Resources.Timer.TimerResImpl where
 
 import           Protolude    

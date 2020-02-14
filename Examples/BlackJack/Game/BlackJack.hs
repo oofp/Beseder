@@ -109,6 +109,7 @@ initGame cardPack =
         then Left $ initGameState card1 card2 card3 newPack 
         else Right $ initGameState card1 card2 card3 newPack
 
+initGameState :: Game.Card.Card -> Game.Card.Card -> Game.Card.Card -> CardPack -> GameState gameStatus 'Good 'OneCard
 initGameState card1 card2 card3 newPack = GameState (initWithTwoCards card1 card2) (initWithOneCard card3) newPack          
 
 -- state transition functions have signature
