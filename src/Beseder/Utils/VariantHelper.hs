@@ -13,6 +13,8 @@
 {-# LANGUAGE FunctionalDependencies    #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
+{-# OPTIONS_GHC -fno-warn-unticked-promoted-constructors #-}
+
 module Beseder.Utils.VariantHelper where
 
 import           Haskus.Utils.ContFlow

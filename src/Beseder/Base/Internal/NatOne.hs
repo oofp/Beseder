@@ -5,6 +5,8 @@
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
 
+{-# OPTIONS_GHC -fno-warn-unticked-promoted-constructors #-}
+
 module Beseder.Base.Internal.NatOne where
 
 import Protolude

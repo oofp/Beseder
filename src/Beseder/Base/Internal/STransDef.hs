@@ -17,6 +17,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
+{-# OPTIONS_GHC -fno-warn-unticked-promoted-constructors #-}
+
 module Beseder.Base.Internal.STransDef where
 
 import           Protolude                    hiding (Product, handle,TypeError,First,forever, on)
@@ -280,7 +282,6 @@ data ScopeFunc ::  (* -> [*] -> Exp ([*],[*])) ->  ([*] -> [*] -> Exp (* -> [*] 
 type instance Eval (ScopeFunc f df sp xs) = EvalScopeFunc df sp xs (ConcatTuple (Eval (f sp xs)))
 
 type family EvalScopeFunc (df :: [*] -> [*] -> Exp (* -> [*] -> Exp ([*],[*])))   (sp :: *)  (xs ::[*])  (ys :: [*]) :: ([*],[*]) where
---type family EvalScopeFunc df (sp :: *)  (xs ::[*])  (ys :: [*]) :: ([*],[*]) where  
   EvalScopeFunc df sp xs ys = Eval ((Eval (df xs ys)) sp ys) 
 
 data FuncFunc :: ([*] -> Exp (* -> [*] -> Exp ([*],[*]))) ->  * -> [*] -> Exp  ([*],[*]) 

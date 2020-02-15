@@ -15,6 +15,8 @@
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE ConstraintKinds           #-}
 
+{-# OPTIONS_GHC -fno-warn-unticked-promoted-constructors #-}
+
 module Beseder.Base.Internal.TupleHelper where
 
 import           GHC.TypeLits

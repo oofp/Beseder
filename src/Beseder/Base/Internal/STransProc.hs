@@ -17,6 +17,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
+{-# OPTIONS_GHC -fno-warn-unticked-promoted-constructors #-}
+
 module Beseder.Base.Internal.STransProc where
 
 import           Protolude                    hiding (Product, handle,TypeError,First,forever, on)
@@ -42,6 +44,7 @@ data ForeverStep (steps :: [*])
 data BlockStep (label :: Symbol) (steps :: [*])  
 data LoopStep (steps :: [*])  
 data LabelStep (label :: Symbol) (sp :: *) (xs :: [*])  
+data ScopeStep (bodySteps :: [*]) (finalSteps :: [*]) 
 data ErrorStep (func :: * -> [*] -> Exp ([*],[*])) (errState :: *) (errText :: Symbol) 
 
 type family ApplyFunc (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [*] where
@@ -56,7 +59,7 @@ type family ApplyFunc (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) 
   ApplyFunc (BlockFunc label f) sp xs = '[BlockStep label (ApplyFunc f sp xs)]
   ApplyFunc (ExtendForLoopFunc f) sp xs = '[]
   ApplyFunc (AlignFunc f) sp xs = ApplyFunc f sp xs
-  ApplyFunc (ScopeFunc f _) sp xs = ApplyFunc f sp xs
+  ApplyFunc (ScopeFunc f df) sp xs = '[ScopeStep (ApplyFunc f sp xs) (MakeScopeFinalSteps df sp xs (ConcatTuple (Eval (f sp xs))))]
   ApplyFunc (HandleLoopFunc f) sp xs = 
     '[LoopStep (ApplyFunc 
                   (ComposeFunc
@@ -65,6 +68,12 @@ type family ApplyFunc (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) 
   ApplyFunc (LabelFunc label) sp xs = '[LabelStep label sp xs]
   ApplyFunc func sp xs = '[Step func sp xs]
     
+type family MakeScopeFinalSteps (df :: [*] -> [*] -> Exp (* -> [*] -> Exp ([*],[*])))   (sp :: *)  (xs ::[*])  (ys :: [*]) :: [*] where
+  MakeScopeFinalSteps df sp xs ys = ApplyFunc (Eval (df xs ys)) sp ys 
+
+type family MakeScopeFinalStepsWithFilter (fltr :: (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp Bool) (df :: [*] -> [*] -> Exp (* -> [*] -> Exp ([*],[*])))   (sp :: *)  (xs ::[*])  (ys :: [*]) :: [*] where
+  MakeScopeFinalStepsWithFilter fltr df sp xs ys = ApplyWithFilter fltr (Eval (df xs ys)) sp ys 
+
 
 type family ApplyWithFilter (fltr :: (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> Exp Bool) (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [*] where
   ApplyWithFilter fltr (ComposeFunc f1 f2) sp xs = Concat (ApplyWithFilter fltr f1 sp xs) (ApplyWithFilter fltr f2 sp (First (Eval (f1 sp xs))))
@@ -78,7 +87,7 @@ type family ApplyWithFilter (fltr :: (* -> [*] -> Exp ([*],[*])) -> * -> [*] -> 
   ApplyWithFilter fltr (ForeverFunc f) sp xs = '[ForeverStep (ApplyWithFilter fltr f sp xs)]
   ApplyWithFilter fltr (ExtendForLoopFunc f) sp xs = '[]
   ApplyWithFilter fltr (AlignFunc f) sp xs = ApplyWithFilter fltr f sp xs
-  ApplyWithFilter fltr (ScopeFunc f _) sp xs = ApplyWithFilter fltr f sp xs
+  ApplyWithFilter fltr (ScopeFunc f df) sp xs = '[ScopeStep (ApplyWithFilter fltr f sp xs) (MakeScopeFinalStepsWithFilter fltr df sp xs (ConcatTuple (Eval (f sp xs))))]
   ApplyWithFilter fltr (HandleLoopFunc f) sp xs = 
     '[LoopStep (ApplyWithFilter fltr 
                   (ComposeFunc
@@ -107,7 +116,7 @@ type family ValidateFunc (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*
   ValidateFunc (BlockFunc label f) sp xs = PropValRes (BlockStep label) (ValidateFunc f sp xs)
   ValidateFunc (ExtendForLoopFunc f) sp xs = '( 'True, '[])
   ValidateFunc (AlignFunc f) sp xs = ValidateFunc f sp xs
-  ValidateFunc (ScopeFunc f _) sp xs = ValidateFunc f sp xs
+  ValidateFunc (ScopeFunc f fd) sp xs = ValidateScope (ValidateFunc f sp xs) f fd sp xs
   ValidateFunc (HandleLoopFunc f) sp xs = ValidateTransformLoop f sp xs
   ValidateFunc (AssertFunc sp1) sp xs = ValidateAssert sp1 (ListSplitterReminder sp1 xs) xs
   {-  
@@ -139,6 +148,13 @@ type family ValidateCompose (res1 :: (Bool, [*])) (func1 :: * -> [*] -> Exp ([*]
 
 type family ValidateCompose' (steps1 :: [*]) (res2 :: (Bool, [*])) :: (Bool, [*]) where
   ValidateCompose steps1 '(fl, steps2) = '(fl, Concat steps1 steps2)
+
+type family ValidateScope (res1 :: (Bool, [*])) (f :: * -> [*] -> Exp ([*],[*])) (df :: [*] -> [*] -> Exp (* -> [*] -> Exp ([*],[*]))) (sp :: *) (xs :: [*]) :: (Bool, [*]) where
+  ValidateScope '( 'False, steps1) f df sp xs = '( 'False, steps1)
+  ValidateScope '( 'True, steps1) f df sp xs = ValidatScope' steps1 df sp xs (ConcatTuple (Eval (f sp xs))) 
+
+type family ValidatScope' (steps1 :: [*]) (df :: [*] -> [*] -> Exp (* -> [*] -> Exp ([*],[*]))) (sp :: *) (xs :: [*]) (ys :: [*])  :: (Bool, [*]) where
+  ValidatScope' steps1 df sp xs ys  = ValidateCompose' steps1 (ValidateFunc (Eval (df xs ys)) sp ys)
 
 type family ValidateIfElse (res1 :: (Bool, [*])) (func1 :: * -> [*] -> Exp ([*],[*])) (func2 :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: (Bool, [*]) where
   ValidateIfElse '( 'False, steps1) f1 f2 sp xs = '( 'False, '[IfElseStep steps1 '[]])
@@ -218,6 +234,7 @@ type family GetSteps (d :: *) :: [*] where
   GetSteps (ForeverStep steps) = FlattenSteps steps  
   GetSteps (BlockStep label steps) = FlattenSteps steps  
   GetSteps (LoopStep steps) = FlattenSteps steps  
+  GetSteps (ScopeStep steps1 steps2) = Concat (FlattenSteps steps1) (FlattenSteps steps2)
   GetSteps step = '[step]
   
 type family FlattenSteps (steps :: [*]) :: [*] where
@@ -263,10 +280,11 @@ type family Edges (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [
   Edges (IffFunc f) sp xs = Edges f sp xs 
   Edges (IfElseFunc f1 f2) sp xs = Concat (Edges f1 sp xs) (Edges f2 sp xs) 
   Edges (ForeverFunc f) sp xs = Edges f sp xs
+  Edges (BlockFunc "" f) sp xs = Edges' f sp xs 
   Edges (BlockFunc label f) sp xs = (BlockEdge label f sp xs) ': (Edges' (BlockFunc label f) sp xs)
   Edges (ExtendForLoopFunc f) sp xs = '[]
   Edges (AlignFunc f) sp xs = Edges f sp xs
-  Edges (ScopeFunc f _) sp xs = Edges f sp xs
+  Edges (ScopeFunc f df) sp xs = Concat (Edges f sp xs) (MakeScopeFinalEdges df sp xs (ConcatTuple (Eval (f sp xs ))))
   Edges (HandleLoopFunc (ComposeFunc (CaptureFunc Dynamics GetNextAllFunc) f)) sp xs = 
     EdgesEventLoop f sp (First (TransformLoop sp xs (ComposeFunc (CaptureFunc Dynamics GetNextAllFunc) f)))
   Edges (HandleLoopFunc f) sp xs = 
@@ -278,6 +296,10 @@ type family Edges (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [
           (ForeverFunc (AlignFunc f))) sp xs
   -}        
   Edges func sp xs = Edges' func sp xs
+
+type family MakeScopeFinalEdges (df :: [*] -> [*] -> Exp (* -> [*] -> Exp ([*],[*])))   (sp :: *)  (xs ::[*])  (ys :: [*]) :: [*] where
+  MakeScopeFinalEdges df sp xs ys = Edges (Eval (df xs ys)) sp ys 
+
 
 type family EdgesEventLoop (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [*] where  
   EdgesEventLoop func sp xs = Concat (Edges' GetNextAllFunc sp xs) (Edges' func sp (First (Eval (GetNextAllFunc sp xs)))) 

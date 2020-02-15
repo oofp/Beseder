@@ -101,6 +101,8 @@ module Beseder.Base.ControlData
     --, module Beseder.Base.Internal.STransProc 
     , NatOne (..)
     , NatConv 
+    , ScopeResFunc
+    , HandleEventsFunc
 ) where
 
 import Beseder.Base.Internal.STransData

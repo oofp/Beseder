@@ -18,6 +18,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 
+{-# OPTIONS_GHC -fno-warn-unticked-promoted-constructors #-}
+
 module Beseder.Base.Internal.STransIx where
 
 import           Protolude                    hiding (Product, handle,TypeError,First,forever, on)

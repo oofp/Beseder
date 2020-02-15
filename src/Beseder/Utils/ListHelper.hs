@@ -13,6 +13,8 @@
 {-# LANGUAGE FunctionalDependencies    #-}
 {-# LANGUAGE PolyKinds #-}
 
+{-# OPTIONS_GHC -fno-warn-unticked-promoted-constructors #-}
+
 module Beseder.Utils.ListHelper where
 
 import           Haskus.Utils.Types.List

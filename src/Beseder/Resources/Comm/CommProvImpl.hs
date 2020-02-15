@@ -12,6 +12,8 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE LambdaCase   #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Beseder.Resources.Comm.CommProvImpl  
   ( CommProvImpl (..)
   , CommReqs (..)

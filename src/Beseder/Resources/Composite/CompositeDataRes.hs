@@ -38,6 +38,7 @@ import            Beseder.Base.Internal.STransIx
 import            Beseder.Base.Internal.STransData
 import            Beseder.Base.Internal.STransDataIntrp
 import            Control.Monad.Identity (IdentityT, runIdentityT)
+import qualified Prelude as SafeUndef (undefined) 
 
 class CompositeDataRes m rt where
   type CreateFunc m rt :: * -> [*] -> Exp ([*], [*]) 
@@ -68,8 +69,9 @@ instance
     in
       fmap (getRes (Proxy @m) (Proxy @res)) (runIdentityT $ runTrans strans NoSplitter (variantFromValue ()))      
        
-extractRes :: Either (V ex) (V rs, a) -> V rs
+extractRes :: Either (V '[]) (V rs, a) -> V rs
 extractRes (Right (v,_)) = v
+extractRes (Left _) = SafeUndef.undefined
 
 getRes :: Proxy m -> Proxy res -> Either (V '[]) (V '[x],()) -> CdRes m res x 
 getRes _pxm _px ei = CdRes (variantToValue (extractRes ei))  

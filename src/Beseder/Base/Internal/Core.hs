@@ -14,6 +14,8 @@
 {-# LANGUAGE DefaultSignatures      #-}
 {-# LANGUAGE ConstraintKinds        #-}
 
+{-# OPTIONS_GHC -fno-warn-unticked-promoted-constructors #-}
+
 module Beseder.Base.Internal.Core where
 
 import           Control.Concurrent.STM.TVar
