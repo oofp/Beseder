@@ -39,6 +39,7 @@ class (Monad m, TaskData res) => TaskProv m res where
   taskTransition :: TransitionDef m (TaskInProgres m res) '[TaskCompleted m res, TaskFailed m res]
   termCompleted :: TermDef m (TaskCompleted m res)
   termCancelled :: TermDef m (TaskCancelled m res)
+  termFailed :: TermDef m (TaskFailed m res)
 
   _taskResult :: TaskCompleted m res -> m (TaskResult res)
   _taskError :: TaskFailed m res -> m (TaskError res)

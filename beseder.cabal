@@ -41,6 +41,7 @@ library
                      , Beseder.Resources.State.ImpRes
                      , Beseder.Resources.State.StateLogger  
                      , Beseder.Resources.Timer
+                     , Beseder.Resources.Task
                      , Beseder.Resources.Monitor
                      , Beseder.Resources.Switch
                      , Beseder.Resources.Comm
@@ -106,6 +107,8 @@ library
                      , Beseder.Resources.State.Impl.BinarySwitchCons
                      , Beseder.Resources.Monitor.BinaryMonitorRes
                      , Beseder.Resources.State.BinarySwitchRes
+                     , Beseder.Resources.Task.TaskRes
+                     , Beseder.Resources.Task.Impl.AsyncTaskProv
   build-depends:       base >= 4.7 && < 5
                      , protolude
                      , network
