@@ -14,6 +14,7 @@
 module Beseder.Resources.Task.Impl.AsyncTaskProv 
   ( asyncTaskResource
   , AsyncTask
+  , AsyncTaskPar
   ) where
 
 import           Protolude    
@@ -33,13 +34,13 @@ instance TaskData (AsyncTask a) where
   type instance TaskError (AsyncTask a) = SomeException 
 
 instance TaskPoster m => TaskProv m (AsyncTask a) where
-  data TaskInProgres m (AsyncTask a) = TaskInProgres (Async ()) (TVar (Maybe (V '[TaskCompleted m (AsyncTask a), TaskFailed m (AsyncTask a)] -> m ())))
+  data TaskInProgress m (AsyncTask a) = TaskInProgress (Async ()) (TVar (Maybe (V '[TaskCompleted m (AsyncTask a), TaskFailed m (AsyncTask a)] -> m ())))
   newtype  TaskCompleted m (AsyncTask a) = TaskCompleted a 
   newtype  TaskFailed m (AsyncTask a) = TaskFailed SomeException
   data  TaskCancelled m (AsyncTask a) = TaskCancelled
   data  ResPar m (AsyncTask a) = MkAsyncTask (IO a)
 
-  startTask :: ResPar m (AsyncTask a) -> m (TaskInProgres m (AsyncTask a))
+  startTask :: ResPar m (AsyncTask a) -> m (TaskInProgress m (AsyncTask a))
   startTask (MkAsyncTask io_a) = do 
     cb <- liftIO $ newTVarIO Nothing
     taskPoster <- getTaskPoster
@@ -53,15 +54,15 @@ instance TaskPoster m => TaskProv m (AsyncTask a) where
             liftIO $ atomically $ writeTVar cb Nothing  
             fireCompletion cbFunc ioRes
             return True
-    return (TaskInProgres task cb)
+    return (TaskInProgress task cb)
 
-  cancelTask CancelTask (TaskInProgres asyncTask cb) = do 
+  cancelTask CancelTask (TaskInProgress asyncTask cb) = do 
     liftIO $ atomically $ writeTVar cb Nothing 
     liftIO $ cancel asyncTask
     return (variantFromValue TaskCancelled)
 
 
-  taskTransition (TaskInProgres _asyncTask cb) cbFunc = 
+  taskTransition (TaskInProgress _asyncTask cb) cbFunc = 
     liftIO $ atomically $ writeTVar cb (Just cbFunc) 
 
   termCompleted (TaskCompleted _a) = return ()

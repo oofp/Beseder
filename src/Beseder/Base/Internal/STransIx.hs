@@ -715,7 +715,7 @@ execTrans_ t = do
 
 type ExecutableFunc sfunc = Eval (sfunc NoSplitter '[()]) ~ '(('[()]),'[])    
 type ExecutableTrans q m sfunc = STrans q m NoSplitter '[()] '[()]  ('[])  sfunc ()
-type ExecutableApp q m sfunc = STransApp q m NoSplitter '[()] '[()]  ('[]) ()
+type ExecutableApp q m = STransApp q m NoSplitter '[()] '[()]  ('[]) ()
 
 type AsyncTrans m sp xs rs ex func a = STrans (ContT Bool) m sp xs rs ex a  
 type SyncTrans m sp xs rs ex func a = STrans IdentityT m sp xs rs ex a  
@@ -733,7 +733,7 @@ execApp ::
   ( MonadTrans q
   --, ExecutableFunc sfunc
   , Monad (q m)
-  ) => ExecutableApp q m sfunc -> q m () 
+  ) => ExecutableApp q m  -> q m () 
 execApp (MkApp trns) = execTrans trns  
 
 extractKleisliT :: (Monad (q m),Eval (sfunc NoSplitter xs) ~ '(rs,'[])) => STrans q m NoSplitter xs rs '[] sfunc () -> Kleisli (q m) (V xs) (V rs)

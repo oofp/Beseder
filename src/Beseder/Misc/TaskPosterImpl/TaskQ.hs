@@ -55,10 +55,10 @@ runAsyncTrans = runAsyncFlow . execTrans
 runSyncTrans :: (ExecutableFunc sfunc) => ExecutableTrans IdentityT TaskQ sfunc -> IO ()
 runSyncTrans = runSyncFlow . execTrans  
 
-runAsyncApp :: ExecutableApp (ContT Bool) TaskQ sfunc -> IO ()
+runAsyncApp :: ExecutableApp (ContT Bool) TaskQ  -> IO ()
 runAsyncApp = runAsyncFlow . execApp  
 
-runSyncApp :: ExecutableApp IdentityT TaskQ sfunc -> IO ()
+runSyncApp :: ExecutableApp IdentityT TaskQ -> IO ()
 runSyncApp = runSyncFlow . execApp  
 
 runAsyncData :: 

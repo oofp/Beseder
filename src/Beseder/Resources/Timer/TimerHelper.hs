@@ -13,7 +13,6 @@
 {-# LANGUAGE UndecidableInstances   #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedLabels       #-}
-{-# LANGUAGE TemplateHaskell        #-}
 
 {-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
 

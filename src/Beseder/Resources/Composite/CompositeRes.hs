@@ -85,8 +85,9 @@ instance
   mkRes (CResPar (MkApp (STrans t))) = 
     fmap (getRes (Proxy @hf)) (runIdentityT $ t NoSplitter (variantFromValue ()))   
 
-extractRes :: Either (V ex) (V rs, a) -> V rs
+extractRes :: Either (V '[]) (V rs, a) -> V rs
 extractRes (Right (v,_)) = v
+extractRes (Left _) = SafeUndef.undefined
 
 getRes :: Proxy hf -> Either (V '[]) (V '[x],()) -> CRes hf x 
 getRes _px ei = CRes (variantToValue (extractRes ei))  

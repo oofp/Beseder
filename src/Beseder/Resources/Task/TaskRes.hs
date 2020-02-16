@@ -28,15 +28,15 @@ class TaskData res where
   type TaskError res :: *
   
 class (Monad m, TaskData res) => TaskProv m res where
-  data  TaskInProgres m res 
+  data  TaskInProgress m res 
   data  TaskCompleted m res 
   data  TaskFailed m res 
   data  TaskCancelled m res 
   data  ResPar m res
 
-  startTask :: MkResDef m (ResPar m res) (TaskInProgres m res)
-  cancelTask :: RequestDef m CancelTask (TaskInProgres m res) '[TaskCancelled m res]  
-  taskTransition :: TransitionDef m (TaskInProgres m res) '[TaskCompleted m res, TaskFailed m res]
+  startTask :: MkResDef m (ResPar m res) (TaskInProgress m res)
+  cancelTask :: RequestDef m CancelTask (TaskInProgress m res) '[TaskCancelled m res]  
+  taskTransition :: TransitionDef m (TaskInProgress m res) '[TaskCompleted m res, TaskFailed m res]
   termCompleted :: TermDef m (TaskCompleted m res)
   termCancelled :: TermDef m (TaskCancelled m res)
   termFailed :: TermDef m (TaskFailed m res)
@@ -46,7 +46,9 @@ class (Monad m, TaskData res) => TaskProv m res where
   
 buildRes ''TaskProv
 
-type instance TermRequest (StTaskInProgres m res name) = CancelTask
+instance GetInstance CancelTask where getInstance = CancelTask
+
+type instance TermRequest (StTaskInProgress m res name) = CancelTask
 
 taskResult :: TaskProv m res => StTaskCompleted m res name -> m (TaskResult res)
 taskResult = _taskResult . coerce 
