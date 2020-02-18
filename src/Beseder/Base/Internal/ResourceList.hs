@@ -20,13 +20,9 @@ module Beseder.Base.Internal.ResourceList where
 import           GHC.TypeLits
 import           Beseder.Base.Internal.Core
 import           Protolude hiding (TypeError)
-import           GHC.Exts
 import           Beseder.Base.Internal.Named
-import           Haskus.Utils.Types.List
 import           Haskus.Utils.Variant
-import           Beseder.Base.Internal.TypeExp
-import           Data.Function (id)
-import           Prelude (error)
+import qualified Prelude as SafeUndef (undefined) 
 
 --- Append
 class AppendResource resList newRes where
@@ -74,7 +70,7 @@ class RemoveResource resList (resName :: Symbol) where
   
 instance RemoveResource (St res name) name where
   type RemoveResourceRes (St res name) name = () 
-  removeResource res _named = ()
+  removeResource _res _named = ()
 
 class RemoveResource' resList (resName :: Symbol) (fl :: Bool) where
   type RemoveResourceRes' resList resName fl
@@ -90,7 +86,7 @@ instance
     
 instance RemoveResource' (St res resName, tail) resName1 'True where
   type RemoveResourceRes' (St res resName, tail) resName1 'True = tail 
-  removeResource' (res, tail) _named _px = tail
+  removeResource' (_res, tail) _named _px = tail
 
 instance 
   ( RemoveResource tail resName1
@@ -100,3 +96,69 @@ instance
   removeResource' (res, tail) named _px = appendResource res (removeResource tail named)
 
 
+--
+-- Rename resource
+type family IsNameUnique resList (n :: Symbol) :: Constraint where
+  IsNameUnique () n = ()
+  IsNameUnique (St res n) n = TypeError ('Text "Resource " :<>: 'Text n :<>: 'Text " already exists") 
+  IsNameUnique (St res n, tail) n = TypeError ('Text "Resource " :<>: 'Text n :<>: 'Text " already exists") 
+  IsNameUnique (St res n1) n = ()
+  IsNameUnique (St res n1, tail) n = IsNameUnique tail n
+
+class RenameResource resList (resName :: Symbol) (newName :: Symbol) where
+  type RenameResourceRes resList resName newName
+  renameResource :: resList -> Named resName -> Named newName -> RenameResourceRes resList resName newName
+
+class RenameResource' resList (resName :: Symbol) (newName :: Symbol) (fl :: Bool) where
+  type RenameResourceRes' resList resName newName fl
+  renameResource' :: resList -> Named resName -> Named newName -> Proxy fl -> RenameResourceRes' resList resName newName fl
+
+instance RenameResource (St res resName) resName newName where
+  type RenameResourceRes (St res resName) resName newName = (St res newName) 
+  renameResource (St res) _ _ = (St res)
+
+{-
+instance (fl ~ IsNameMatch resName1 resName, RenameResource' (St res resName1, tail) resName newName fl, IsNameUnique tail newName) => RenameResource (St res resName1, tail) resName newName where
+  type RenameResourceRes (St res resName1,tail) resName newName = RenameResourceRes' (St res resName,tail) resName newName (IsNameMatch resName1 resName)  
+  renameResource resList resName newName = renameResource resList resName newName (Proxy @(IsNameMatch resName1 resName))
+-}
+instance 
+  ( fl ~ IsNameMatch resName resName1
+  , RenameResource' (St res resName, tail) (resName1 :: Symbol) newName fl
+  , IsNameUnique (St res resName, tail) newName
+  ) => RenameResource (St res resName, tail) resName1 newName where
+  type RenameResourceRes (St res resName, tail) resName1 newName = RenameResourceRes' (St res resName, tail) resName1 newName (IsNameMatch resName resName1)
+  renameResource lst named newName = renameResource' lst named newName (Proxy @(IsNameMatch resName resName1)) 
+  
+
+instance RenameResource' (St res resName1, tail) resName newName 'True where
+  type RenameResourceRes' (St res resName1,tail) resName newName 'True = (St res newName, tail) 
+  renameResource' (St res, tail) _ _ _ = (St res, tail)
+
+instance RenameResource tail resName newName => RenameResource' (St res resName1, tail) resName newName 'False where
+  type RenameResourceRes' (St res resName1,tail) resName newName 'False = (St res resName1, RenameResourceRes tail resName newName) 
+  renameResource' (St res, tail) resName newName _ = (St res, renameResource tail resName newName)
+
+instance RenameResource (V '[]) resName newName where
+  type RenameResourceRes (V '[]) resName newName = (V '[])
+  renameResource _ _ _ = SafeUndef.undefined
+
+instance 
+    ( RenameResource x resName newName
+    , RenameResource (V xs) resName newName
+    , V (RenameResourceList xs resName newName) ~ RenameResourceRes (Variant xs) resName newName
+    , Liftable '[RenameResourceRes x resName newName] (RenameResourceList (x ': xs) resName newName)
+    , Liftable (RenameResourceList xs resName newName) (RenameResourceList (x ': xs) resName newName)
+    ) => RenameResource (V (x ': xs)) resName newName where
+  type RenameResourceRes (V (x ': xs)) resName newName = V (RenameResourceList (x ': xs) resName newName) 
+  renameResource v_x_xs resName newName = 
+      case popVariantHead v_x_xs of 
+        Right x -> liftVariant $ variantFromValue $ renameResource x resName newName
+        Left v_xs -> 
+          let newList :: V (RenameResourceList xs resName newName)
+              newList = renameResource v_xs resName newName 
+          in liftVariant newList 
+
+type family RenameResourceList (xs :: [*]) resName newName where
+  RenameResourceList '[] resName newName = '[]
+  RenameResourceList (x ': xs) resName newName = (RenameResourceRes x resName newName) ': (RenameResourceList xs resName newName)          

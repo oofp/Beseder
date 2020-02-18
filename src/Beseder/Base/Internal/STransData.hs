@@ -32,6 +32,7 @@ data STransData (m :: * -> *) (sp :: *) (sfunc :: * -> [*] -> Exp ([*],[*])) (a 
   Invoke :: Named name -> req -> STransData m sp (InvokeAllFunc req name) ()
   Clear :: Named name -> STransData m sp (ClearAllFunc name) ()
   NextEv' :: STransData m sp GetNextAllFunc ()
+  RenameRes :: Named resName -> Named newName -> STransData m sp (RenameResFunc resName newName) ()
   ClearResources' :: STransData m sp ClearAllVarFunc ()
   Try :: forall sp1 sp m f_sub. STransData m (sp :&& sp1) f_sub () -> STransData m sp (EmbedFunc sp1 f_sub) ()
   On :: forall sp1 sp m f_sub. STransData m sp f_sub () -> STransData m sp (CaptureFunc sp1 f_sub) ()
@@ -157,4 +158,5 @@ infixr 1 >>>
 (>>>=) :: STransData m sp f1 a -> (a -> STransData m sp f2 b) -> STransData m sp (BindFunc f1 f2) b 
 (>>>=) = Bind
 infixr 1 >>>=
+
 

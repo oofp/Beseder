@@ -38,6 +38,7 @@ import           Beseder.Base.Internal.STransFunc
 import           Beseder.Base.Internal.STransData 
 import           Beseder.Utils.VariantHelper
 import           Beseder.Utils.ListHelper
+import           Beseder.Base.Internal.ResourceList
 
 type NewResCon name resPars q m sp xs rs ex = NewResConFam name resPars (St (ResSt m resPars) name) m sp xs rs ex
 type family NewResConFam name resPars res m sp xs rs ex where
@@ -68,6 +69,15 @@ type family ClearConFam name m sp xs rs ex zs where
     , KnownSymbol name
     , SplicC sp rs ex zs
     )
+
+type RenameResCon resName newName q m sp xs rs ex = RenameResConFam resName newName m sp xs rs ex (RenameResourceList xs resName newName)
+type family RenameResConFam resName newName m sp xs rs ex zs where
+  RenameResConFam resName newName m sp xs rs ex zs =
+    ( RenameResource (V xs) resName newName
+    , (V zs) ~ RenameResourceRes (V xs) resName newName
+    , SplicC sp rs ex zs
+    )
+
 
 type ForeverCon f q m sp xs rs ex = 
   ( Interpretable q m sp xs xs ex f 
@@ -131,6 +141,14 @@ instance
   , Eval (ClearAllFunc name sp xs) ~ '(rs,ex)
   ) => Interpretable q m sp xs rs ex (ClearAllFunc name) where
   interpret (Clear named) = clear named
+
+instance 
+  ( Qm q m
+  , RenameResCon resName newName q m sp xs rs ex
+  , Eval (RenameResFunc resName newName sp xs) ~ '(rs,ex)
+  ) => Interpretable q m sp xs rs ex (RenameResFunc resName newName) where
+  interpret (RenameRes resName newName) = renameRes resName newName 
+
 
 instance 
   ( Qm q m

@@ -41,6 +41,7 @@ import           Beseder.Utils.VariantHelper
 import           Beseder.Base.Internal.SplitFlow
 import           Beseder.Base.Internal.NatOne
 import           Beseder.Base.Internal.STransDef
+import           Beseder.Base.Internal.ResourceList
 import           Control.Arrow (Kleisli (..))
 import           Beseder.Base.Internal.STransMonad hiding (return, (>>), (>>=))
 import           Data.Coerce
@@ -215,6 +216,14 @@ invoke ::
   ) => Named name -> req -> STrans q m sp xs rs ex (InvokeAllFunc req name) ()
 invoke named req = STrans (\sp v_xs -> splitV_ sp <$> andReqAll named req (return v_xs))  
 
+renameRes :: 
+  ( RenameResource (V xs) resName newName
+  , V zs ~ RenameResourceRes (V xs) resName newName
+  , Monad (q m)
+  , MonadTrans q
+  , SplicC sp rs ex zs
+  ) => Named resName -> Named newName -> STrans q m sp xs rs ex (RenameResFunc resName newName) () 
+renameRes resName newName = STrans (\sp v_xs -> return $ splitV_ sp (renameResource v_xs resName newName))  
 
 clear ::
   ( Request m (NamedRequest TerminateRes name) (VWrap xs NamedTupleClr)

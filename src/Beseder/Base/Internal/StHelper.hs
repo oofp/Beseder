@@ -106,6 +106,7 @@ type family GetResState st :: * where
   GetResState (St st name) = st
 
 data SupportedRequests :: * -> (Exp [*]) 
+type instance Eval (SupportedRequests ()) = '[]
 
 type family NameRequests (reqs :: [*]) (name :: Symbol) :: [*] where
   NameRequests '[] name = '[]

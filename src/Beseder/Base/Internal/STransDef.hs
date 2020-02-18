@@ -32,6 +32,7 @@ import           Beseder.Base.Internal.SplitOps
 import           Beseder.Utils.ListHelper
 import           Beseder.Base.Internal.NatOne
 import           Haskus.Utils.Variant
+import           Beseder.Base.Internal.ResourceList
 
 data ReturnFunc :: res -> * -> [*] -> Exp ([*],[*])
 type instance Eval (ReturnFunc res sp xs) = '(xs, '[])
@@ -70,6 +71,9 @@ type instance Eval (NewResFunc resPars name m sp xs) = ListSplitterRes2 sp (Appe
 
 data InvokeAllFunc :: (req :: *) -> name -> * -> [*] -> Exp ([*],[*])
 type instance Eval (InvokeAllFunc req name sp xs) = ListSplitterRes2 sp (ReqResult (NamedRequest req name) (VWrap xs NamedTuple))
+
+data RenameResFunc :: resName -> newName  -> * -> [*] -> Exp ([*],[*])
+type instance Eval (RenameResFunc resName newName sp xs) = ListSplitterRes2 sp (RenameResourceList xs resName newName)
 
 data ClearAllFunc :: Symbol -> * -> [*] -> Exp ([*],[*])
 type instance Eval (ClearAllFunc name sp xs) = ListSplitterRes2 sp (ReqResult (NamedRequest TerminateRes name) (VWrap xs NamedTupleClr))

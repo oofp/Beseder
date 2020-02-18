@@ -172,3 +172,6 @@ handleTo hnd =
   Try @(Not sp1) (handleEvents hnd) 
 
 
+renameRes :: Named resName -> Named newName -> STransData m sp (RenameResFunc resName newName) ()
+renameRes = RenameRes 
+

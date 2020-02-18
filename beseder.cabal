@@ -74,6 +74,7 @@ library
                      , Beseder.Base.Internal.STransIxDo 
                      , Beseder.Base.Internal.STransDataCombo
                      , Beseder.Base.Internal.STransFunc
+                     , Beseder.Base.Internal.ResourceList
                      , Beseder.Utils.ListHelper
                      , Beseder.Utils.BoolHelper
                      , Beseder.Utils.Lst
