@@ -24,6 +24,7 @@ module Beseder.Resources.Timer.TimerHelper
   , handleWithTimer
   , handleWithTimeLimit
   , pumpWithTimer
+  , skipWithTimeLimitTo
   ) where
 
 import           Protolude                    hiding (Product, handle, return, gets, lift, liftIO,
@@ -91,5 +92,14 @@ delay timerName timeoutSec = scopeRes $ do
   startTimer timerName timeoutSec 
   try @(name :? IsTimerArmed) pumpEvents
   clear timerName
+
+skipWithTimeLimitTo :: forall sp1 name m sp. Named name -> Int -> Proxy sp1 ->
+                  STransData m sp _ ()
+skipWithTimeLimitTo timerName timeoutSec _px = do
+  startTimer timerName timeoutSec 
+  try @(name :? IsTimerArmed) (skipTo @sp1)
+  clear timerName
+
+
 
 -- ghcid --command "stack ghci ./src/Beseder/Resources/Timer/TimerHelper.hs"

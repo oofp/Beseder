@@ -33,6 +33,7 @@ module Beseder.Base.ControlData
     , ifElse
     , iff
     , handleTo
+    , renameRes
     , block
     , lb
     , evalSTransData
