@@ -298,7 +298,8 @@ type family Edges (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [
   Edges func sp xs = Edges' func sp xs
 
 type family MakeScopeFinalEdges (df :: [*] -> [*] -> Exp (* -> [*] -> Exp ([*],[*])))   (sp :: *)  (xs ::[*])  (ys :: [*]) :: [*] where
-  MakeScopeFinalEdges df sp xs ys = Edges (Eval (df xs ys)) sp ys 
+  --MakeScopeFinalEdges df sp xs ys = Edges (Eval (df xs ys)) sp ys 
+  MakeScopeFinalEdges df sp xs ys = Edges' (Eval (df xs ys)) sp ys -- collapse final edges
 
 
 type family EdgesEventLoop (func :: * -> [*] -> Exp ([*],[*])) (sp :: *) (xs :: [*]) :: [*] where  

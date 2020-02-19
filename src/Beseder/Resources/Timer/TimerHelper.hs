@@ -93,13 +93,16 @@ delay timerName timeoutSec = scopeRes $ do
   try @(name :? IsTimerArmed) pumpEvents
   clear timerName
 
-skipWithTimeLimitTo :: forall sp1 name m sp. Named name -> Int -> Proxy sp1 ->
+skipWithTimeLimitTo' :: forall sp1 name m sp. Proxy sp1 ->Named name -> Int -> 
                   STransData m sp _ ()
-skipWithTimeLimitTo timerName timeoutSec _px = do
+skipWithTimeLimitTo' _px timerName timeoutSec  = do
   startTimer timerName timeoutSec 
   try @(name :? IsTimerArmed) (skipTo @sp1)
   clear timerName
 
+skipWithTimeLimitTo :: forall sp1 name m sp. Named name -> Int -> 
+                  STransData m sp _ ()
+skipWithTimeLimitTo = skipWithTimeLimitTo' (Proxy @sp1)
 
 
 -- ghcid --command "stack ghci ./src/Beseder/Resources/Timer/TimerHelper.hs"
