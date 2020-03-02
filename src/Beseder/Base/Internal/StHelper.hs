@@ -31,9 +31,11 @@ module Beseder.Base.Internal.StHelper
   , StateTitle
   , ShowState
   , ShowStates
+  , NextDataStates
+  , StateDataTrans
   ) where
 
-import            Protolude hiding (First)
+import            Protolude hiding (First, TypeError)
 import            Haskus.Utils.Variant 
 import            Beseder.Base.Internal.Core
 import            Beseder.Base.Internal.Named
@@ -133,3 +135,19 @@ type family ShowState (s :: *) :: Symbol where
 type family ShowStates (sts :: [*]) :: [Symbol] where
   ShowStates '[] = '[]
   ShowStates (s ': moreStates) = (ShowState s) ': (ShowStates moreStates)
+
+--
+type family NextDataStates (st :: *) :: [*] where
+  NextDataStates st = NextDataStates' (St st "") (StateTrans (St st "")) 
+
+type family NextDataStates' (st :: *) (transKind :: StateTransKind) :: [*] where
+  NextDataStates' stNamed 'Static = '[]
+  NextDataStates' stNamed 'Dynamic = GetStatesData (NextStates stNamed)
+
+type family GetStatesData (states :: [*])  :: [*] where
+  GetStatesData '[] = '[]
+  GetStatesData ((St st name) ': tail) = st ': (GetStatesData tail)
+  GetStatesData (invState ': tail) = TypeError ('Text "Cannot GetStateData from " :<>: 'ShowType invState)
+
+type family StateDataTrans stData :: StateTransKind where
+   StateDataTrans stData = StateTrans (St stData "")

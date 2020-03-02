@@ -38,6 +38,8 @@ module Beseder.Base.Common
     , CoerceVar (..)
     , Var (..)
     , IndexedPar (..)
+    , NextDataStates
+    , StateDataTrans
     ) where
 
 import Beseder.Base.Internal.Core 

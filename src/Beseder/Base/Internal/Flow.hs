@@ -363,6 +363,23 @@ instance
   request (Left req1) namedTuple_x = liftVariant <$> (request req1 namedTuple_x)  
   request (Right req2) namedTuple_x = liftVariant <$> (request req2 namedTuple_x)  
 
+instance (Monad m) => Request m  (V '[]) (NamedTuple x) where 
+  type ReqResult (V '[]) (NamedTuple x) = '[]
+  request _ _namedTuple_x = SafeUndef.undefined 
+
+instance 
+  ( Request m req (NamedTuple x) 
+  , Request m (V reqs) (NamedTuple x) 
+  , MonadIO m
+  , res ~ Union (ReqResult req (NamedTuple x)) (ReqResult (V (reqs)) (NamedTuple x))
+  , Liftable (ReqResult req (NamedTuple x)) res 
+  , Liftable (ReqResult (V reqs) (NamedTuple x)) res 
+  ) => Request m  (V (req ': reqs)) (NamedTuple x) where 
+  type ReqResult (V (req ': reqs)) (NamedTuple x) = Union (ReqResult req (NamedTuple x)) (ReqResult (V reqs) (NamedTuple x))
+  request v_req_reqs namedTuple_x = 
+    case popVariantHead v_req_reqs of 
+      Right req -> liftVariant <$> request req namedTuple_x
+      Left v_reqs -> liftVariant <$> request v_reqs namedTuple_x
 
 data TerminateRes = TerminateRes deriving (Eq,Show)
 newtype NamedTupleClr x = NamedTupleClr x
