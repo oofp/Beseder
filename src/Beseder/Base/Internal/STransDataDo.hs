@@ -26,8 +26,9 @@ import           Beseder.Base.Internal.NatOne
 import           Beseder.Base.Common
 import           Beseder.Base.Internal.STransDef
 import           Beseder.Base.Internal.STransData
+import           Haskus.Utils.Variant
 
-newRes :: Named name -> resPars -> STransData m sp (NewResFunc resPars name m) ()
+newRes :: forall resPars m sp name. Named name -> resPars -> STransData m sp (NewResFunc resPars name m) ()
 newRes = NewRes
 
 invoke :: Named name -> req -> STransData m sp (InvokeAllFunc req name) ()
@@ -147,6 +148,9 @@ while = While
 newState :: STransData m sp f () -> STransData m sp (GetNewStateFunc f) ()
 newState = NewState
 
+handleLoop :: STransData m sp f () -> STransData m sp (HandleLoopFunc f) () 
+handleLoop hnd = HandleLoop hnd
+
 type HandleEventsFunc f =
     EmbedFunc Dynamics
         (HandleLoopFunc
@@ -175,3 +179,24 @@ handleTo hnd =
 renameRes :: Named resName -> Named newName -> STransData m sp (RenameResFunc resName newName) ()
 renameRes = RenameRes 
 
+class InvokeVar (name :: Symbol) reqs where
+  type InvokeVarFunc name reqs :: * -> [*] -> Exp ([*],[*])
+  invokeVar :: Named name -> V reqs -> STransData m sp (InvokeVarFunc name reqs) ()
+
+instance InvokeVar name '[req] where
+  type InvokeVarFunc name '[req] = InvokeAllFunc  req name
+  invokeVar named v_req =  invoke named (variantToValue v_req)
+
+instance (InvokeVar name (req1 ': reqs)) => InvokeVar name (req ': req1 ': reqs) where
+  type InvokeVarFunc name (req ': req1 ': reqs) = IfElseFunc (InvokeAllFunc  req name) (InvokeVarFunc name (req1 ': reqs))
+  invokeVar named v_reqs =  
+    let ei_req = popVariantHead v_reqs
+    in ifElse (isRight ei_req)
+        (invoke named (getRight ei_req))
+        (invokeVar named (getLeft ei_req))
+
+getLeft :: Either l r -> l
+getLeft (Left l) = l
+
+getRight :: Either l r -> r
+getRight (Right r) = r

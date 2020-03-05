@@ -86,9 +86,10 @@ pumpWithTimer timerName timeoutSec c_sub = scopeRes $ do
   on @(name :? IsTimerTriggered) c_sub
   clear timerName
 
-delay :: forall name m sp. Named name -> Int -> 
+delay :: forall name m sp f. Named name -> Int -> STransData m sp f () ->
                   STransData m sp _ ()
-delay timerName timeoutSec = scopeRes $ do
+delay timerName timeoutSec sub = do
+  sub
   startTimer timerName timeoutSec 
   try @(name :? IsTimerArmed) pumpEvents
   clear timerName

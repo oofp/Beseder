@@ -28,6 +28,7 @@ module Beseder.Base.ControlData
     , termAndClearAllResources
     , while
     , newState 
+    , handleLoop
     , handleEvents
     , pumpEvents 
     , ifElse
@@ -104,6 +105,7 @@ module Beseder.Base.ControlData
     , NatConv 
     , ScopeResFunc
     , HandleEventsFunc
+    , InvokeVar (..)
 ) where
 
 import Beseder.Base.Internal.STransData

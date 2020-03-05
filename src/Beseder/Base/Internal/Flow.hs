@@ -363,6 +363,7 @@ instance
   request (Left req1) namedTuple_x = liftVariant <$> (request req1 namedTuple_x)  
   request (Right req2) namedTuple_x = liftVariant <$> (request req2 namedTuple_x)  
 
+{- Not used for now
 instance (Monad m) => Request m  (V '[]) (NamedTuple x) where 
   type ReqResult (V '[]) (NamedTuple x) = '[]
   request _ _namedTuple_x = SafeUndef.undefined 
@@ -380,6 +381,7 @@ instance
     case popVariantHead v_req_reqs of 
       Right req -> liftVariant <$> request req namedTuple_x
       Left v_reqs -> liftVariant <$> request v_reqs namedTuple_x
+-}
 
 data TerminateRes = TerminateRes deriving (Eq,Show)
 newtype NamedTupleClr x = NamedTupleClr x
