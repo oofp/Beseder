@@ -9,6 +9,8 @@ module Beseder.Base.Base
     , StateTransKind (..)
     , StateTrans 
     , TermRequest 
+    , PropType
+    , Property (..)
     , (:=)
     , Rs
     , RsL

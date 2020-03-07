@@ -7,8 +7,6 @@
 module PureDoor where
 
 import           Protolude  
-import           Beseder.Base.Control                                               
-import           Beseder.Base.Base
 import           Beseder.Base.Common
 import           Beseder.Resources.State.PureRes
 import           Haskus.Utils.Variant

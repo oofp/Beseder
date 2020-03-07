@@ -43,6 +43,9 @@ type instance Eval (OpResFunc name x sp xs) = '(xs, '[])
 data GetFunc :: name -> * -> * -> [*] -> Exp ([*],[*])
 type instance Eval (GetFunc name x sp xs) = '(xs, '[])
 
+data GetPropFunc :: name -> propKey -> * -> [*] -> Exp ([*],[*])
+type instance Eval (GetPropFunc name propKey sp xs) = '(xs, '[])
+
 data OpFunc :: * -> * -> [*] -> Exp ([*],[*])
 type instance Eval (OpFunc a sp xs) = '(xs, '[])
 

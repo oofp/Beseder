@@ -350,6 +350,12 @@ instance
 
 instance  
   ( Qm q m
+  , GetPropVarByName xs name propKey
+  ) => Interpretable q m sp xs xs '[] (GetPropFunc name propKey) where
+    interpret (Prop named propKey) = prop named propKey 
+
+instance  
+  ( Qm q m
   ) => Interpretable q m sp xs xs '[] NoopFunc where
     interpret Noop = noop 
 

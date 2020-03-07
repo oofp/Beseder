@@ -22,6 +22,7 @@ module Beseder.Base.ControlData
     --, whatNames
     , liftIO
     , op
+    , prop
     , forever
     , nextSteps
     , clearAllResources

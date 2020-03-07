@@ -26,6 +26,7 @@ import           Beseder.Base.Internal.Core
 import           Beseder.Base.Internal.Cont
 import           Beseder.Base.Internal.Named
 import           Beseder.Base.Internal.TupleHelper
+import           Beseder.Base.Internal.ResourceList
 import           Beseder.Utils.VariantHelper
 import           Beseder.Utils.ListHelper
 import qualified Prelude as SafeUndef (undefined) 
@@ -326,6 +327,27 @@ contRByName' ::
   ) => Named name -> req ->  x -> MFlow q m xs
 contRByName' named req x = 
   contR req (transformForReq (byName named x)) 
+
+class GetPropByName resList resName propKey where
+  getPropByName :: resList -> Named resName -> Proxy propKey -> PropType propKey
+
+instance (GetResource resList resName, Property (GetResourceRes resList resName) propKey) => GetPropByName resList resName propKey where
+  getPropByName resList resName propKey = getProp (getResource resList resName) propKey
+
+class GetPropVarByName (xs :: [*]) resName propKey where
+  getPropVarByName :: V xs -> Named resName -> Proxy propKey -> PropType propKey 
+
+instance GetPropVarByName '[] resName propKey where
+  getPropVarByName _empty  = SafeUndef.undefined
+
+instance 
+  ( GetPropByName x resName propKey
+  , GetPropVarByName xs resName propKey
+  ) =>  GetPropVarByName (x ': xs) resName propKey where
+  getPropVarByName v_x_xs resName propKey = 
+    case popVariantHead v_x_xs of
+      Right x -> getPropByName x resName propKey
+      Left v_xs -> getPropVarByName v_xs resName propKey
 
 data NamedRequest req name = NamedRequest req (Named name)   
 newtype NamedTuple x = NamedTuple x

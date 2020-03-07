@@ -162,7 +162,7 @@ instance GetTarget (St a name,b) (St a name) where
 instance (GetTarget b c) => GetTarget (RT a b) c where
   getTarget (RT (_,b)) = getTarget b
 
-
+-- see if can be optimized
 getByName :: (TT a (TargetByName name a), GetTarget (TargetByName name a) (TypeByName name a))  => Named name -> a -> TypeByName name a
 getByName nm a = getTarget (transformForReq (byName nm a))
 

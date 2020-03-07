@@ -26,7 +26,9 @@ import           Beseder.Base.Internal.NatOne
 import           Beseder.Base.Common
 import           Beseder.Base.Internal.STransDef
 import           Beseder.Base.Internal.STransData
+import           Beseder.Base.Internal.Core (PropType)
 import           Haskus.Utils.Variant
+import qualified Prelude as SafeUndef (undefined) 
 
 newRes :: forall resPars m sp name. Named name -> resPars -> STransData m sp (NewResFunc resPars name m) ()
 newRes = NewRes
@@ -151,6 +153,9 @@ newState = NewState
 handleLoop :: STransData m sp f () -> STransData m sp (HandleLoopFunc f) () 
 handleLoop hnd = HandleLoop hnd
 
+prop :: forall propKey name m sp. Named name -> STransData m sp (GetPropFunc name propKey) (PropType propKey) 
+prop named = Prop named (Proxy @propKey) 
+
 type HandleEventsFunc f =
     EmbedFunc Dynamics
         (HandleLoopFunc
@@ -197,6 +202,8 @@ instance (InvokeVar name (req1 ': reqs)) => InvokeVar name (req ': req1 ': reqs)
 
 getLeft :: Either l r -> l
 getLeft (Left l) = l
+getLeft (Right _) = SafeUndef.undefined
 
 getRight :: Either l r -> r
 getRight (Right r) = r
+getRight (Left _) = SafeUndef.undefined

@@ -24,6 +24,33 @@ import           Beseder.Base.Internal.Named
 import           Haskus.Utils.Variant
 import qualified Prelude as SafeUndef (undefined) 
 
+--- Get
+
+class GetResource resList name where
+  type GetResourceRes resList name
+  getResource :: resList -> Named name -> GetResourceRes resList name
+
+instance GetResource (St st name) name where
+  type instance GetResourceRes (St st name) name = (St st name)
+  getResource st _name = st
+
+instance GetResource' (St st name1, more) name ((IsNameMatch name1 name)) => GetResource (St st name1, more) name where
+  type instance GetResourceRes (St st name1, more) name = GetResourceRes' (St st name1, more) name (IsNameMatch name1 name)
+  getResource resList named = getResource' resList named (Proxy @(IsNameMatch name1 name))
+
+
+class GetResource' st name (fl :: Bool) where
+  type GetResourceRes' st name fl
+  getResource' :: st -> Named name -> Proxy fl -> GetResourceRes' st name fl
+
+instance GetResource' (St st name, more) name 'True where
+  type instance GetResourceRes' (St st name, more) name 'True = (St st name)
+  getResource' (st, _more) _name _ = st
+
+instance GetResource more name => GetResource' (St st name1, more) name 'False where
+  type instance GetResourceRes' (St st name1, more) name 'False = GetResourceRes more name
+  getResource' (_st1, more) name _ = getResource more name
+
 --- Append
 class AppendResource resList newRes where
   type AppendResourceRes resList newRes 

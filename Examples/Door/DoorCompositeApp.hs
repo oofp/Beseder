@@ -25,22 +25,20 @@
 -- {-# LANGUAGE ConstraintKinds        #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedLabels #-}
+
 {-# OPTIONS_GHC -fomit-interface-pragmas #-}
+{-# OPTIONS_GHC -fno-warn-partial-type-signatures #-}
+{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 
 module  DoorCompositeApp where
 
 import           Protolude                    hiding (Product, handle, return, gets, lift, liftIO,
                                                (>>), (>>=), forever, until,try,on)
 import           Beseder.Base.Control                                               
-import           Beseder.Base.Base
-import           Beseder.Base.Common
 import           Beseder.Misc.Misc
-import           Beseder.Resources.Timer
 import           Beseder.Resources.Composite
 import           Data.String 
 import           Control.Monad.Cont (ContT)
-import           Control.Monad.Identity (IdentityT)
-import           qualified Protolude 
 import           SelfClosingDoor
 
 doorTrans :: Int -> Int -> STransApp (ContT Bool) TaskQ NoSplitter '[()] _ _ () 

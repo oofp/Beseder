@@ -23,15 +23,14 @@ module  TimerDataApps where
 import           Protolude                    hiding (Product, handle, return, gets, lift, liftIO,
                                                (>>), (>>=), forever, until,try,on)
 --import           Beseder.Base.Control                                               
-import           Beseder.Base.Base
 import           Beseder.Base.Common
 import           Beseder.Misc.Misc
 import           Beseder.Resources.Timer
 import           Data.String 
 import           Control.Monad.Cont (ContT)
 import           Beseder.Base.ControlData 
-import           Protolude                    hiding (Product, handle, return, gets, lift, liftIO,
-                                               (>>), (>>=), forever, until,try,on)
+--import           Protolude                    hiding (Product, handle, return, gets, lift, liftIO,
+--                                               (>>), (>>=), forever, until,try,on)
 
 timerHelloData :: Int -> STransData m NoSplitter _ () 
 timerHelloData timeoutSec1 = do

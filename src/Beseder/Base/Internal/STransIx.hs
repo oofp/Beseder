@@ -456,7 +456,13 @@ gets :: -- forall x name xs st sp q m a.
   , Monad (q m)
   ) => Named name -> (x -> a) -> STrans q m sp xs xs ('[]) (GetFunc name x) a 
 gets named f = STrans (\_sp v_xs -> return $ Right (v_xs , (f (getTypeByNameVar named v_xs)))) 
-  
+
+prop :: -- forall x name xs st sp q m a.
+  ( GetPropVarByName xs name propKey
+  , Monad (q m)
+  ) => Named name -> Proxy propKey -> STrans q m sp xs xs ('[]) (GetPropFunc name propKey) (PropType propKey)
+prop named pxKey = STrans (\_sp v_xs -> return $ Right (v_xs , getPropVarByName v_xs named pxKey)) 
+
 op :: 
   ( Monad m
   , Monad (q m)

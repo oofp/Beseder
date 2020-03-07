@@ -38,6 +38,7 @@ data STransData (m :: * -> *) (sp :: *) (sfunc :: * -> [*] -> Exp ([*],[*])) (a 
   On :: forall sp1 sp m f_sub. STransData m sp f_sub () -> STransData m sp (CaptureFunc sp1 f_sub) ()
   OnOrElse :: forall sp1 sp m f_sub1 f_sub2. STransData m sp f_sub1 () -> STransData m sp f_sub2 () -> STransData m sp (CaptureOrElseFunc sp1 f_sub1 f_sub2) ()
   Gets :: Named name -> (St x name -> a) -> STransData m sp (GetFunc name (St x name)) a
+  Prop :: Named name -> Proxy propKey -> STransData m sp (GetPropFunc name propKey) (PropType propKey)
   OpRes :: Named name -> (x -> m a) -> STransData m sp (OpResFunc name x) a
   Op :: m a -> STransData m sp (OpFunc a) a
   Noop :: STransData m sp NoopFunc ()

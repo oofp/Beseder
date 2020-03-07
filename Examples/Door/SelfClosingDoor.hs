@@ -45,7 +45,6 @@ import           Protolude                    hiding (Product, handle, return, g
                                                (>>), (>>=), forever, until,try,on, First)
 import qualified Protolude as P                                               
 import           Beseder.Base.Control                                               
-import           Beseder.Base.Base
 import           Beseder.Base.Common
 import           Data.String
 

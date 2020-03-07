@@ -67,6 +67,11 @@ class (Monad q) => ClearableState q state where
 
 type family TermRequest (st :: *) :: *
 
+type family PropType propkey :: *
+
+class Property st propKey where
+  getProp :: st -> Proxy propKey -> PropType propKey 
+
 ---
 
 data StateTransKind
@@ -451,3 +456,4 @@ type family RsL (xs :: [*]) :: [*] where
 
 rs :: Proxy (a :: [*]) -> Proxy (RsL a)
 rs _ = Proxy
+
