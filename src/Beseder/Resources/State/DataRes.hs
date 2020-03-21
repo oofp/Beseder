@@ -11,6 +11,8 @@
 {-# LANGUAGE UndecidableInstances  #-}
 {-# LANGUAGE PolyKinds             #-}
 {-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE DeriveFunctor         #-}
 
 module Beseder.Resources.State.DataRes
   ( InitData (..)
@@ -29,14 +31,24 @@ module Beseder.Resources.State.DataRes
   , initAsFalse
   , InitAsTrue
   , InitAsFalse
+  , NextTags
+  , SetTag
+  , GetTagType
+  , modifyTag
+  , getTag
+  , newTagRes
+  , IsTag
   ) where  
 
-import           Protolude hiding (Any)
+import           GHC.TypeLits
+import           Protolude hiding (TypeError)
 import           Haskus.Utils.Variant
 import           Beseder.Base.Base
 import           Beseder.Base.Common
 import           Control.Arrow (Kleisli (..))
-import           qualified GHC.Show (Show (..))
+import qualified GHC.Show (Show (..))
+import           Data.Coerce (coerce)
+import           Beseder.Base.ControlData (newRes, STransData, NewResFunc)
 
 newtype D a = D a deriving (Show, Eq)
 
@@ -140,5 +152,50 @@ instance GetInstance SetFalse where
 instance GetInstance SetTrue where
   getInstance = setTrue
       
+--
+--type SetData' = forall a. SetData a
 
-      
+newtype Tagged a = Tagged a deriving Functor
+type family NextTags a :: [*]
+
+type instance Eval (SupportedRequests (St (D (Tagged a)) name)) = SupportedTagReqFam a (NextTags a)
+
+type family SupportedTagReqFam (a :: *) (xs :: [*]) where
+  SupportedTagReqFam a '[] = '[]
+  SupportedTagReqFam a (x ': xs) = (SetData x) ':  (ModifyData a x) ': SupportedTagReqFam a xs
+
+type SetTag a = SetData (Tagged a)
+modifyTag :: (a -> b) -> ModifyData (Tagged a) (Tagged b)
+modifyTag f_a_b  = ModifyData (fmap f_a_b)
+
+type instance PropType (Tagged a) = a
+instance Property (St (D (Tagged a)) name) (Tagged a) where
+  getProp st _px = coerce st
+
+getTag :: forall a name. (St (D (Tagged a)) name) -> a
+getTag st = 
+  let pxa :: Proxy (Tagged a)
+      pxa = Proxy
+  in getProp st pxa
+
+
+data IsTag :: Type -> Type -> Exp Bool 
+type instance Eval (IsTag t st) = IsTagFam t st
+
+type family IsTagFam t st where 
+  IsTagFam t (St (D (Tagged t)) name) = 'True
+  IsTagFam t _ = 'False
+
+type InitTag a = InitData (Tagged a)
+initTag :: a -> InitTag a
+initTag = coerce
+
+type family GetTagType (st :: *) :: * where
+  GetTagType (St (D (Tagged t)) name) = t
+  GetTagType st = TypeError 
+                    ( 'Text "Resource is not data tag `"
+                      ':<>: 'ShowType st) 
+
+
+newTagRes :: forall m sp a name. Named name -> a -> STransData m sp (NewResFunc (InitTag a) name m) ()
+newTagRes name a = newRes name (initTag a)
